@@ -1,4 +1,4 @@
-"""Command line for validation, schema export, and capability reporting."""
+"""Command line for validation, the locked IV bolus analysis, and capabilities."""
 
 import argparse
 from pathlib import Path
@@ -21,6 +21,13 @@ def main(argv: list[str] | None = None) -> int:
     validate.add_argument("--bundle", type=Path, help="Write a validation bundle to this new directory")
     validate.add_argument("--run-id", help="Run identifier used when --bundle is set")
 
+    analyze = commands.add_parser("analyze", help="Run locked IV bolus NCA and the one-compartment fit")
+    analyze.add_argument("study_dir", type=Path)
+    analyze.add_argument("--config", type=Path, required=True)
+    analyze.add_argument("--bundle", type=Path, required=True)
+    analyze.add_argument("--run-id")
+    analyze.add_argument("--strict", action="store_true")
+
     commands.add_parser("capabilities", help="Show which modules can execute")
     export = commands.add_parser("export-schemas", help="Write JSON Schema files from the data contracts")
     export.add_argument("--directory", type=Path, default=Path("schemas"))
@@ -29,6 +36,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "validate":
             return _validate(args.study_dir, strict=args.strict, bundle=args.bundle, run_id=args.run_id)
+        if args.command == "analyze":
+            return _analyze(
+                args.study_dir,
+                config=args.config,
+                bundle=args.bundle,
+                run_id=args.run_id,
+                strict=args.strict,
+            )
         if args.command == "capabilities":
             return _capabilities()
         if args.command == "export-schemas":
@@ -52,6 +67,18 @@ def _validate(study_dir: Path, *, strict: bool, bundle: Path | None, run_id: str
         selected_run = run_id or f"{study.metadata.study_id}-validation"
         study.export_bundle(bundle, run_id=selected_run, mode=mode)
         print(f"Wrote validation bundle to {bundle}")
+    return 0
+
+
+def _analyze(study_dir: Path, *, config: Path, bundle: Path, run_id: str | None, strict: bool) -> int:
+    from pharmacoweave.core.study import PharmacologyStudy
+
+    mode = "strict" if strict else "research"
+    study = PharmacologyStudy.from_files(study_dir, mode=mode)
+    selected_run = run_id or f"{study.metadata.study_id}-analysis"
+    manifest = study.export_analysis_bundle(bundle, run_id=selected_run, nca_config=config, mode=mode)
+    print(f"analysis_executed={manifest.analysis_executed}")
+    print(f"Wrote analysis bundle to {bundle}")
     return 0
 
 

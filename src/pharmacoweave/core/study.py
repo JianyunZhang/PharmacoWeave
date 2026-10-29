@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING
 from pydantic import Field, PrivateAttr
 
 if TYPE_CHECKING:
+    from pharmacoweave.core.modeling import AnalysisRecords
     from pharmacoweave.core.provenance import ResultBundleManifest
     from pharmacoweave.core.validation import ValidationReport
+    from pharmacoweave.pk_models.fit import IvBolusFit
 
 from pharmacoweave.core.entities import (
     Analyte,
@@ -29,8 +31,10 @@ class PharmacologyStudy(Record):
     """One study in memory.
 
     ``from_files`` reads a directory. ``check`` checks foreign keys, clocks,
-    assay limits, and evidence boundaries. ``run_nca`` loads an NCA config and
-    stops, because the calculator is not part of this version.
+    assay limits, and evidence boundaries. ``run_nca`` calculates NCA for the
+    locked single-dose IV bolus design. ``export_bundle`` writes a validation
+    inventory. ``export_analysis_bundle`` also runs that NCA, fits CL and V,
+    and sets ``analysis_executed``.
     """
 
     metadata: StudyMetadata
@@ -99,12 +103,52 @@ class PharmacologyStudy(Record):
 
         return export_bundle(self, path, run_id=run_id, mode=mode)
 
-    def run_nca(self, config: str | Path) -> None:
-        """Load an NCA configuration. The calculator is not implemented."""
+    def run_nca(self, config: str | Path) -> AnalysisRecords:
+        """Calculate NCA for the locked single-dose IV bolus design."""
 
         from pharmacoweave.pk_nca.runner import run_nca
 
-        run_nca(self, config)
+        return run_nca(self, config)
+
+    def fit_one_compartment_iv_bolus(
+        self,
+        *,
+        error_model: str = "proportional",
+        max_nfev: int = 200,
+        initial: tuple[float, float] | None = None,
+    ) -> IvBolusFit:
+        """Estimate CL and V. Non-convergence omits estimates and is not a pass."""
+
+        from pharmacoweave.pk_models.fit import fit_one_compartment_iv_bolus
+
+        return fit_one_compartment_iv_bolus(
+            self,
+            error_model=error_model,
+            max_nfev=max_nfev,
+            initial=initial,
+        )
+
+    def export_analysis_bundle(
+        self,
+        path: str | Path,
+        *,
+        run_id: str,
+        nca_config: str | Path,
+        mode: str = "research",
+        error_model: str = "proportional",
+    ) -> ResultBundleManifest:
+        """Run the locked IV bolus analysis and write a new result bundle."""
+
+        from pharmacoweave.analysis import export_analysis_bundle
+
+        return export_analysis_bundle(
+            self,
+            path,
+            run_id=run_id,
+            nca_config=nca_config,
+            mode=mode,
+            error_model=error_model,
+        )
 
     def attach_candidates(self, path: str | Path) -> PharmacologyStudy:
         """Attach a TheraWeave evidence file. Predicted ADMET stays predicted."""

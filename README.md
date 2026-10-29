@@ -1,6 +1,6 @@
 # PharmacoWeave
 
-定量药理学研究用 Python 工具包。当前版本 **0.0.1** 锁定实验数据模型、单位、质量控制、结果包和跨项目证据边界。它可以从已知参数计算一室静脉推注浓度，并生成数据校验报告。它不计算 NCA，不拟合 PK 模型，也不给出给药建议。
+定量药理学研究用 Python 工具包。当前版本 **0.1.0** 在 Phase 0 的数据契约之上，计算锁定设计的 NCA，并拟合一室静脉推注的 CL 与 V。它不给出给药建议。
 
 **Research use only.** 本软件不是医疗器械，不构成监管申报、GxP 或临床决策工具。参考 ICH M15 的记录结构，并不表示本软件满足该指南。
 
@@ -15,6 +15,8 @@ pharmacoweave validate examples/data/iv_bolus_single_dose --strict
 
 ## 这一版能做什么
 
+校验研究并写出只含数据清单的结果包。`analysis_executed` 保持 false：
+
 ```python
 from pharmacoweave import PharmacologyStudy
 
@@ -25,13 +27,22 @@ study = PharmacologyStudy.from_files(
 study.export_bundle("results/iv-bolus-validation", run_id="iv-bolus-validation")
 ```
 
-`results/` 会得到带校验和的 Pharmacology Result Bundle：Parquet 表、来源、QC 和 HTML 校验报告。清单里的 `analysis_executed` 为 false，NCA 与拟合产物列在 `omitted` 中。
+对同一份合成研究运行已锁定的分析。NCA 只接受单次静脉推注、连续采血和 linear-up/log-down。拟合只估计一室静脉推注的 CL 与 V。成功写出分析包时 `analysis_executed` 为 true：
+
+```bash
+pharmacoweave analyze examples/data/iv_bolus_single_dose \
+  --config configs/nca_single_dose_iv.yaml \
+  --bundle results/iv-bolus-analysis \
+  --strict
+```
+
+分析目录包含 NCA 表、参数估计、预测与残差、浓度–时间图，以及研究用 HTML 报告。终末相不合格、外推过大、拟合不收敛或不辨识时，相应产物列在 `omitted` 里，不会被标成通过。
 
 ```bash
 pharmacoweave capabilities
 ```
 
-`core`、`ingestion`、`bioanalysis` 可以执行。`pk_nca`、`pk_models`、`diagnostics`、`reporting`、`integrations` 只提供已测试的契约或参考方程。`pd_models` 及之后的包可以导入，导入不会运行分析。
+`core`、`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`diagnostics`、`reporting` 可以执行，范围限于上面的锁定设计。`integrations` 只有文件级证据守卫。`pd_models` 及之后的包可以导入，导入不会运行分析。
 
 ## 文档
 
@@ -49,4 +60,4 @@ pharmacoweave capabilities
 
 `examples/data/iv_bolus_single_dose/` 是无噪声的一室静脉推注数据：两只大鼠，CL = 0.20 L/h/kg，V = 1.0 L/kg。24 h 样品低于 0.01 µg/mL，以 BLQ 保存，数值列为空。这不是动物实验。
 
-第一版准备接受的 NCA 设计写在 `configs/nca_single_dose_iv.yaml`：单次静脉推注、连续采血、linear-up/log-down。加载该文件不会计算 NCA。
+`configs/nca_single_dose_iv.yaml` 锁定第一种 NCA：单次静脉推注、连续采血、linear-up/log-down。口服、输注、多次给药和稀疏采样会被拒绝。数值容差写在 `docs/validation.md`。

@@ -1,8 +1,8 @@
 """Result-bundle manifest.
 
-A bundle written by this version records validated study data. ``analysis_executed``
-stays false, and NCA or fit tables are listed under ``omitted`` so a missing
-file is not read as an empty analysis.
+``analysis_executed`` is true only when this run wrote NCA or fit artifacts.
+A validation-only bundle lists those roles under ``omitted`` so a missing file
+is not read as an empty analysis.
 """
 
 from typing import Literal
@@ -47,7 +47,11 @@ class SourceBundleRef(Record):
 
 
 class ResultBundleManifest(Record):
-    """Index of a pharmacology result bundle."""
+    """Index of a pharmacology result bundle.
+
+    ``analysis_executed`` is true only after NCA or a fit has been written into
+    the bundle. Validation-only bundles keep it false.
+    """
 
     run_id: Identifier
     study_id: Identifier

@@ -8,7 +8,7 @@ import pytest
 from examples.iv_bolus_case import EXAMPLE_DIR, build_study
 
 from pharmacoweave.cli import main
-from pharmacoweave.errors import IngestError, PlannedCapabilityError
+from pharmacoweave.errors import IngestError
 from pharmacoweave.pk_nca import load_nca_config
 
 
@@ -38,8 +38,9 @@ def test_bundle_is_research_use_and_does_not_invent_nca(tmp_path, repo_root) -> 
     assert payload["schema_name"] == "pharmacology-result-bundle"
     with pytest.raises(IngestError):
         study.export_bundle(destination, run_id="run-002")
-    with pytest.raises(PlannedCapabilityError):
-        study.run_nca(repo_root / "configs" / "nca_single_dose_iv.yaml")
+    nca = study.run_nca(repo_root / "configs" / "nca_single_dose_iv.yaml")
+    assert len(nca.nca_parameters) == 2
+    assert all(item.auc_last is not None for item in nca.nca_parameters)
 
 
 def test_nca_config_rejects_designs_outside_the_locked_scope(tmp_path, repo_root) -> None:
@@ -61,6 +62,9 @@ def test_cli_validates_the_example_and_reports_capabilities(tmp_path, repo_root,
     assert (bundle / "manifest.json").is_file()
     assert main(["capabilities"]) == 0
     text = capsys.readouterr().out
-    assert "pk_nca" in text and "partial" in text
-    assert "pbpk" in text and "reserved" in text
+    rows = {line.split()[0]: line for line in text.splitlines() if line.strip()}
+    assert "available" in rows["pk_nca"]
+    assert "available" in rows["pk_models"]
+    assert "partial" in rows["integrations"]
+    assert "reserved" in rows["pbpk"]
     assert main(["validate", str(repo_root / "examples")]) == 2

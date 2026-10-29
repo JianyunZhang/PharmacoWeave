@@ -60,6 +60,6 @@ python -m pharmacoweave.schema_export
 
 ## 分析记录
 
-`schemas/analysis_records.schema.json` 描述模型说明、拟合、参数、NCA 参数集和诊断。0.0.1 不写出这些表。NCA 参数模型已经执行的报告规则包括：终末相未合格时不能带 λz、t½、AUC∞；静脉与 CL/F 不能同时出现；血管外给药与 CL、V 不能同时出现。
+`schemas/analysis_records.schema.json` 描述模型说明、拟合、参数、NCA 参数集和诊断。分析包把它们写到 `analysis/analysis_records.json`，并把 NCA 行写到 `analysis/nca_parameters.parquet`。只做校验的包不写这些表，并在 `omitted` 中说明原因。报告规则包括：终末相未合格时不能带 λz、t½、AUC∞；静脉与 CL/F 不能同时出现；血管外给药与 CL、V 不能同时出现。Tmax 可以为 0。Schema 版本仍是 `0.1.0`。
 
 `schemas/nca_config.schema.json` 只接受单次静脉推注、连续采血和 `linear_up_log_down`。

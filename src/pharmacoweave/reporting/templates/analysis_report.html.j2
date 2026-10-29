@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PharmacoWeave analysis report — {{ study_id }}</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 2rem auto; max-width: 60rem; font: 16px/1.5 "Segoe UI", Helvetica, Arial, sans-serif; color: #1c2834; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.8rem; }
+    .banner { background: #e8f3f4; border-left: 4px solid #0f6f78; padding: 0.8rem 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 0.6rem; }
+    th, td { border-bottom: 1px solid #d5dee5; text-align: left; padding: 0.35rem 0.5rem; vertical-align: top; }
+    th { font-size: 0.85rem; color: #486070; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <strong>Research use only.</strong>
+    Run <code>{{ run_id }}</code> calculated NCA and, when the fit was accepted, one-compartment IV bolus parameters.
+    This is not a dosing recommendation, a medical-device output, or a regulatory report.
+    Missing cells were omitted by a reporting rule or because a fit failed.
+  </div>
+  <h1>{{ title }}</h1>
+  <p>Study <code>{{ study_id }}</code></p>
+  <h2>NCA</h2>
+  <p>Single-dose IV bolus, rich sampling, linear-up/log-down. BLQ samples stay censored. Times are in hours.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th><th>AUC last</th><th>AUC∞</th><th>Fraction</th><th>Cmax</th><th>Tmax (h)</th>
+        <th>λz (1/h)</th><th>t½ (h)</th><th>Terminal</th><th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in nca_rows %}
+      <tr>
+        <td>{{ row.subject_id }}</td>
+        <td>{{ row.auc_last if row.auc_last is not none else "omitted" }} {{ row.auc_last_unit or "" }}</td>
+        <td>{{ row.auc_inf if row.auc_inf is not none else "omitted" }} {{ row.auc_inf_unit or "" }}</td>
+        <td>{{ row.auc_inf_extrap_fraction if row.auc_inf_extrap_fraction is not none else "omitted" }}</td>
+        <td>{{ row.cmax if row.cmax is not none else "omitted" }} {{ row.cmax_unit or "" }}</td>
+        <td>{{ row.tmax if row.tmax is not none else "omitted" }}</td>
+        <td>{{ row.lambda_z if row.lambda_z is not none else "omitted" }}</td>
+        <td>{{ row.half_life if row.half_life is not none else "omitted" }}</td>
+        <td>{{ "qualified" if row.terminal_phase_qualified else "not qualified" }}</td>
+        <td>{{ row.excluded_reason or "" }} {% for note in row.warnings %}{{ note }} {% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h2>One-compartment IV bolus fit</h2>
+  <table>
+    <thead><tr><th>Fit</th><th>Status</th><th>Converged</th><th>Limitations</th></tr></thead>
+    <tbody>
+      {% for fit in fits %}
+      <tr>
+        <td><code>{{ fit.fit_id }}</code></td>
+        <td>{{ fit.diagnostic_status }}</td>
+        <td>{{ fit.converged }}</td>
+        <td>{% for item in fit.limitations %}{{ item }} {% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if estimates %}
+  <table>
+    <thead><tr><th>Fit</th><th>Parameter</th><th>Value</th><th>Unit</th><th>SE</th></tr></thead>
+    <tbody>
+      {% for item in estimates %}
+      <tr>
+        <td><code>{{ item.fit_id }}</code></td>
+        <td>{{ item.parameter }}</td>
+        <td>{{ item.value }}</td>
+        <td>{{ item.unit }}</td>
+        <td>{{ item.standard_error if item.standard_error is not none else "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No parameter estimates were written.</p>
+  {% endif %}
+  <h2>Not in this bundle</h2>
+  <ul>
+    {% for item in omitted %}
+    <li><code>{{ item.role }}</code>: {{ item.reason }}</li>
+    {% endfor %}
+  </ul>
+  <h2>Software</h2>
+  <p>PharmacoWeave {{ version }}, schema {{ schema_version }}, written {{ generated_at }}.</p>
+</body>
+</html>

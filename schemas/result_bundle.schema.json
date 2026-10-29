@@ -120,7 +120,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Index of a pharmacology result bundle.",
+  "description": "Index of a pharmacology result bundle.\n\n``analysis_executed`` is true only after NCA or a fit has been written into\nthe bundle. Validation-only bundles keep it false.",
   "properties": {
     "run_id": {
       "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",

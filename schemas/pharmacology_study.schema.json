@@ -1144,7 +1144,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "One study in memory.\n\n``from_files`` reads a directory. ``check`` checks foreign keys, clocks,\nassay limits, and evidence boundaries. ``run_nca`` loads an NCA config and\nstops, because the calculator is not part of this version.",
+  "description": "One study in memory.\n\n``from_files`` reads a directory. ``check`` checks foreign keys, clocks,\nassay limits, and evidence boundaries. ``run_nca`` calculates NCA for the\nlocked single-dose IV bolus design. ``export_bundle`` writes a validation\ninventory. ``export_analysis_bundle`` also runs that NCA, fits CL and V,\nand sets ``analysis_executed``.",
   "properties": {
     "metadata": {
       "$ref": "#/$defs/StudyMetadata"

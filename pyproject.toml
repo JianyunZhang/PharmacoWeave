@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pharmacoweave"
-version = "0.0.1"
-description = "Research-use data model and validation toolkit for quantitative pharmacology."
+version = "0.1.0"
+description = "Research-use NCA and one-compartment IV bolus fitting for quantitative pharmacology."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "JianyunZhang" }]
 keywords = ["pharmacology", "pharmacokinetics", "NCA", "PKPD", "bioanalysis"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
@@ -26,6 +26,8 @@ dependencies = [
     "jinja2>=3.1",
     "PyYAML>=6",
     "jsonschema>=4.20",
+    "numpy>=1.26",
+    "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
@@ -61,5 +63,5 @@ warn_unused_ignores = true
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ["pyarrow.*", "pandas.*", "jinja2.*", "yaml.*", "jsonschema.*"]
+module = ["pyarrow.*", "pandas.*", "jinja2.*", "yaml.*", "jsonschema.*", "numpy.*", "scipy.*"]
 ignore_missing_imports = true

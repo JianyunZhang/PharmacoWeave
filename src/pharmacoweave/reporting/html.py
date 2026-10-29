@@ -19,6 +19,7 @@ def render_validation_report(
     omitted: list[OmittedArtifact],
     version: str,
     schema_version: str,
+    analysis_executed: bool = False,
 ) -> str:
     """Render the validation inventory. This is not a PK analysis report."""
 
@@ -42,4 +43,5 @@ def render_validation_report(
         version=version,
         schema_version=schema_version,
         generated_at=generated_at.isoformat(),
+        analysis_executed=analysis_executed,
     )

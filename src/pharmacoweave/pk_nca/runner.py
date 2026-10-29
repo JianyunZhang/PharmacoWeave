@@ -1,8 +1,7 @@
-"""NCA entry point.
+"""NCA entry point for the locked single-dose IV bolus design.
 
-The config and the result schema are executable checks. The numerical
-calculator is intentionally absent until a reference terminal-phase rule is
-implemented and tested.
+Other designs are rejected. The calculator does not run for sparse sampling,
+urine, steady state, infusion, extravascular absorption, or multiple dosing.
 """
 
 from pathlib import Path
@@ -10,10 +9,13 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
+from pharmacoweave.core.modeling import AnalysisRecords
 from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.core.validation import validate_study
-from pharmacoweave.errors import IngestError, PlannedCapabilityError, ValidationFailed
+from pharmacoweave.errors import IngestError, ValidationFailed
+from pharmacoweave.pk_nca.calculator import calculate_profile
 from pharmacoweave.pk_nca.config import NcaConfig
+from pharmacoweave.pk_profiles import load_iv_bolus_profiles
 
 
 def load_nca_config(path: str | Path) -> NcaConfig:
@@ -34,20 +36,17 @@ def load_nca_config(path: str | Path) -> NcaConfig:
         raise IngestError(f"{selected} is outside the implemented NCA design: {exc}") from exc
 
 
-def run_nca(study: PharmacologyStudy, config: str | Path) -> None:
-    """Validate the study and config, then stop before calculating NCA."""
+def run_nca(study: PharmacologyStudy, config: NcaConfig | str | Path) -> AnalysisRecords:
+    """Calculate NCA for a validated single-dose IV bolus study.
 
-    loaded = load_nca_config(config)
+    The returned records contain one parameter set per concentration profile.
+    Terminal parameters and AUC∞ are absent when their reporting rules fail.
+    BLQ rows on the study are not modified.
+    """
+
+    loaded = config if isinstance(config, NcaConfig) else load_nca_config(config)
     report = validate_study(study)
     if not report.ok:
         raise ValidationFailed(report)
-    raise PlannedCapabilityError(
-        module="pk_nca",
-        phase="P0",
-        detail=(
-            f"Config accepted for {loaded.dosing} {loaded.design_route} {loaded.sampling} "
-            f"with AUC method {loaded.auc_method}. The calculator is not implemented. "
-            "Sparse sampling, urine, steady state, infusion, extravascular absorption, "
-            "and multiple dosing are outside this config."
-        ),
-    )
+    profiles = load_iv_bolus_profiles(study)
+    return AnalysisRecords(nca_parameters=[calculate_profile(profile, loaded) for profile in profiles])

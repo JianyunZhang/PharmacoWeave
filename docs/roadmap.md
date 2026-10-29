@@ -11,11 +11,18 @@
 - 跨项目证据守卫和 NCA 配置拒绝超范围设计。
 - 一室静脉推注解析解。
 
-## Phase 1：第一种 NCA 和一室静脉拟合
+## 已完成：Phase 1 第一种 NCA 和一室静脉拟合（0.1.0）
 
-输入已经由 `configs/nca_single_dose_iv.yaml` 和 `NcaParameterSet` 限定。工作是实现计算器，并用 `tests/numerical_benchmarks/` 里的靶值加上一份外部参考输出做数值测试。拟合只针对一室静脉推注解析解，回收 CL 与 V。终末相不合格、外推过大或不收敛时，相应参数缺席或诊断为失败。
+`run_nca` 只计算 `configs/nca_single_dose_iv.yaml` 锁定的设计：单次静脉推注、连续采血、linear-up/log-down。口服、输注、多次给药和稀疏采样仍然拒绝。
 
-这一阶段开始画浓度–时间图，并让 `analysis_executed` 在真正运行后变为 true。Schema 如需放宽，递增 `schema_version`。
+- 梯形规则、C0 回推和终末相选点有独立参考转录，并与冻结数字比较。容差见 `docs/validation.md`。
+- 终末相少于 3 点或调整 R² 低于 0.90 时，省略 λz、t½ 和 AUC∞。外推比例高于 0.20 时省略 AUC∞、CL 和 Vz。
+- BLQ 保持删失。合成研究的 24 h 点不是 0，也不是定量点。
+- 一室静脉推注拟合回收 CL 与 V。不收敛、贴边界或不可辨识时诊断为失败，估计缺席。
+- 分析路径写出浓度–时间图。分析包的 `analysis_executed` 为 true。只做校验的包仍为 false。
+- `schema_version` 保持 0.1.0。JSON Schema 没有新增字段。
+
+仍延后：PD、DMPK、毒理、群体 PK、PBPK、QSP，以及这些阶段的笔记本。
 
 ## Phase 2：PD、DMPK、毒理和 TheraWeave 往返
 

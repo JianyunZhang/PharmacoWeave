@@ -1,7 +1,7 @@
-"""Diagnostic records.
+"""Diagnostic records and IV bolus figures.
 
-A record can describe a future fit. This package does not draw
-goodness-of-fit figures and cannot mark a fit as acceptable from a metric alone.
+A passing diagnostic still has to state limitations. Figures do not by
+themselves mark a fit as acceptable.
 """
 
 from pharmacoweave.core.modeling import DiagnosticRecord, DiagnosticStatus

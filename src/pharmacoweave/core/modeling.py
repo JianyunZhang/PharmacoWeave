@@ -222,7 +222,7 @@ class NcaParameterSet(Record):
     def reporting_rules(self) -> "NcaParameterSet":
         _pair(self.auc_last, self.auc_last_unit, "auc_last", {AUC_MASS, AUC_AMOUNT})
         _pair(self.cmax, self.cmax_unit, "cmax", {CONC_MASS, CONC_AMOUNT})
-        _pair(self.tmax, self.tmax_unit, "tmax", {TIME})
+        _pair(self.tmax, self.tmax_unit, "tmax", {TIME}, allow_zero=True)
         if not self.terminal_phase_qualified:
             leaked = [
                 name
@@ -301,12 +301,22 @@ def auc_inf_is_reportable(record: NcaParameterSet, *, max_extrapolated_fraction:
     return record.terminal_phase_qualified and record.auc_inf_extrap_fraction <= max_extrapolated_fraction
 
 
-def _pair(value: float | None, unit: str | None, label: str, allowed: set[tuple[int, int, int, int, int]]) -> None:
+def _pair(
+    value: float | None,
+    unit: str | None,
+    label: str,
+    allowed: set[tuple[int, int, int, int, int]],
+    *,
+    allow_zero: bool = False,
+) -> None:
     if value is None and unit is None:
         return
     if value is None or unit is None:
         raise ValueError(f"{label} requires both a value and a unit.")
-    if value <= 0:
+    if allow_zero:
+        if value < 0:
+            raise ValueError(f"{label} must be zero or positive when it is reported.")
+    elif value <= 0:
         raise ValueError(f"{label} must be positive when it is reported.")
     if parse_unit(unit).dimensions not in allowed:
         raise ValueError(f"{label} unit {unit} has the wrong dimension.")

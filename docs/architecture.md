@@ -1,6 +1,6 @@
 # 架构
 
-PharmacoWeave 0.0.1 是一个研究用的数据与证据工具包。计算模块依赖 `core`。`core` 不依赖分析模块。集成模块只依赖已经版本化的证据契约，不导入其他 Weave 项目。
+PharmacoWeave 0.1.0 是研究用的数据与分析工具包。可执行范围是数据契约、锁定设计的 NCA，以及一室静脉推注拟合。计算模块依赖 `core`。数据模型不在导入时依赖分析包；`PharmacologyStudy` 的分析方法在调用时再导入它们。结果包写入器导入校验报告渲染器，以便没有分析时仍能写出 HTML 清单。集成模块只依赖已经版本化的证据契约，不导入其他 Weave 项目。
 
 ```mermaid
 flowchart TB
@@ -8,12 +8,12 @@ flowchart TB
         ingestion[ingestion]
         bioanalysis[bioanalysis]
         core[core]
-    end
-    subgraph partial [契约或部分实现]
         nca[pk_nca]
         models[pk_models]
         diagnostics[diagnostics]
         reporting[reporting]
+    end
+    subgraph partial [部分实现]
         integrations[integrations]
     end
     reserved[pd_models / pkpd / dmpk / toxicology / population_pk / pbpk / qsp / simulation]
@@ -34,7 +34,10 @@ flowchart TB
 2. 单条记录的规则在 Pydantic 模型里执行：时区、剂量维度、BLQ 不得带数值、输注必须有时长。
 3. `study.check` 执行跨记录规则：外键、时钟、LLOQ、基质、身份链接和外部证据。
 4. `export_bundle` 在校验通过后写出新的结果目录。目录已存在时拒绝覆盖。
-5. `run_nca` 先加载配置并校验研究，然后以 `PlannedCapabilityError` 停止。
+5. `export_bundle` 不运行 NCA 或拟合。`analysis_executed` 保持 false。
+6. `run_nca` 加载锁定配置并计算 NCA。超范围设计抛出 `UnsupportedDesign`。
+7. `fit_one_compartment_iv_bolus` 估计 CL 与 V。失败的拟合不写出估计。
+8. `export_analysis_bundle` 或 `pharmacoweave analyze` 写出分析产物，并把 `analysis_executed` 设为 true。
 
 `check` 这个名字是为了避开 `BaseModel.validate`。命令行和 `from_files(..., validate_schema=True)` 仍然表达“做校验”。
 
@@ -52,7 +55,7 @@ flowchart TB
 
 写出的目录包含研究表、实验表、来源、软件版本、运行时、证据、身份链接、校验 JSON 和 HTML 清单。每个文件有 SHA-256。`manifest.json` 自身的摘要写在 `manifest.sha256`。
 
-`analysis_executed` 在本版本恒为 false。NCA、参数、预测、残差、诊断和 PK 报告出现在 `omitted`，并说明缺席原因。缺文件因此表示“没有运行分析”，而不是“分析产生了空表”。
+只做校验时，`analysis_executed` 为 false。NCA、参数、预测、残差、诊断和 PK 报告出现在 `omitted`，并说明缺席原因。分析真正运行后，清单改为 true，并写入实际算出的表和图。失败或按规则省略的产物仍留在 `omitted`，缺文件表示“没有这份结果”，而不是“分析产生了空表”。
 
 `provenance/runtime.json` 记录写出校验包的解释器。它不是密封的分析环境锁；`environment.lock` 也列在 `omitted`。
 

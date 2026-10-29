@@ -1,6 +1,6 @@
 # 跨项目互操作
 
-0.0.1 用文件交换证据。它不安装、不导入 OmicsWeave、TheraWeave 或 EphysWeave。
+0.1.0 仍用文件交换证据。它不安装、不导入 OmicsWeave、TheraWeave 或 EphysWeave。
 
 夹具在 `examples/cross_project_demo/`。
 

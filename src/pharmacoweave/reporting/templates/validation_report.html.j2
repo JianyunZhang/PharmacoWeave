@@ -20,7 +20,12 @@
   <div class="banner">
     <strong>Research use only.</strong>
     This is a data-validation inventory for run <code>{{ run_id }}</code>.
+    {% if analysis_executed %}
+    NCA and the one-compartment IV bolus fit were executed for this run.
+    See <code>reports/analysis_report.html</code>. This inventory is not a dosing recommendation.
+    {% else %}
     NCA, model fitting, and dosing recommendations were not run.
+    {% endif %}
   </div>
   <h1>{{ title }}</h1>
   <p>Study <code>{{ study_id }}</code> · {{ data_class }} · {{ species }}</p>

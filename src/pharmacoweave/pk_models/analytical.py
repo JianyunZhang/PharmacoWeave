@@ -1,7 +1,7 @@
 """Analytical one-compartment IV bolus reference.
 
 These functions generate and check concentrations from known parameters.
-They do not estimate CL or V from data.
+Estimation of CL and V lives in ``pharmacoweave.pk_models.fit``.
 """
 
 import math

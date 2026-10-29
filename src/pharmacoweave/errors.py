@@ -37,3 +37,7 @@ class PlannedCapabilityError(PharmacoWeaveError):
         self.module = module
         self.phase = phase
         super().__init__(f"{module} ({phase}) is not executable in this version. {detail}")
+
+
+class UnsupportedDesign(PharmacoWeaveError):
+    """The study is outside the single design this calculator accepts."""

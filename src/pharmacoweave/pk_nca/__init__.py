@@ -1,7 +1,8 @@
-"""Noncompartmental analysis contracts."""
+"""Noncompartmental analysis for single-dose IV bolus rich sampling."""
 
 from pharmacoweave.core.modeling import NcaParameterSet, auc_inf_is_reportable
 from pharmacoweave.core.roadmap import status
+from pharmacoweave.pk_nca.calculator import calculate_profile
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.pk_nca.runner import load_nca_config, run_nca
 
@@ -12,6 +13,7 @@ __all__ = [
     "NcaParameterSet",
     "STATUS",
     "auc_inf_is_reportable",
+    "calculate_profile",
     "load_nca_config",
     "run_nca",
 ]
