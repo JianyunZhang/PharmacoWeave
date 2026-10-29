@@ -1,0 +1,81 @@
+{
+  "additionalProperties": false,
+  "description": "Reporting rules for single-dose IV bolus rich sampling.\n\nLoading a config does not calculate NCA. Other designs fail validation\nhere so they are not silently passed to a later calculator.",
+  "properties": {
+    "analysis": {
+      "const": "nca",
+      "title": "Analysis",
+      "type": "string"
+    },
+    "design_route": {
+      "const": "iv_bolus",
+      "title": "Design Route",
+      "type": "string"
+    },
+    "dosing": {
+      "const": "single_dose",
+      "title": "Dosing",
+      "type": "string"
+    },
+    "sampling": {
+      "const": "rich_serial",
+      "title": "Sampling",
+      "type": "string"
+    },
+    "auc_method": {
+      "const": "linear_up_log_down",
+      "title": "Auc Method",
+      "type": "string"
+    },
+    "lambda_z_min_points": {
+      "maximum": 20,
+      "minimum": 3,
+      "title": "Lambda Z Min Points",
+      "type": "integer"
+    },
+    "lambda_z_min_adjusted_r2": {
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Lambda Z Min Adjusted R2",
+      "type": "number"
+    },
+    "auc_inf_max_extrapolated_fraction": {
+      "exclusiveMaximum": 1,
+      "exclusiveMinimum": 0,
+      "title": "Auc Inf Max Extrapolated Fraction",
+      "type": "number"
+    },
+    "blq_rule": {
+      "enum": [
+        "keep_as_censored",
+        "exclude"
+      ],
+      "title": "Blq Rule",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "note": {
+      "default": "",
+      "title": "Note",
+      "type": "string"
+    }
+  },
+  "required": [
+    "analysis",
+    "design_route",
+    "dosing",
+    "sampling",
+    "auc_method",
+    "lambda_z_min_points",
+    "lambda_z_min_adjusted_r2",
+    "auc_inf_max_extrapolated_fraction",
+    "blq_rule"
+  ],
+  "title": "NcaConfig",
+  "type": "object"
+}

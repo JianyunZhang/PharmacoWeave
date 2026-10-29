@@ -1,0 +1,2 @@
+link_id,source_project,source_study_id,source_subject_id,canonical_subject_id,match_method,review_status,notes
+LINK-EW-SUBJ-01,ephysweave,EW-SYNTH-001,EW-RAT-A,SUBJ-01,synthetic_protocol,accepted,Synthetic cross-reference. Accepted because this protocol defined the map. Matching text was not treated as identity.

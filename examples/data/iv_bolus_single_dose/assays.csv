@@ -1,0 +1,2 @@
+assay_id,method,analyte_id,matrix,calibration_id,quantitation,lloq,uloq,limit_unit,qc_status
+ASSAY-LCMS-01,LC-MS/MS,PW-0001-PARENT,plasma,CAL-001,concentration,0.01,10,ug/mL,accepted

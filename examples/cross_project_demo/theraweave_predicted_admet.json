@@ -1,0 +1,21 @@
+{
+  "schema_name": "pharmacology-evidence-exchange",
+  "schema_version": "0.1.0",
+  "records": [
+    {
+      "evidence_id": "TW-PRED-001",
+      "source_project": "theraweave",
+      "source_run_id": "tw-demo-run",
+      "source_artifact_id": "admet-prediction-1",
+      "entity_type": "CandidateCompound",
+      "entity_id": "PW-0001",
+      "measurement_type": "clearance",
+      "evidence_type": "predicted",
+      "unit": "L/h",
+      "qc_status": "not_applicable",
+      "claim_type": "predicted_admet",
+      "applicability": "Candidate triage only.",
+      "limitations": ["In silico ADMET prediction. Not a measured clearance."]
+    }
+  ]
+}

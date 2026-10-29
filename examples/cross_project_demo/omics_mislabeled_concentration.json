@@ -1,0 +1,19 @@
+{
+  "schema_name": "pharmacology-evidence-exchange",
+  "schema_version": "0.1.0",
+  "records": [
+    {
+      "evidence_id": "OW-BAD-001",
+      "source_project": "omicsweave",
+      "source_run_id": "ow-demo-run",
+      "entity_type": "FluxObservation",
+      "entity_id": "reaction-demo",
+      "measurement_type": "concentration",
+      "evidence_type": "estimated",
+      "unit": "nmol/L",
+      "qc_status": "not_reviewed",
+      "claim_type": "mislabeled_flux",
+      "limitations": ["This fixture is expected to be rejected."]
+    }
+  ]
+}

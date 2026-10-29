@@ -1,0 +1,26 @@
+{
+  "schema_name": "pharmacology-evidence-exchange",
+  "schema_version": "0.1.0",
+  "records": [
+    {
+      "evidence_id": "EW-NEURAL-001",
+      "source_project": "ephysweave",
+      "source_run_id": "ew-demo-run",
+      "source_artifact_id": "psth-1",
+      "entity_type": "NeuralPDObservation",
+      "entity_id": "psth-1",
+      "measurement_type": "neural_pd_endpoint",
+      "evidence_type": "observed",
+      "qc_status": "accepted",
+      "claim_type": "firing_rate",
+      "subject_id": "EW-RAT-A",
+      "session_id": "SESSION-1",
+      "timebase_id": "PLEXON-CLOCK",
+      "sync_error_ms": 2.5,
+      "numeric_value": 12.0,
+      "unit": "1",
+      "time_context": "Event-aligned firing rate. Not aligned to a PharmacoWeave dose clock.",
+      "limitations": ["Synchronization error is reported and has not been used to shift timestamps."]
+    }
+  ]
+}
