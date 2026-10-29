@@ -1,0 +1,1221 @@
+{
+  "$defs": {
+    "Analyte": {
+      "additionalProperties": false,
+      "description": "What was measured. Parent, metabolite, and biomarker stay distinct.",
+      "properties": {
+        "analyte_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Analyte Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "analyte_role": {
+          "$ref": "#/$defs/AnalyteRole"
+        },
+        "matrix": {
+          "minLength": 1,
+          "title": "Matrix",
+          "type": "string"
+        },
+        "compound_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compound Id"
+        }
+      },
+      "required": [
+        "analyte_id",
+        "name",
+        "analyte_role",
+        "matrix"
+      ],
+      "title": "Analyte",
+      "type": "object"
+    },
+    "AnalyteForm": {
+      "enum": [
+        "total",
+        "free",
+        "parent",
+        "metabolite",
+        "occupancy",
+        "unspecified"
+      ],
+      "title": "AnalyteForm",
+      "type": "string"
+    },
+    "AnalyteRole": {
+      "enum": [
+        "parent",
+        "metabolite",
+        "biomarker",
+        "other"
+      ],
+      "title": "AnalyteRole",
+      "type": "string"
+    },
+    "Assay": {
+      "additionalProperties": false,
+      "description": "Bioanalytical method limits. LLOQ is required for a concentration assay.",
+      "properties": {
+        "assay_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Assay Id",
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "analyte_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Analyte Id",
+          "type": "string"
+        },
+        "matrix": {
+          "minLength": 1,
+          "title": "Matrix",
+          "type": "string"
+        },
+        "quantitation": {
+          "$ref": "#/$defs/AssayQuantitation",
+          "default": "concentration"
+        },
+        "qc_status": {
+          "$ref": "#/$defs/QcStatus",
+          "default": "not_reviewed"
+        },
+        "calibration_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibration Id"
+        },
+        "lloq": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lloq"
+        },
+        "uloq": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uloq"
+        },
+        "limit_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Limit Unit"
+        }
+      },
+      "required": [
+        "assay_id",
+        "method",
+        "analyte_id",
+        "matrix"
+      ],
+      "title": "Assay",
+      "type": "object"
+    },
+    "AssayQuantitation": {
+      "enum": [
+        "concentration",
+        "other"
+      ],
+      "title": "AssayQuantitation",
+      "type": "string"
+    },
+    "Biosample": {
+      "additionalProperties": false,
+      "description": "A collected sample tied to one subject, one clock, and one dose event.",
+      "properties": {
+        "sample_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Sample Id",
+          "type": "string"
+        },
+        "subject_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "collection_time_absolute": {
+          "format": "date-time",
+          "title": "Collection Time Absolute",
+          "type": "string"
+        },
+        "time_since_dose": {
+          "title": "Time Since Dose",
+          "type": "number"
+        },
+        "time_since_dose_unit": {
+          "title": "Time Since Dose Unit",
+          "type": "string"
+        },
+        "dose_event_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Dose Event Id",
+          "type": "string"
+        },
+        "matrix": {
+          "minLength": 1,
+          "title": "Matrix",
+          "type": "string"
+        },
+        "timebase_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Timebase Id",
+          "type": "string"
+        },
+        "is_predose": {
+          "default": false,
+          "title": "Is Predose",
+          "type": "boolean"
+        },
+        "collection_site": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Collection Site"
+        }
+      },
+      "required": [
+        "sample_id",
+        "subject_id",
+        "collection_time_absolute",
+        "time_since_dose",
+        "time_since_dose_unit",
+        "dose_event_id",
+        "matrix",
+        "timebase_id"
+      ],
+      "title": "Biosample",
+      "type": "object"
+    },
+    "Compound": {
+      "additionalProperties": false,
+      "description": "A test article. A TheraWeave id is a cross-reference, not a measurement.",
+      "properties": {
+        "compound_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Compound Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "molecular_weight": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Molecular Weight"
+        },
+        "molecular_weight_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Molecular Weight Unit"
+        },
+        "structure_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Structure Ref"
+        },
+        "formulation_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formulation Ref"
+        },
+        "theraweave_candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Theraweave Candidate Id"
+        }
+      },
+      "required": [
+        "compound_id",
+        "name"
+      ],
+      "title": "Compound",
+      "type": "object"
+    },
+    "DataClass": {
+      "enum": [
+        "synthetic",
+        "preclinical_animal",
+        "clinical",
+        "literature",
+        "other"
+      ],
+      "title": "DataClass",
+      "type": "string"
+    },
+    "DoseEvent": {
+      "additionalProperties": false,
+      "description": "An administered dose. The primary amount is the actual dose, not the plan.",
+      "properties": {
+        "dose_event_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Dose Event Id",
+          "type": "string"
+        },
+        "subject_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "compound_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Compound Id",
+          "type": "string"
+        },
+        "absolute_time": {
+          "format": "date-time",
+          "title": "Absolute Time",
+          "type": "string"
+        },
+        "dose_value": {
+          "exclusiveMinimum": 0,
+          "title": "Dose Value",
+          "type": "number"
+        },
+        "dose_unit": {
+          "title": "Dose Unit",
+          "type": "string"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "formulation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formulation"
+        },
+        "infusion_duration": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Infusion Duration"
+        },
+        "infusion_duration_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Infusion Duration Unit"
+        },
+        "body_weight_normalized_value": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body Weight Normalized Value"
+        },
+        "body_weight_normalized_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body Weight Normalized Unit"
+        }
+      },
+      "required": [
+        "dose_event_id",
+        "subject_id",
+        "compound_id",
+        "absolute_time",
+        "dose_value",
+        "dose_unit",
+        "route"
+      ],
+      "title": "DoseEvent",
+      "type": "object"
+    },
+    "EvidenceQc": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "not_reviewed",
+        "not_applicable"
+      ],
+      "title": "EvidenceQc",
+      "type": "string"
+    },
+    "EvidenceRecord": {
+      "additionalProperties": false,
+      "description": "One claim, with its evidence grade kept on the record.",
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_project": {
+          "$ref": "#/$defs/ProjectName"
+        },
+        "source_run_id": {
+          "minLength": 1,
+          "title": "Source Run Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "minLength": 1,
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "measurement_type": {
+          "minLength": 1,
+          "title": "Measurement Type",
+          "type": "string"
+        },
+        "evidence_type": {
+          "$ref": "#/$defs/EvidenceType"
+        },
+        "qc_status": {
+          "$ref": "#/$defs/EvidenceQc"
+        },
+        "claim_type": {
+          "minLength": 1,
+          "title": "Claim Type",
+          "type": "string"
+        },
+        "schema_name": {
+          "default": "pharmacology-evidence",
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "0.1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Artifact Id"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "time_context": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Context"
+        },
+        "applicability": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicability"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "derived_from": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Derived From",
+          "type": "array"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "timebase_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timebase Id"
+        },
+        "sync_error_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sync Error Ms"
+        },
+        "numeric_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Numeric Value"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_project",
+        "source_run_id",
+        "entity_type",
+        "entity_id",
+        "measurement_type",
+        "evidence_type",
+        "qc_status",
+        "claim_type"
+      ],
+      "title": "EvidenceRecord",
+      "type": "object"
+    },
+    "EvidenceType": {
+      "enum": [
+        "observed",
+        "estimated",
+        "predicted",
+        "literature",
+        "hypothesis"
+      ],
+      "title": "EvidenceType",
+      "type": "string"
+    },
+    "IdentityLink": {
+      "additionalProperties": false,
+      "description": "A reviewed correspondence between a foreign subject id and a study subject.",
+      "properties": {
+        "link_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Link Id",
+          "type": "string"
+        },
+        "source_project": {
+          "$ref": "#/$defs/ProjectName"
+        },
+        "source_study_id": {
+          "minLength": 1,
+          "title": "Source Study Id",
+          "type": "string"
+        },
+        "source_subject_id": {
+          "minLength": 1,
+          "title": "Source Subject Id",
+          "type": "string"
+        },
+        "canonical_subject_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Canonical Subject Id",
+          "type": "string"
+        },
+        "match_method": {
+          "minLength": 3,
+          "title": "Match Method",
+          "type": "string"
+        },
+        "review_status": {
+          "$ref": "#/$defs/ReviewStatus"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "link_id",
+        "source_project",
+        "source_study_id",
+        "source_subject_id",
+        "canonical_subject_id",
+        "match_method",
+        "review_status"
+      ],
+      "title": "IdentityLink",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "description": "One measured result. BLQ, missing, and invalid rows do not carry a number.",
+      "properties": {
+        "observation_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "sample_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Sample Id",
+          "type": "string"
+        },
+        "observation_type": {
+          "$ref": "#/$defs/ObservationType"
+        },
+        "status": {
+          "$ref": "#/$defs/ObservationStatus"
+        },
+        "analyte_form": {
+          "$ref": "#/$defs/AnalyteForm",
+          "default": "unspecified"
+        },
+        "analyte_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Analyte Id"
+        },
+        "raw_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Value"
+        },
+        "reported_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reported Value"
+        },
+        "numeric_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Numeric Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "assay_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assay Id"
+        },
+        "qc_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Qc Flags",
+          "type": "array"
+        },
+        "exclusion_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exclusion Reason"
+        },
+        "replicate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicate Id"
+        },
+        "assay_batch_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assay Batch Id"
+        }
+      },
+      "required": [
+        "observation_id",
+        "sample_id",
+        "observation_type",
+        "status"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "ObservationStatus": {
+      "enum": [
+        "quantified",
+        "BLQ",
+        "above_ULOQ",
+        "missing",
+        "invalid"
+      ],
+      "title": "ObservationStatus",
+      "type": "string"
+    },
+    "ObservationType": {
+      "enum": [
+        "concentration",
+        "effect",
+        "toxicity"
+      ],
+      "title": "ObservationType",
+      "type": "string"
+    },
+    "ProjectName": {
+      "enum": [
+        "pharmacoweave",
+        "omicsweave",
+        "theraweave",
+        "ephysweave",
+        "external"
+      ],
+      "title": "ProjectName",
+      "type": "string"
+    },
+    "QcStatus": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "not_reviewed"
+      ],
+      "title": "QcStatus",
+      "type": "string"
+    },
+    "Quantity": {
+      "additionalProperties": false,
+      "description": "A finite number with an explicit unit.",
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "title": "Quantity",
+      "type": "object"
+    },
+    "ReviewStatus": {
+      "enum": [
+        "unreviewed",
+        "accepted",
+        "rejected"
+      ],
+      "title": "ReviewStatus",
+      "type": "string"
+    },
+    "Route": {
+      "enum": [
+        "iv_bolus",
+        "iv_infusion",
+        "oral",
+        "subcutaneous",
+        "intramuscular",
+        "other"
+      ],
+      "title": "Route",
+      "type": "string"
+    },
+    "Sex": {
+      "enum": [
+        "female",
+        "male",
+        "unknown",
+        "not_applicable"
+      ],
+      "title": "Sex",
+      "type": "string"
+    },
+    "StudyMetadata": {
+      "additionalProperties": false,
+      "description": "Design context for one study. This is not an analysis result.",
+      "properties": {
+        "study_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Study Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "study_type": {
+          "$ref": "#/$defs/StudyType"
+        },
+        "data_class": {
+          "$ref": "#/$defs/DataClass"
+        },
+        "species": {
+          "minLength": 1,
+          "title": "Species",
+          "type": "string"
+        },
+        "design_version": {
+          "minLength": 1,
+          "title": "Design Version",
+          "type": "string"
+        },
+        "timebases": {
+          "items": {
+            "$ref": "#/$defs/Timebase"
+          },
+          "minItems": 1,
+          "title": "Timebases",
+          "type": "array"
+        },
+        "protocol_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Protocol Id"
+        },
+        "ncbi_taxon_id": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ncbi Taxon Id"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "study_id",
+        "title",
+        "study_type",
+        "data_class",
+        "species",
+        "design_version",
+        "timebases"
+      ],
+      "title": "StudyMetadata",
+      "type": "object"
+    },
+    "StudyType": {
+      "enum": [
+        "pk",
+        "pd",
+        "pkpd",
+        "tk",
+        "dmpk",
+        "toxicology",
+        "other"
+      ],
+      "title": "StudyType",
+      "type": "string"
+    },
+    "Subject": {
+      "additionalProperties": false,
+      "description": "One experimental unit. Technical replicates are not subjects.",
+      "properties": {
+        "subject_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "study_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Study Id",
+          "type": "string"
+        },
+        "species": {
+          "minLength": 1,
+          "title": "Species",
+          "type": "string"
+        },
+        "sex": {
+          "$ref": "#/$defs/Sex",
+          "default": "unknown"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Id"
+        },
+        "body_weight": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Quantity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "subject_id",
+        "study_id",
+        "species"
+      ],
+      "title": "Subject",
+      "type": "object"
+    },
+    "Timebase": {
+      "additionalProperties": false,
+      "description": "A named clock. Samples declare which clock their times use.",
+      "properties": {
+        "timebase_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Timebase Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timebase_id",
+        "description"
+      ],
+      "title": "Timebase",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One study in memory.\n\n``from_files`` reads a directory. ``check`` checks foreign keys, clocks,\nassay limits, and evidence boundaries. ``run_nca`` loads an NCA config and\nstops, because the calculator is not part of this version.",
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/StudyMetadata"
+    },
+    "subjects": {
+      "items": {
+        "$ref": "#/$defs/Subject"
+      },
+      "title": "Subjects",
+      "type": "array"
+    },
+    "compounds": {
+      "items": {
+        "$ref": "#/$defs/Compound"
+      },
+      "title": "Compounds",
+      "type": "array"
+    },
+    "analytes": {
+      "items": {
+        "$ref": "#/$defs/Analyte"
+      },
+      "title": "Analytes",
+      "type": "array"
+    },
+    "assays": {
+      "items": {
+        "$ref": "#/$defs/Assay"
+      },
+      "title": "Assays",
+      "type": "array"
+    },
+    "dose_events": {
+      "items": {
+        "$ref": "#/$defs/DoseEvent"
+      },
+      "title": "Dose Events",
+      "type": "array"
+    },
+    "biosamples": {
+      "items": {
+        "$ref": "#/$defs/Biosample"
+      },
+      "title": "Biosamples",
+      "type": "array"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/Observation"
+      },
+      "title": "Observations",
+      "type": "array"
+    },
+    "identity_links": {
+      "items": {
+        "$ref": "#/$defs/IdentityLink"
+      },
+      "title": "Identity Links",
+      "type": "array"
+    },
+    "external_evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRecord"
+      },
+      "title": "External Evidence",
+      "type": "array"
+    }
+  },
+  "required": [
+    "metadata"
+  ],
+  "title": "PharmacologyStudy",
+  "type": "object"
+}

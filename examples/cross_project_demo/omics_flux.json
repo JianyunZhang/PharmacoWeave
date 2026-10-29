@@ -1,0 +1,19 @@
+{
+  "schema_name": "pharmacology-evidence-exchange",
+  "schema_version": "0.1.0",
+  "records": [
+    {
+      "evidence_id": "OW-FLUX-001",
+      "source_project": "omicsweave",
+      "source_run_id": "ow-demo-run",
+      "source_artifact_id": "mfa-reaction-1",
+      "entity_type": "FluxObservation",
+      "entity_id": "reaction-demo",
+      "measurement_type": "flux",
+      "evidence_type": "estimated",
+      "qc_status": "not_reviewed",
+      "claim_type": "metabolic_flux",
+      "limitations": ["A metabolic flux is not a drug concentration or a clearance."]
+    }
+  ]
+}

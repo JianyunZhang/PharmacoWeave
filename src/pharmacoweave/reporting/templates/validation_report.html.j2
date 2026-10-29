@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PharmacoWeave validation report — {{ study_id }}</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 2rem auto; max-width: 52rem; font: 16px/1.5 "Segoe UI", Helvetica, Arial, sans-serif; color: #1c2834; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.8rem; }
+    p, li { color: #243140; }
+    .banner { background: #e8f3f4; border-left: 4px solid #0f6f78; padding: 0.8rem 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 0.6rem; }
+    th, td { border-bottom: 1px solid #d5dee5; text-align: left; padding: 0.35rem 0.5rem; vertical-align: top; }
+    th { font-size: 0.85rem; color: #486070; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <strong>Research use only.</strong>
+    This is a data-validation inventory for run <code>{{ run_id }}</code>.
+    NCA, model fitting, and dosing recommendations were not run.
+  </div>
+  <h1>{{ title }}</h1>
+  <p>Study <code>{{ study_id }}</code> · {{ data_class }} · {{ species }}</p>
+  <p>{{ description }}</p>
+  <h2>Inventory</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Count</th></tr></thead>
+    <tbody>
+      {% for key, value in counts.items() %}
+      <tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h2>Validation</h2>
+  <p>{{ summary }}</p>
+  {% if issues %}
+  <table>
+    <thead><tr><th>Severity</th><th>Code</th><th>Record</th><th>Message</th></tr></thead>
+    <tbody>
+      {% for issue in issues %}
+      <tr>
+        <td>{{ issue.severity }}</td>
+        <td><code>{{ issue.code }}</code></td>
+        <td>{{ issue.entity_id or "" }}</td>
+        <td>{{ issue.message }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No validation errors or warnings.</p>
+  {% endif %}
+  <h2>Not in this bundle</h2>
+  <ul>
+    {% for item in omitted %}
+    <li><code>{{ item.role }}</code>: {{ item.reason }}</li>
+    {% endfor %}
+  </ul>
+  <h2>Software</h2>
+  <p>PharmacoWeave {{ version }}, schema {{ schema_version }}, written {{ generated_at }}.</p>
+</body>
+</html>

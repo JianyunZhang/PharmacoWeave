@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: PharmacoWeave
+message: >-
+  If you use this software, cite the repository. This version is a research-use
+  data contract and does not by itself support a regulatory submission.
+type: software
+authors:
+  - name: JianyunZhang
+    email: zhangjianyun1997@gmail.com
+repository-code: https://github.com/JianyunZhang/PharmacoWeave
+version: 0.0.1
+license: MIT
+date-released: "2026-10-29"

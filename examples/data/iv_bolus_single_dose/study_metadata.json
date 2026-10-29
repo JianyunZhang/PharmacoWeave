@@ -1,0 +1,18 @@
+{
+  "study_id": "PW-SYNTH-IV-001",
+  "title": "Synthetic single-dose IV bolus plasma PK",
+  "study_type": "pk",
+  "data_class": "synthetic",
+  "species": "Rattus norvegicus",
+  "design_version": "1",
+  "timebases": [
+    {
+      "timebase_id": "STUDY-CLOCK",
+      "description": "Synthetic protocol clock, UTC."
+    }
+  ],
+  "protocol_id": "SYNTH-PROTOCOL-001",
+  "ncbi_taxon_id": 10116,
+  "description": "Noise-free synthetic plasma concentrations for a one-compartment IV bolus. Both subjects use CL = 0.20 L/h/kg and V = 1.0 L/kg. The 24 h sample is below the 0.01 ug/mL LLOQ and is stored as BLQ. This is not an animal experiment and not a dosing recommendation.",
+  "research_use_only": true
+}

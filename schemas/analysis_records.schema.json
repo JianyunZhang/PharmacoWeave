@@ -1,0 +1,737 @@
+{
+  "$defs": {
+    "DiagnosticRecord": {
+      "additionalProperties": false,
+      "description": "A model diagnostic. Pass requires limitations to be written down.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/DiagnosticStatus"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fit_id",
+        "status"
+      ],
+      "title": "DiagnosticRecord",
+      "type": "object"
+    },
+    "DiagnosticStatus": {
+      "enum": [
+        "not_run",
+        "pass",
+        "warning",
+        "fail"
+      ],
+      "title": "DiagnosticStatus",
+      "type": "string"
+    },
+    "ErrorModel": {
+      "enum": [
+        "additive",
+        "proportional",
+        "combined",
+        "unspecified"
+      ],
+      "title": "ErrorModel",
+      "type": "string"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "One named diagnostic number.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "ModelFit": {
+      "additionalProperties": false,
+      "description": "One fit against one dataset. Fits are appended, not overwritten.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "dataset_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "software_version": {
+          "minLength": 1,
+          "title": "Software Version",
+          "type": "string"
+        },
+        "estimation_method": {
+          "minLength": 1,
+          "title": "Estimation Method",
+          "type": "string"
+        },
+        "context_of_use": {
+          "minLength": 10,
+          "title": "Context Of Use",
+          "type": "string"
+        },
+        "diagnostic_status": {
+          "$ref": "#/$defs/DiagnosticStatus",
+          "default": "not_run"
+        },
+        "converged": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Converged"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fit_id",
+        "model_id",
+        "dataset_id",
+        "software_version",
+        "estimation_method",
+        "context_of_use"
+      ],
+      "title": "ModelFit",
+      "type": "object"
+    },
+    "ModelSpec": {
+      "additionalProperties": false,
+      "description": "A named structural model and the question it is allowed to answer.",
+      "properties": {
+        "model_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "model_type": {
+          "minLength": 1,
+          "title": "Model Type",
+          "type": "string"
+        },
+        "equations_ref": {
+          "minLength": 1,
+          "title": "Equations Ref",
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Parameters",
+          "type": "array"
+        },
+        "error_model": {
+          "$ref": "#/$defs/ErrorModel"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "question_of_interest": {
+          "minLength": 10,
+          "title": "Question Of Interest",
+          "type": "string"
+        },
+        "context_of_use": {
+          "minLength": 10,
+          "title": "Context Of Use",
+          "type": "string"
+        },
+        "estimation_implemented": {
+          "default": false,
+          "title": "Estimation Implemented",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id",
+        "model_type",
+        "equations_ref",
+        "parameters",
+        "error_model",
+        "assumptions",
+        "question_of_interest",
+        "context_of_use"
+      ],
+      "title": "ModelSpec",
+      "type": "object"
+    },
+    "NcaParameterSet": {
+      "additionalProperties": false,
+      "description": "NCA parameters that are allowed to be reported for one subject profile.",
+      "properties": {
+        "subject_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "analyte_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Analyte Id",
+          "type": "string"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "dose_event_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Dose Event Id",
+          "type": "string"
+        },
+        "auc_method": {
+          "minLength": 1,
+          "title": "Auc Method",
+          "type": "string"
+        },
+        "terminal_phase_qualified": {
+          "title": "Terminal Phase Qualified",
+          "type": "boolean"
+        },
+        "auc_last": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Last"
+        },
+        "auc_last_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Last Unit"
+        },
+        "auc_inf": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Inf"
+        },
+        "auc_inf_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Inf Unit"
+        },
+        "auc_inf_extrap_fraction": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Inf Extrap Fraction"
+        },
+        "cmax": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cmax"
+        },
+        "cmax_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cmax Unit"
+        },
+        "tmax": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tmax"
+        },
+        "tmax_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tmax Unit"
+        },
+        "lambda_z": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lambda Z"
+        },
+        "lambda_z_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lambda Z Unit"
+        },
+        "half_life": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Half Life"
+        },
+        "half_life_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Half Life Unit"
+        },
+        "terminal_phase_n_points": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Phase N Points"
+        },
+        "terminal_phase_adjusted_r2": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Phase Adjusted R2"
+        },
+        "clearance_semantic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterSemantic"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clearance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clearance"
+        },
+        "clearance_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clearance Unit"
+        },
+        "volume_semantic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParameterSemantic"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "volume": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Volume"
+        },
+        "volume_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Volume Unit"
+        },
+        "excluded_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Excluded Reason"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "subject_id",
+        "analyte_id",
+        "route",
+        "dose_event_id",
+        "auc_method",
+        "terminal_phase_qualified"
+      ],
+      "title": "NcaParameterSet",
+      "type": "object"
+    },
+    "ParameterEstimate": {
+      "additionalProperties": false,
+      "description": "A parameter from a fit, including the route that fixes its meaning.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "parameter": {
+          "minLength": 1,
+          "title": "Parameter",
+          "type": "string"
+        },
+        "semantic": {
+          "$ref": "#/$defs/ParameterSemantic"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "estimation_method": {
+          "minLength": 1,
+          "title": "Estimation Method",
+          "type": "string"
+        },
+        "route": {
+          "$ref": "#/$defs/Route"
+        },
+        "standard_error": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Standard Error"
+        },
+        "ci_lower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci Lower"
+        },
+        "ci_upper": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci Upper"
+        },
+        "ci_level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci Level"
+        },
+        "bound_hit": {
+          "default": false,
+          "title": "Bound Hit",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "fit_id",
+        "parameter",
+        "semantic",
+        "value",
+        "unit",
+        "estimation_method",
+        "route"
+      ],
+      "title": "ParameterEstimate",
+      "type": "object"
+    },
+    "ParameterSemantic": {
+      "enum": [
+        "CL",
+        "CL_over_F",
+        "V",
+        "V_over_F",
+        "Vz",
+        "Vz_over_F",
+        "V1",
+        "V2",
+        "Q",
+        "ka",
+        "kel",
+        "k12",
+        "k21",
+        "half_life",
+        "F"
+      ],
+      "title": "ParameterSemantic",
+      "type": "string"
+    },
+    "Route": {
+      "enum": [
+        "iv_bolus",
+        "iv_infusion",
+        "oral",
+        "subcutaneous",
+        "intramuscular",
+        "other"
+      ],
+      "title": "Route",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable analysis records. An empty document means no analysis ran.",
+  "properties": {
+    "model_specs": {
+      "items": {
+        "$ref": "#/$defs/ModelSpec"
+      },
+      "title": "Model Specs",
+      "type": "array"
+    },
+    "model_fits": {
+      "items": {
+        "$ref": "#/$defs/ModelFit"
+      },
+      "title": "Model Fits",
+      "type": "array"
+    },
+    "parameter_estimates": {
+      "items": {
+        "$ref": "#/$defs/ParameterEstimate"
+      },
+      "title": "Parameter Estimates",
+      "type": "array"
+    },
+    "nca_parameters": {
+      "items": {
+        "$ref": "#/$defs/NcaParameterSet"
+      },
+      "title": "Nca Parameters",
+      "type": "array"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/DiagnosticRecord"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "schema_name": {
+      "default": "pharmacology-analysis-records",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "AnalysisRecords",
+  "type": "object"
+}

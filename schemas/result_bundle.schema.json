@@ -1,0 +1,218 @@
+{
+  "$defs": {
+    "BundleFile": {
+      "additionalProperties": false,
+      "description": "One file inside a bundle, hashed from the bytes that were written.",
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "role",
+        "sha256",
+        "media_type"
+      ],
+      "title": "BundleFile",
+      "type": "object"
+    },
+    "OmittedArtifact": {
+      "additionalProperties": false,
+      "description": "A planned artifact that this run deliberately did not write.",
+      "properties": {
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "reason"
+      ],
+      "title": "OmittedArtifact",
+      "type": "object"
+    },
+    "Producer": {
+      "additionalProperties": false,
+      "description": "The software that wrote a bundle.",
+      "properties": {
+        "software": {
+          "const": "PharmacoWeave",
+          "default": "PharmacoWeave",
+          "title": "Software",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "Producer",
+      "type": "object"
+    },
+    "SourceBundleRef": {
+      "additionalProperties": false,
+      "description": "A pointer to an upstream bundle. The upstream payload is not copied.",
+      "properties": {
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_project": {
+          "minLength": 1,
+          "title": "Source Project",
+          "type": "string"
+        },
+        "source_run_id": {
+          "minLength": 1,
+          "title": "Source Run Id",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_name",
+        "schema_version",
+        "source_project",
+        "source_run_id",
+        "uri"
+      ],
+      "title": "SourceBundleRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Index of a pharmacology result bundle.",
+  "properties": {
+    "run_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "study_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Study Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "producer": {
+      "$ref": "#/$defs/Producer"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/BundleFile"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "data": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Data",
+      "type": "object"
+    },
+    "omitted": {
+      "items": {
+        "$ref": "#/$defs/OmittedArtifact"
+      },
+      "title": "Omitted",
+      "type": "array"
+    },
+    "analysis_executed": {
+      "title": "Analysis Executed",
+      "type": "boolean"
+    },
+    "source_bundles": {
+      "items": {
+        "$ref": "#/$defs/SourceBundleRef"
+      },
+      "title": "Source Bundles",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "schema_name": {
+      "const": "pharmacology-result-bundle",
+      "default": "pharmacology-result-bundle",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "quality_status": {
+      "const": "research_only",
+      "default": "research_only",
+      "title": "Quality Status",
+      "type": "string"
+    },
+    "provenance": {
+      "default": "provenance/source_files.json",
+      "title": "Provenance",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "study_id",
+    "created_at",
+    "producer",
+    "files",
+    "data",
+    "omitted",
+    "analysis_executed"
+  ],
+  "title": "ResultBundleManifest",
+  "type": "object"
+}

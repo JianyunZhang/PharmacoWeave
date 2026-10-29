@@ -1,0 +1,14 @@
+schema_version: "0.1.0"
+analysis: nca
+design_route: iv_bolus
+dosing: single_dose
+sampling: rich_serial
+auc_method: linear_up_log_down
+lambda_z_min_points: 3
+lambda_z_min_adjusted_r2: 0.90
+auc_inf_max_extrapolated_fraction: 0.20
+blq_rule: keep_as_censored
+note: >
+  Phase 0 configuration for the first NCA design. Loading this file does not
+  calculate NCA parameters. The 0.20 extrapolated-fraction value is a reporting
+  flag for AUC infinity, not proof that a larger extrapolation is impossible.
