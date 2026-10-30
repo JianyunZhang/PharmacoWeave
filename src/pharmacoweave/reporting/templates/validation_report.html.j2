@@ -20,8 +20,10 @@
   <div class="banner">
     <strong>Research use only.</strong>
     This is a research-use report for run <code>{{ run_id }}</code>.
-    {% if nca_rows %}
-    Single-dose IV bolus NCA was run. It is not a dosing recommendation.
+    {% if nca_rows or fit_rows %}
+    {% if nca_rows %}Single-dose IV bolus NCA was run.{% endif %}
+    {% if fit_rows %}A one-compartment IV bolus fit was run.{% endif %}
+    It is not a dosing recommendation.
     {% else %}
     NCA, model fitting, and dosing recommendations were not run.
     {% endif %}
@@ -83,6 +85,34 @@
       {% endfor %}
     </tbody>
   </table>
+  {% endif %}
+  {% if fit_rows %}
+  <h2>IV bolus fit</h2>
+  <p>CL and V are blank when the diagnostic status is fail. BLQ concentrations are omitted and are not plotted as zero.</p>
+  <table>
+    <thead>
+      <tr><th>Subject</th><th>Method</th><th>Status</th><th>CL (L/h)</th><th>V (L)</th></tr>
+    </thead>
+    <tbody>
+      {% for row in fit_rows %}
+      <tr>
+        <td>{{ row.subject_id }}</td>
+        <td><code>{{ row.method }}</code></td>
+        <td>{{ row.status }}</td>
+        <td>{{ row.clearance }}</td>
+        <td>{{ row.volume }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if goodness_of_fit_svg %}
+  <h2>Observed vs predicted</h2>
+  {{ goodness_of_fit_svg | safe }}
+  {% endif %}
+  {% if residual_diagnostics_svg %}
+  <h2>Residual vs time</h2>
+  {{ residual_diagnostics_svg | safe }}
+  {% endif %}
   {% endif %}
   <h2>Not in this bundle</h2>
   <ul>

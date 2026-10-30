@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -100,12 +101,13 @@ class PharmacologyStudy(Record):
         run_id: str,
         mode: str = "research",
         nca_parameters: list[NcaParameterSet] | None = None,
+        fits: Sequence[object] | None = None,
     ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
         from pharmacoweave.core.bundle import export_bundle
 
-        return export_bundle(self, path, run_id=run_id, mode=mode, nca_parameters=nca_parameters)
+        return export_bundle(self, path, run_id=run_id, mode=mode, nca_parameters=nca_parameters, fits=fits)
 
     def run_nca(self, config: str | Path) -> list[NcaParameterSet]:
         """Run single-dose IV bolus NCA. The study must already validate."""

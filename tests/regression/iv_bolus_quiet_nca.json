@@ -1,0 +1,99 @@
+{
+  "reference_id": "iv_bolus_quiet_nca_v1",
+  "pharmacoweave_case": "examples/data/iv_bolus_single_dose and examples.iv_bolus_case.build_study",
+  "computed_with": "Independent decimal arithmetic at 50 digits, following linear-up/log-down, log-linear C0 through the first two quantified points, and terminal rule pharmacoweave.lambda_z.adjusted_r2.v1. This file was not produced by importing PharmacoWeave, PKNCA, Phoenix, or any other NCA package.",
+  "auc_method": "linear_up_log_down",
+  "terminal_phase_rule": "pharmacoweave.lambda_z.adjusted_r2.v1",
+  "lambda_z_min_points": 3,
+  "lambda_z_min_adjusted_r2": "0.90",
+  "blq_rule": "omitted, not replaced with zero",
+  "concentration_note": "Stored ug/mL values are numerically equal to mg/L. Both subjects share this curve.",
+  "omitted_observations": [
+    {
+      "time_min": "-5",
+      "status": "BLQ",
+      "reason": "predose"
+    },
+    {
+      "time_min": "1440",
+      "status": "BLQ",
+      "reason": "below LLOQ 0.01 ug/mL; numeric_value is absent, not zero"
+    }
+  ],
+  "quantified_concentrations_mg_l": [
+    {
+      "time_h": "0.083333333333333333333333333333333333333333333333333",
+      "concentration": "0.983471"
+    },
+    {
+      "time_h": "0.25",
+      "concentration": "0.951229"
+    },
+    {
+      "time_h": "0.5",
+      "concentration": "0.904837"
+    },
+    {
+      "time_h": "1",
+      "concentration": "0.818731"
+    },
+    {
+      "time_h": "2",
+      "concentration": "0.670320"
+    },
+    {
+      "time_h": "4",
+      "concentration": "0.449329"
+    },
+    {
+      "time_h": "8",
+      "concentration": "0.201897"
+    },
+    {
+      "time_h": "12",
+      "concentration": "0.090718"
+    }
+  ],
+  "shared_parameters": {
+    "c0_mg_l": "9.99999530959625306678e-1",
+    "auc_last_mg_h_l": "4.54641228426569877312e+0",
+    "auc_inf_mg_h_l": "5.00000260884387550412e+0",
+    "auc_inf_extrap_fraction": "9.07180175818064329668e-2",
+    "lambda_z_per_h": "1.99999856884876443142e-1",
+    "half_life_h": "3.46573838279761089621e+0",
+    "cmax_mg_l": "0.983471",
+    "tmax_h": "0.083333333333333333333333333333333333333333333333333",
+    "terminal_phase_n_points": 8,
+    "terminal_phase_adjusted_r2": "9.99999999999217756099e-1"
+  },
+  "subjects": [
+    {
+      "subject_id": "SUBJ-01",
+      "dose_mg": "0.25",
+      "clearance_l_h": "4.99999739115748570844e-2",
+      "volume_l": "2.50000048451813402431e-1"
+    },
+    {
+      "subject_id": "SUBJ-02",
+      "dose_mg": "0.30",
+      "clearance_l_h": "5.99999686938898285013e-2",
+      "volume_l": "3.00000058142176082917e-1"
+    }
+  ],
+  "acceptance": {
+    "relative": {
+      "auc_last": 1e-09,
+      "auc_inf": 1e-09,
+      "auc_inf_extrap_fraction": 1e-09,
+      "lambda_z": 1e-09,
+      "half_life": 1e-09,
+      "clearance": 1e-09,
+      "volume": 1e-09,
+      "terminal_phase_adjusted_r2": 1e-09,
+      "cmax": 1e-12
+    },
+    "absolute": {
+      "tmax_h": 1e-12
+    }
+  }
+}

@@ -21,8 +21,11 @@ def render_validation_report(
     version: str,
     schema_version: str,
     nca_parameters: list[NcaParameterSet] | None = None,
+    fit_rows: list[dict[str, str]] | None = None,
+    goodness_of_fit_svg: str | None = None,
+    residual_diagnostics_svg: str | None = None,
 ) -> str:
-    """Render the validation inventory, plus NCA rows when a calculation was run."""
+    """Render the validation inventory, plus NCA or fit rows when that analysis was run."""
 
     environment = Environment(
         loader=PackageLoader("pharmacoweave.reporting", "templates"),
@@ -45,6 +48,9 @@ def render_validation_report(
         schema_version=schema_version,
         generated_at=generated_at.isoformat(),
         nca_rows=[_nca_row(record) for record in nca_parameters or []],
+        fit_rows=fit_rows or [],
+        goodness_of_fit_svg=goodness_of_fit_svg,
+        residual_diagnostics_svg=residual_diagnostics_svg,
     )
 
 

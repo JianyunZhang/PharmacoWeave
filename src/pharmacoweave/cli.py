@@ -24,8 +24,19 @@ def main(argv: list[str] | None = None) -> int:
     nca = commands.add_parser("nca", help="Run single-dose IV bolus NCA")
     nca.add_argument("study_dir", type=Path)
     nca.add_argument("--config", type=Path, required=True)
-    nca.add_argument("--bundle", type=Path, help="Write a bundle that includes the NCA tables")
+    nca.add_argument(
+        "--bundle",
+        type=Path,
+        help="Write a bundle with the NCA tables, the log-linear IV bolus fit, and residual figures",
+    )
     nca.add_argument("--run-id")
+
+    fit = commands.add_parser("fit", help="Fit a one-compartment IV bolus for CL and V")
+    fit.add_argument("study_dir", type=Path)
+    fit.add_argument("--method", choices=("log_linear_ols", "weighted_nls"), default="log_linear_ols")
+    fit.add_argument("--weight", choices=("1/y", "1/y^2"), default="1/y^2")
+    fit.add_argument("--bundle", type=Path, help="Write a bundle that includes the fit and residual figures")
+    fit.add_argument("--run-id")
 
     commands.add_parser("capabilities", help="Show which modules can execute")
     export = commands.add_parser("export-schemas", help="Write JSON Schema files from the data contracts")
@@ -37,6 +48,14 @@ def main(argv: list[str] | None = None) -> int:
             return _validate(args.study_dir, strict=args.strict, bundle=args.bundle, run_id=args.run_id)
         if args.command == "nca":
             return _nca(args.study_dir, config=args.config, bundle=args.bundle, run_id=args.run_id)
+        if args.command == "fit":
+            return _fit(
+                args.study_dir,
+                method=args.method,
+                weight=args.weight,
+                bundle=args.bundle,
+                run_id=args.run_id,
+            )
         if args.command == "capabilities":
             return _capabilities()
         if args.command == "export-schemas":
@@ -73,9 +92,33 @@ def _nca(study_dir: Path, *, config: Path, bundle: Path | None, run_id: str | No
             f"{row.subject_id}\tAUC_inf={row.auc_inf}\tCL={row.clearance}\thalf_life={row.half_life}\tVz={row.volume}"
         )
     if bundle is not None:
+        from pharmacoweave.pk_models.fit_iv import fit_iv_bolus
+
         selected_run = run_id or f"{study.metadata.study_id}-nca"
-        study.export_bundle(bundle, run_id=selected_run, nca_parameters=results)
+        study.export_bundle(bundle, run_id=selected_run, nca_parameters=results, fits=fit_iv_bolus(study))
         print(f"Wrote NCA bundle to {bundle}")
+    return 0
+
+
+def _fit(study_dir: Path, *, method: str, weight: str, bundle: Path | None, run_id: str | None) -> int:
+    from pharmacoweave.core.study import PharmacologyStudy
+    from pharmacoweave.pk_models.fit_iv import fit_iv_bolus
+    from pharmacoweave.pk_models.wnls import fit_iv_bolus_wnls
+
+    study = PharmacologyStudy.from_files(study_dir)
+    fits = fit_iv_bolus(study) if method == "log_linear_ols" else fit_iv_bolus_wnls(study, weight=weight)
+    for item in fits:
+        values = {estimate.parameter: estimate.value for estimate in item.estimates}
+        clearance = "" if "CL" not in values else f"{values['CL']:.6g}"
+        volume = "" if "V" not in values else f"{values['V']:.6g}"
+        print(
+            f"{item.subject_id}\tmethod={item.fit.estimation_method}\t"
+            f"status={item.diagnostic.status.value}\tCL={clearance}\tV={volume}"
+        )
+    if bundle is not None:
+        selected_run = run_id or f"{study.metadata.study_id}-fit"
+        study.export_bundle(bundle, run_id=selected_run, fits=fits)
+        print(f"Wrote fit bundle to {bundle}")
     return 0
 
 

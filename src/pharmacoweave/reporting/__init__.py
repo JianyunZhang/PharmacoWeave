@@ -1,7 +1,7 @@
-"""Validation reports.
+"""Validation reports and SVG figures.
 
-The HTML writer inventories data and validation findings. It does not report
-NCA parameters or model estimates.
+The HTML writer inventories data and validation findings. NCA rows and IV bolus
+fit figures are included only when that analysis was run.
 """
 
 from pharmacoweave.core.roadmap import status
