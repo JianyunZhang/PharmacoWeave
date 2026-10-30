@@ -1,6 +1,6 @@
 # 跨项目互操作
 
-0.0.1 用文件交换证据。它不安装、不导入 OmicsWeave、TheraWeave 或 EphysWeave。
+0.0.4 用文件交换证据。它不安装、不导入 OmicsWeave、TheraWeave 或 EphysWeave。PharmacoWeave 自己的证据必须带 `derived_from`。
 
 夹具在 `examples/cross_project_demo/`。
 
@@ -18,6 +18,12 @@
 study.attach_candidates("examples/cross_project_demo/theraweave_predicted_admet.json")
 ```
 
+## PharmacologyEvidence 往返
+
+`pharmacoweave.integrations.evidence_from_nca` 把可报告的 NCA 参数写成 `evidence_type=estimated`。外推比例超过报告上限时不写出 AUC∞。`evidence_from_emax` 把 Emax 和 EC50 写成 estimated，把曲线上的效应写成 predicted。`evidence_from_adme` 使用 `permeability`、`microsomal_clearance` 或 `hepatocyte_clearance`，不用 `clearance`。未测量的体外行不产生数值证据。`evidence_from_tox` 的适用范围写明这不是临床给药建议。
+
+`round_trip_exchange` 把交换文件转成 JSON 再读回。预测清除率不会变成 estimated 或 observed。`promote_to_observation` 仍然一律拒绝。
+
 ## 会被拒绝的内容
 
 - 把 OmicsWeave 通量标成 `measurement_type=concentration`（`omics_mislabeled_concentration.json`）。
@@ -26,6 +32,8 @@ study.attach_candidates("examples/cross_project_demo/theraweave_predicted_admet.
 - 预测、文献或假设使用 `qc_status=accepted`。
 - 缺少 `sync_error_ms` 或 `timebase_id` 的电生理终点（`ephys_missing_sync.json`）。程序不会在时钟基准缺失时插值。
 - 把任意证据记录提升为 `Observation`。
+- PharmacoWeave 证据缺少 `derived_from`。
+- 把预测效应写成 `EffectObservation`。
 
 ## 身份
 

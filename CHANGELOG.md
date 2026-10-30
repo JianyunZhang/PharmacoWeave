@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.4 — 2026-10-30
+
+- 效应观测记录时间尺度和量纲，并保持实测与预测分开。直接效应 Emax（基线固定、Hill 系数为 1）在无噪声合成曲线上回收 Emax 和 EC50。点数不足、效应平坦、效应等于基线，或方向与 Emax 符号相反时诊断为失败，不输出 EC50。AUC 和 Cmax 不能当作直接效应的浓度。BLQ 不替换成 0。滞后和间接反应不估计。
+- 增加体外通透性、微粒体清除率和肝细胞清除率记录。血浆清除率单位会被拒绝。本版本不把这些结果换算成体内 CL。
+- 增加研究用毒理终点。记录可以链接剂量或暴露，调用给药建议会失败。
+- PharmacologyEvidence 用 `derived_from` 引用暴露或分析来源。预测与实测在 JSON 往返后等级不变。不导入 TheraWeave、OmicsWeave 或 EphysWeave。
+
 ## 0.0.3 — 2026-10-30
 
 - 一室静脉推注拟合写出观测值–预测值和残差–时间 SVG。BLQ 不画成 0。`pharmacoweave nca --bundle` 和 `pharmacoweave fit --bundle` 把这两张图写入结果包的 `figures/`。

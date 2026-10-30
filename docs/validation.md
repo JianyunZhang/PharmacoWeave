@@ -1,6 +1,6 @@
 # 验证
 
-0.0.3 验证数据契约、单次静脉推注 NCA、一室静脉推注的对数线性拟合、加权非线性最小二乘，以及该拟合的残差图。
+0.0.4 在 0.0.3 的静脉推注 NCA、对数线性拟合、加权非线性最小二乘和残差图之上，验证直接效应 Emax、体外 ADME 记录、研究用毒理终点，以及带 `derived_from` 的证据往返。
 
 ## 已自动执行的检查
 
@@ -72,6 +72,26 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 `examples/data/iv_bolus_noisy/` 是另一条合成曲线：剂量 1 mg，CL = 0.40 L/h，V = 2.0 L，定量点为 `C(t) * exp(0.10 * z)` 的一次抽样（`random.Random(20261030)`，保留 8 位小数）。24 h 仍是 BLQ。`1/y` 和 `1/y^2` 加权非线性最小二乘都必须在 **相对误差 10%** 以内回收 CL 和 V。对数线性拟合在同一条曲线上也不失败。浓度随时间上升、采样时间没有变化，或定量点少于 3 个时，诊断为 `fail`，估计值为空，不输出清除率。
 
 拟合随结果包写出时，`figures/goodness_of_fit.svg` 是观测值对预测值，`figures/residual_diagnostics.svg` 是残差对时间。非正浓度不会画成坐标原点上的点。
+
+## 0.0.4 直接效应、体外 ADME、毒理和证据
+
+`examples/direct_effect_and_evidence.py` 是一条无噪声直接效应曲线：E0 = 10 percent，Emax = 80 percent，EC50 = 8 mg/L，Hill = 1。浓度是 1、5、10、20、40 mg/L。`tests/numerical_benchmarks/test_direct_emax.py` 要求 Emax 和 EC50 的相对误差不超过 **1e-8**。预测点的 `evidence_grade` 必须是 predicted。
+
+失败时不输出 EC50，检查在 `tests/unit/test_emax.py`：
+
+- 定量浓度–效应对少于 3 个
+- 效应不随浓度变化，或浓度不变化
+- 有效应等于固定基线
+- 声明方向为 increase，但 Emax 不是正数
+- 量化的直接效应指向 AUC 或 Cmax
+- BLQ 效应不写成 0
+- `estimate_hill`、`fit_effect_lag`、`fit_indirect_response` 拒绝估计
+
+体外记录接受 `cm/s`、`uL/min/mg_protein` 和 `uL/min/million_cells`。`L/h` 和未写明蛋白质量的 `uL/min/mg` 被拒绝。`not_measured` 不能带数值。`scale_to_in_vivo_clearance` 始终失败。
+
+毒理终点必须链接 `dose_event_id` 或 `exposure_ref`。发生率的分子不能大于分母。剂量单位不能当作终点数值。`dosing_recommendation` 失败。
+
+证据往返后，TheraWeave 的 predicted clearance 仍是 predicted，NCA 的 clearance 仍是 estimated。PharmacoWeave 自己的证据没有 `derived_from` 时会被拒绝。实测 clearance 不能从证据交换进入观测表。未测量的体外行不会变成一个清除率数字。
 
 ## 明确不做的符合性声明
 

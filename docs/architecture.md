@@ -1,6 +1,6 @@
 # 架构
 
-PharmacoWeave 0.0.1 是一个研究用的数据与证据工具包。计算模块依赖 `core`。`core` 不依赖分析模块。集成模块只依赖已经版本化的证据契约，不导入其他 Weave 项目。
+PharmacoWeave 0.0.4 是一个研究用的数据与证据工具包。计算模块依赖 `core`。`core` 不依赖分析模块。集成模块导出证据并做文件级守卫，不导入其他 Weave 项目。
 
 ```mermaid
 flowchart TB
@@ -12,16 +12,24 @@ flowchart TB
     subgraph partial [契约或部分实现]
         nca[pk_nca 单次静脉推注]
         models[pk_models]
+        pd[pd_models 直接 Emax]
+        pkpd[pkpd 显式浓度]
+        dmpk[dmpk 体外记录]
+        tox[toxicology 研究用终点]
         diagnostics[diagnostics]
         reporting[reporting]
-        integrations[integrations]
+        integrations[integrations 证据往返]
     end
-    reserved[pd_models / pkpd / dmpk / toxicology / population_pk / pbpk / qsp / simulation]
+    reserved[population_pk / pbpk / qsp / simulation]
 
     ingestion --> core
     bioanalysis --> core
     nca --> core
     models --> core
+    pd --> core
+    pkpd --> pd
+    dmpk --> core
+    tox --> core
     diagnostics --> core
     reporting --> core
     integrations --> core
@@ -66,17 +74,20 @@ flowchart TB
 - 预测、文献和假设不能使用 `qc_status=accepted`。
 - EphysWeave 的神经或行为终点必须带 `subject_id`、`session_id`、`timebase_id` 和 `sync_error_ms`。读取函数不移动时钟，也不做插值。
 - `promote_to_observation` 一律拒绝。证据等级留在证据记录上。
+- PharmacoWeave 写出的证据必须有非空的 `derived_from`。预测效应不能改写成 observed。
 
 身份链接只有 `review_status=accepted` 且指向本研究所内受试者时，才有资格在以后被用于连接。本版本不做这个连接。
 
-## 预留包
+## 部分实现和预留包
 
-后期包只导出 `STATUS`。阶段和 `execution=reserved` 来自 `pharmacoweave.core.roadmap`。`pharmacoweave capabilities` 打印同一张表。
+`pd_models` 估计基线固定、Hill 系数为 1 的直接效应 Emax。`pkpd` 把实测直接效应连到显式浓度，拒绝把 AUC 或 Cmax 当作该浓度。`dmpk` 校验体外通透性、微粒体清除率和肝细胞清除率，不换算成体内 CL。`toxicology` 保存链接到剂量或暴露的研究用终点，不生成临床剂量。
+
+`population_pk`、`pbpk`、`qsp`、`simulation` 只导出 `STATUS`，`execution=reserved`。`pharmacoweave capabilities` 打印同一张表。
 
 ## 依赖方向
 
-允许：`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`diagnostics`、`reporting`、`integrations` 依赖 `core`。
+允许：`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`pd_models`、`dmpk`、`toxicology`、`diagnostics`、`reporting` 依赖 `core`。`pkpd` 依赖 `pd_models`。`integrations` 依赖 `core` 和这些记录的公开类型，用来写出证据。
 
-不允许：`core` 依赖上述业务包；任何模块导入 OmicsWeave、TheraWeave、EphysWeave、nlmixr2、PK-Sim 或 NONMEM。
+不允许：`core` 依赖上述业务包；任何模块导入 OmicsWeave、TheraWeave、EphysWeave、PKNCA、nlmixr2、PK-Sim 或 NONMEM。
 
 `schema_export` 从模型生成 `schemas/`。测试比较两边的 JSON。

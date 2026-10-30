@@ -36,13 +36,19 @@ python -m pharmacoweave.schema_export
 
 `observation_type` 取 `concentration`、`effect`、`toxicity`。`status` 取 `quantified`、`BLQ`、`above_ULOQ`、`missing`、`invalid`。只有 `quantified` 同时拥有 `numeric_value` 和 `unit`。
 
+研究目录的列契约在 0.0.4 没有加列。效应的时间尺度和量纲在 `EffectObservation` 上，不在 `observations.csv` 里。它必须引用一条 `exposure_ref`。`time_scale=direct` 记录 `time_since_exposure`；`interval` 记录窗口；`time_to_event` 的数值本身是时间。量纲是 `fraction`（`1` 或 `fold`）、`percent`、`concentration`、`rate` 或 `time`。`evidence_grade` 固定为 observed。模型预测是单独的 `PredictedEffect`，不能写进这条记录。
+
+体外 ADME 用 `InVitroAdmeRecord`。允许的单位是 `cm/s`、`um/s`、`nm/s`、`uL/min/mg_protein`、`mL/min/mg_protein`、`uL/min/million_cells` 和 `mL/min/million_cells`。`L/h` 不是这些记录的单位。`not_measured` 和 `failed_qc` 不带数值。
+
+毒理终点用 `ToxEndpoint`。它必须有 `dose_event_id` 或 `exposure_ref`，并且 limitations 含有研究用、非临床给药建议这句话。发生率成对出现，分子不能大于分母。
+
 ## 标识符
 
 标识符匹配 `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$`。研究、受试者、检测、给药、样本和观测在各自表内唯一。
 
 ## 单位
 
-封闭词表的基准是小时、毫克药物、千克体重、升和摩尔。可组合，例如 `ug/mL`、`mg*h/L`、`L/h`、`mg/kg`、`1/h`。`kg` 是体重。未知原子，例如 `foot` 或 `IU`，会被拒绝。
+封闭词表的基准是小时、毫克药物、千克体重、升和摩尔。可组合，例如 `ug/mL`、`mg*h/L`、`L/h`、`mg/kg`、`1/h`。`kg` 是体重。`percent` 和 `pct` 是无量纲效应刻度，50 percent = 0.5。`fold` 与 `1` 同量纲。它们都不是浓度。未知原子，例如 `foot` 或 `IU`，会被拒绝。
 
 ## 结果包
 

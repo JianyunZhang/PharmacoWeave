@@ -55,6 +55,13 @@ def screen_record(record: EvidenceRecord) -> None:
         )
     if record.source_project is ProjectName.EPHYSWEAVE and record.measurement_type in _EPHYS_ENDPOINTS:
         read_ephys_endpoint(record)
+    if record.source_project is ProjectName.PHARMACOWEAVE and (
+        not record.derived_from or any(not item.strip() for item in record.derived_from)
+    ):
+        raise ContractViolation(
+            f"{record.evidence_id}: PharmacoWeave evidence requires non-empty derived_from links "
+            "to the exposure or analysis records it came from."
+        )
 
 
 def screen_exchange(exchange: EvidenceExchange) -> None:

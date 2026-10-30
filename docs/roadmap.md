@@ -29,9 +29,19 @@
 
 稀疏采样、稳态、尿药、输注、血管外给药和多次给药仍拒绝计算。二室模型不在拟合库里。
 
-## Phase 2：PD、DMPK、毒理和 TheraWeave 往返
+## 已完成：直接效应、体外 ADME、毒理记录和证据往返（0.0.4）
 
-在 Phase 1 的暴露结果之上，增加效应观测的时间尺度和量纲、典型体外 ADME 记录，以及带 `derived_from` 的 `PharmacologyEvidence`。预测与实测继续分开。`pd_models`、`pkpd`、`dmpk`、`toxicology` 从 reserved 改为有测试的实现之后才能对外声称可用。
+- 效应观测带时间尺度（direct、interval、time_to_event）和量纲（fraction、percent、concentration、rate、time）。它引用一条暴露，不把预测写成实测。
+- 直接效应 Emax：基线固定，Hill 系数固定为 1。`E = E0 + Emax * C / (EC50 + C)`。浓度–效应对不足、效应不随浓度变化、效应等于基线，或声明方向与 Emax 符号相反时，诊断为失败，不输出 EC50。AUC 和 Cmax 不能当作这个模型的浓度。滞后和间接反应不估计。
+- 体外 ADME 记录：通透性（`cm/s`、`um/s`、`nm/s`）、微粒体清除率（`uL/min/mg_protein`）和肝细胞清除率（`uL/min/million_cells`）。`L/h` 会被拒绝。不做体内外推。
+- 毒理终点链接剂量事件或暴露 id。不能生成临床给药建议。
+- `PharmacologyEvidence` 用 `derived_from` 指向剂量、暴露或拟合。预测 ADMET 在往返后仍是 predicted。不导入 TheraWeave。
+
+`pd_models`、`pkpd`、`dmpk`、`toxicology` 的状态是 partial。population_pk、pbpk、qsp、simulation 仍是 reserved。
+
+## 未纳入 0.0.4 的 Phase 2 余量
+
+Sigmoid Hill 估计、间接反应、效应滞后、血浆蛋白结合、体内外推、SEND 和临床建议都不在这一版。
 
 ## Phase 3：组学与电生理终点
 

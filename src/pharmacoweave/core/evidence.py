@@ -42,6 +42,10 @@ class EvidenceQc(StrEnum):
     NOT_APPLICABLE = "not_applicable"
 
 
+RESEARCH_USE_LIMITATION = "Research use only. Not a dosing recommendation."
+TOX_RESEARCH_LIMITATION = "Research use only. Not a clinical dosing recommendation or a safety claim."
+
+
 class EvidenceRecord(Record):
     """One claim, with its evidence grade kept on the record."""
 

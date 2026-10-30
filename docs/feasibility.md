@@ -53,7 +53,7 @@ Pint 能解析任意单位字符串，也会接受与 PK 无关的单位。核�
 
 ### 目录里的后期模块保持为预留包
 
-`pd_models`、`pkpd`、`dmpk`、`toxicology`、`population_pk`、`pbpk`、`qsp`、`simulation` 可以导入，并带有阶段标记。导入不提供 Emax、NLME、PBPK 或 QSP 计算。这样仓库布局和规划一致，同时不会让一个空函数看起来像已经完成的分析。
+`population_pk`、`pbpk`、`qsp`、`simulation` 可以导入，并带有阶段标记。导入不提供 NLME、PBPK 或 QSP 计算。0.0.4 把 `pd_models`、`pkpd`、`dmpk`、`toxicology` 从 reserved 改成 partial：只有有测试的直接效应 Emax、体外记录和毒理记录可以调用。间接反应、体内外推和临床建议仍然不存在。
 
 ### 报告在分析运行之前只做数据清单
 

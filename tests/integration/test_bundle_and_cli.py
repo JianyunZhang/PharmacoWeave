@@ -80,6 +80,10 @@ def test_cli_validates_the_example_and_reports_capabilities(tmp_path, repo_root,
     text = capsys.readouterr().out
     assert "pk_nca" in text and "partial" in text
     assert "pbpk" in text and "reserved" in text
+    for name in ("pd_models", "pkpd", "dmpk", "toxicology"):
+        line = next(item for item in text.splitlines() if item.startswith(name))
+        assert "partial" in line
+        assert "reserved" not in line
     assert main(["validate", str(repo_root / "examples")]) == 2
     nca_bundle = tmp_path / "cli-nca"
     assert (
