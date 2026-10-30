@@ -1,4 +1,4 @@
-"""Noncompartmental analysis contracts."""
+"""Single-dose IV bolus noncompartmental analysis."""
 
 from pharmacoweave.core.modeling import NcaParameterSet, auc_inf_is_reportable
 from pharmacoweave.core.roadmap import status

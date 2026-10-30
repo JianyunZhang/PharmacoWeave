@@ -1,6 +1,6 @@
 # PharmacoWeave
 
-定量药理学研究用 Python 工具包。当前版本 **0.0.1** 锁定实验数据模型、单位、质量控制、结果包和跨项目证据边界。它可以从已知参数计算一室静脉推注浓度，并生成数据校验报告。它不计算 NCA，不拟合 PK 模型，也不给出给药建议。
+定量药理学研究用 Python 工具包。当前版本 **0.0.2** 锁定实验数据模型、单位、质量控制、结果包和跨项目证据边界，并计算一种 NCA：单次静脉推注、连续采血。它可以用对数线性回归估计该模型的 CL 和 V。它不计算其他试验设计，也不给出给药建议。
 
 **Research use only.** 本软件不是医疗器械，不构成监管申报、GxP 或临床决策工具。参考 ICH M15 的记录结构，并不表示本软件满足该指南。
 
@@ -31,7 +31,14 @@ study.export_bundle("results/iv-bolus-validation", run_id="iv-bolus-validation")
 pharmacoweave capabilities
 ```
 
-`core`、`ingestion`、`bioanalysis` 可以执行。`pk_nca`、`pk_models`、`diagnostics`、`reporting`、`integrations` 只提供已测试的契约或参考方程。`pd_models` 及之后的包可以导入，导入不会运行分析。
+`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 只接受 `configs/nca_single_dose_iv.yaml` 里的设计。`pk_models` 另外提供一室静脉推注的对数线性拟合。`pd_models` 及之后的包可以导入，导入不会运行分析。
+
+```bash
+pharmacoweave nca examples/data/iv_bolus_single_dose \
+  --config configs/nca_single_dose_iv.yaml \
+  --bundle results/iv-bolus-nca \
+  --run-id iv-bolus-nca
+```
 
 ## 文档
 

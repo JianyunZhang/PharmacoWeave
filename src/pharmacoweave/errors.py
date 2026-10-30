@@ -30,6 +30,10 @@ class ContractViolation(PharmacoWeaveError):
     """An evidence payload crosses a project boundary it is not allowed to cross."""
 
 
+class AnalysisError(PharmacoWeaveError):
+    """An analysis could not be completed for the locked design."""
+
+
 class PlannedCapabilityError(PharmacoWeaveError):
     """The data contract for this capability exists, and the calculator does not."""
 

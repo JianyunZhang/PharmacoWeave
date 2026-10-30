@@ -10,7 +10,7 @@ flowchart TB
         core[core]
     end
     subgraph partial [契约或部分实现]
-        nca[pk_nca]
+        nca[pk_nca 单次静脉推注]
         models[pk_models]
         diagnostics[diagnostics]
         reporting[reporting]
@@ -34,7 +34,7 @@ flowchart TB
 2. 单条记录的规则在 Pydantic 模型里执行：时区、剂量维度、BLQ 不得带数值、输注必须有时长。
 3. `study.check` 执行跨记录规则：外键、时钟、LLOQ、基质、身份链接和外部证据。
 4. `export_bundle` 在校验通过后写出新的结果目录。目录已存在时拒绝覆盖。
-5. `run_nca` 先加载配置并校验研究，然后以 `PlannedCapabilityError` 停止。
+5. `run_nca` 对单次静脉推注轮廓做 NCA。其他设计在配置或轮廓构建时被拒绝。
 
 `check` 这个名字是为了避开 `BaseModel.validate`。命令行和 `from_files(..., validate_schema=True)` 仍然表达“做校验”。
 

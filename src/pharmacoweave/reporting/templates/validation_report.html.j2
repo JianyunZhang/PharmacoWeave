@@ -19,8 +19,12 @@
 <body>
   <div class="banner">
     <strong>Research use only.</strong>
-    This is a data-validation inventory for run <code>{{ run_id }}</code>.
+    This is a research-use report for run <code>{{ run_id }}</code>.
+    {% if nca_rows %}
+    Single-dose IV bolus NCA was run. It is not a dosing recommendation.
+    {% else %}
     NCA, model fitting, and dosing recommendations were not run.
+    {% endif %}
   </div>
   <h1>{{ title }}</h1>
   <p>Study <code>{{ study_id }}</code> · {{ data_class }} · {{ species }}</p>
@@ -52,6 +56,33 @@
   </table>
   {% else %}
   <p>No validation errors or warnings.</p>
+  {% endif %}
+  {% if nca_rows %}
+  <h2>NCA</h2>
+  <p>Units are mg/L, h, mg·h/L, 1/h, and L/h. For this mass scale, 1 mg/L is 1 µg/mL.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th><th>AUC last</th><th>AUC inf</th><th>Extrap</th>
+        <th>Half-life</th><th>CL</th><th>Vz</th><th>Cmax</th><th>Tmax</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in nca_rows %}
+      <tr>
+        <td>{{ row.subject_id }}</td>
+        <td>{{ row.auc_last }}</td>
+        <td>{{ row.auc_inf }}</td>
+        <td>{{ row.auc_inf_extrap_fraction }}</td>
+        <td>{{ row.half_life }}</td>
+        <td>{{ row.clearance }}</td>
+        <td>{{ row.volume }}</td>
+        <td>{{ row.cmax }}</td>
+        <td>{{ row.tmax }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
   {% endif %}
   <h2>Not in this bundle</h2>
   <ul>

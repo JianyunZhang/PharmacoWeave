@@ -4,6 +4,7 @@ from datetime import datetime
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from pharmacoweave.core.modeling import NcaParameterSet
 from pharmacoweave.core.provenance import OmittedArtifact
 from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.core.validation import ValidationReport
@@ -19,8 +20,9 @@ def render_validation_report(
     omitted: list[OmittedArtifact],
     version: str,
     schema_version: str,
+    nca_parameters: list[NcaParameterSet] | None = None,
 ) -> str:
-    """Render the validation inventory. This is not a PK analysis report."""
+    """Render the validation inventory, plus NCA rows when a calculation was run."""
 
     environment = Environment(
         loader=PackageLoader("pharmacoweave.reporting", "templates"),
@@ -42,4 +44,25 @@ def render_validation_report(
         version=version,
         schema_version=schema_version,
         generated_at=generated_at.isoformat(),
+        nca_rows=[_nca_row(record) for record in nca_parameters or []],
     )
+
+
+def _nca_row(record: NcaParameterSet) -> dict[str, str]:
+    return {
+        "subject_id": record.subject_id,
+        "auc_last": _fmt(record.auc_last),
+        "auc_inf": _fmt(record.auc_inf),
+        "auc_inf_extrap_fraction": _fmt(record.auc_inf_extrap_fraction),
+        "half_life": _fmt(record.half_life),
+        "clearance": _fmt(record.clearance),
+        "volume": _fmt(record.volume),
+        "cmax": _fmt(record.cmax),
+        "tmax": _fmt(record.tmax),
+    }
+
+
+def _fmt(value: float | None) -> str:
+    if value is None:
+        return ""
+    return f"{value:.6g}"

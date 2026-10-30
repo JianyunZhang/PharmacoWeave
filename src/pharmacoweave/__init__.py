@@ -1,8 +1,8 @@
 """PharmacoWeave, a research-use quantitative pharmacology toolkit.
 
-Version 0.0.1 validates study data, units, and cross-project evidence
-boundaries. It calculates one-compartment IV bolus concentrations from known
-parameters. It does not estimate NCA parameters or fit PK models.
+Version 0.0.2 validates study data, units, and cross-project evidence
+boundaries. It calculates single-dose IV bolus NCA and a log-linear
+one-compartment fit for CL and V. It does not run other study designs.
 """
 
 from pharmacoweave.core.roadmap import MODULE_STATUS

@@ -11,11 +11,19 @@
 - 跨项目证据守卫和 NCA 配置拒绝超范围设计。
 - 一室静脉推注解析解。
 
-## Phase 1：第一种 NCA 和一室静脉拟合
+## 已完成：第一种 NCA 和一室静脉拟合（0.0.2）
 
-输入已经由 `configs/nca_single_dose_iv.yaml` 和 `NcaParameterSet` 限定。工作是实现计算器，并用 `tests/numerical_benchmarks/` 里的靶值加上一份外部参考输出做数值测试。拟合只针对一室静脉推注解析解，回收 CL 与 V。终末相不合格、外推过大或不收敛时，相应参数缺席或诊断为失败。
+- 单次静脉推注、连续采血、linear-up/log-down。
+- 终末相规则 `pharmacoweave.lambda_z.adjusted_r2.v1`。点数不足或 adjusted R² 不够时不报告 λz、t½、AUC∞。
+- 外推比例超过配置上限时保留数值，并由 `auc_inf_is_reportable` 返回 false。
+- 对数线性拟合回收 CL 与 V。斜率不下降时诊断为失败，不输出清除率。
+- 结果包在传入 NCA 结果后写出参数表和浓度–时间图，`analysis_executed` 为 true。
 
-这一阶段开始画浓度–时间图，并让 `analysis_executed` 在真正运行后变为 true。Schema 如需放宽，递增 `schema_version`。
+尚未做的 Phase 1 后续：与外部软件逐项对照的第二份参考输出、带噪声数据上的加权非线性拟合、残差图。
+
+## 之后的 Phase 1 余量
+
+稀疏采样、稳态、尿药、输注、血管外给药和多次给药仍拒绝计算。二室模型不在拟合库里。
 
 ## Phase 2：PD、DMPK、毒理和 TheraWeave 往返
 

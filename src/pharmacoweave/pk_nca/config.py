@@ -11,8 +11,7 @@ from pharmacoweave.version import SCHEMA_VERSION
 class NcaConfig(Record):
     """Reporting rules for single-dose IV bolus rich sampling.
 
-    Loading a config does not calculate NCA. Other designs fail validation
-    here so they are not silently passed to a later calculator.
+    Other designs fail validation here instead of being passed to this calculator.
     """
 
     analysis: Literal["nca"]

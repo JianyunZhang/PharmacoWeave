@@ -21,6 +21,12 @@ def main(argv: list[str] | None = None) -> int:
     validate.add_argument("--bundle", type=Path, help="Write a validation bundle to this new directory")
     validate.add_argument("--run-id", help="Run identifier used when --bundle is set")
 
+    nca = commands.add_parser("nca", help="Run single-dose IV bolus NCA")
+    nca.add_argument("study_dir", type=Path)
+    nca.add_argument("--config", type=Path, required=True)
+    nca.add_argument("--bundle", type=Path, help="Write a bundle that includes the NCA tables")
+    nca.add_argument("--run-id")
+
     commands.add_parser("capabilities", help="Show which modules can execute")
     export = commands.add_parser("export-schemas", help="Write JSON Schema files from the data contracts")
     export.add_argument("--directory", type=Path, default=Path("schemas"))
@@ -29,6 +35,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "validate":
             return _validate(args.study_dir, strict=args.strict, bundle=args.bundle, run_id=args.run_id)
+        if args.command == "nca":
+            return _nca(args.study_dir, config=args.config, bundle=args.bundle, run_id=args.run_id)
         if args.command == "capabilities":
             return _capabilities()
         if args.command == "export-schemas":
@@ -52,6 +60,22 @@ def _validate(study_dir: Path, *, strict: bool, bundle: Path | None, run_id: str
         selected_run = run_id or f"{study.metadata.study_id}-validation"
         study.export_bundle(bundle, run_id=selected_run, mode=mode)
         print(f"Wrote validation bundle to {bundle}")
+    return 0
+
+
+def _nca(study_dir: Path, *, config: Path, bundle: Path | None, run_id: str | None) -> int:
+    from pharmacoweave.core.study import PharmacologyStudy
+
+    study = PharmacologyStudy.from_files(study_dir)
+    results = study.run_nca(config)
+    for row in results:
+        print(
+            f"{row.subject_id}\tAUC_inf={row.auc_inf}\tCL={row.clearance}\thalf_life={row.half_life}\tVz={row.volume}"
+        )
+    if bundle is not None:
+        selected_run = run_id or f"{study.metadata.study_id}-nca"
+        study.export_bundle(bundle, run_id=selected_run, nca_parameters=results)
+        print(f"Wrote NCA bundle to {bundle}")
     return 0
 
 

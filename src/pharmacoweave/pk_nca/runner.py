@@ -1,18 +1,16 @@
-"""NCA entry point.
-
-The config and the result schema are executable checks. The numerical
-calculator is intentionally absent until a reference terminal-phase rule is
-implemented and tested.
-"""
+"""NCA entry point for the one implemented design."""
 
 from pathlib import Path
 
 import yaml
 from pydantic import ValidationError
 
+from pharmacoweave.core.modeling import NcaParameterSet
+from pharmacoweave.core.profiles import iv_bolus_profiles
 from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.core.validation import validate_study
-from pharmacoweave.errors import IngestError, PlannedCapabilityError, ValidationFailed
+from pharmacoweave.errors import IngestError, ValidationFailed
+from pharmacoweave.pk_nca.calculate import nca_iv_bolus
 from pharmacoweave.pk_nca.config import NcaConfig
 
 
@@ -34,20 +32,15 @@ def load_nca_config(path: str | Path) -> NcaConfig:
         raise IngestError(f"{selected} is outside the implemented NCA design: {exc}") from exc
 
 
-def run_nca(study: PharmacologyStudy, config: str | Path) -> None:
-    """Validate the study and config, then stop before calculating NCA."""
+def run_nca(study: PharmacologyStudy, config: str | Path | NcaConfig) -> list[NcaParameterSet]:
+    """Run single-dose IV bolus NCA.
 
-    loaded = load_nca_config(config)
+    Sparse sampling, urine, steady state, infusion, extravascular absorption,
+    and multiple dosing are rejected by the config or by the profile builder.
+    """
+
+    loaded = config if isinstance(config, NcaConfig) else load_nca_config(config)
     report = validate_study(study)
     if not report.ok:
         raise ValidationFailed(report)
-    raise PlannedCapabilityError(
-        module="pk_nca",
-        phase="P0",
-        detail=(
-            f"Config accepted for {loaded.dosing} {loaded.design_route} {loaded.sampling} "
-            f"with AUC method {loaded.auc_method}. The calculator is not implemented. "
-            "Sparse sampling, urine, steady state, infusion, extravascular absorption, "
-            "and multiple dosing are outside this config."
-        ),
-    )
+    return [nca_iv_bolus(profile, loaded) for profile in iv_bolus_profiles(study)]

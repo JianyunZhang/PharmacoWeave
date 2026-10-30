@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.2 — 2026-10-30
+
+- 计算单次静脉推注、连续采血的 NCA：linear-up/log-down、对数线性回推 C0、adjusted R² 终末相。
+- BLQ 和高于 ULOQ 的点不参与梯形积分，也不替换成数字。
+- 外推比例超过配置上限时仍保存 AUC∞，并由 `auc_inf_is_reportable` 标成不宜报告。
+- 用对数线性最小二乘拟合一室静脉推注，回收 CL 和 V。浓度不下降时不给出清除率。
+- 结果包可以写入 `analysis/nca_parameters.parquet` 和浓度–时间图。`pharmacoweave nca` 运行该计算。
+
 ## 0.0.1 — 2026-10-29
 
 研究用数据契约的第一版骨架。
