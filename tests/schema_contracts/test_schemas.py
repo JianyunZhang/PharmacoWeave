@@ -5,14 +5,20 @@ import json
 import jsonschema
 
 from pharmacoweave.core.provenance import ResultBundleManifest
+from pharmacoweave.dmpk.records import InVitroAdmeSet
+from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.schema_export import CONTRACTS, json_schema
+from pharmacoweave.toxicology.records import ToxEndpointSet
 from pharmacoweave.version import SCHEMA_VERSION
 
 
 def test_schema_version_defaults_match_the_package_constant() -> None:
     assert ResultBundleManifest.model_fields["schema_version"].default == SCHEMA_VERSION
     assert NcaConfig.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert PdAnalysisRecords.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert InVitroAdmeSet.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert ToxEndpointSet.model_fields["schema_version"].default == SCHEMA_VERSION
 
 
 def test_committed_schemas_match_the_models(repo_root) -> None:

@@ -1,0 +1,718 @@
+{
+  "$defs": {
+    "DiagnosticRecord": {
+      "additionalProperties": false,
+      "description": "A model diagnostic. Pass requires limitations to be written down.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/DiagnosticStatus"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fit_id",
+        "status"
+      ],
+      "title": "DiagnosticRecord",
+      "type": "object"
+    },
+    "DiagnosticStatus": {
+      "enum": [
+        "not_run",
+        "pass",
+        "warning",
+        "fail"
+      ],
+      "title": "DiagnosticStatus",
+      "type": "string"
+    },
+    "DirectEffectPair": {
+      "additionalProperties": false,
+      "description": "One observed effect and the concentration it is paired with.",
+      "properties": {
+        "effect_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "exposure_ref": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Exposure Ref",
+          "type": "string"
+        },
+        "concentration": {
+          "exclusiveMinimum": 0,
+          "title": "Concentration",
+          "type": "number"
+        },
+        "concentration_unit": {
+          "title": "Concentration Unit",
+          "type": "string"
+        },
+        "effect": {
+          "title": "Effect",
+          "type": "number"
+        },
+        "effect_unit": {
+          "title": "Effect Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "effect_id",
+        "exposure_ref",
+        "concentration",
+        "concentration_unit",
+        "effect",
+        "effect_unit"
+      ],
+      "title": "DirectEffectPair",
+      "type": "object"
+    },
+    "EffectDimension": {
+      "description": "The dimension of the effect number. This is not an exposure dimension.",
+      "enum": [
+        "fraction",
+        "percent",
+        "concentration",
+        "rate",
+        "time"
+      ],
+      "title": "EffectDimension",
+      "type": "string"
+    },
+    "EffectDirection": {
+      "enum": [
+        "increase",
+        "decrease",
+        "unspecified"
+      ],
+      "title": "EffectDirection",
+      "type": "string"
+    },
+    "EffectObservation": {
+      "additionalProperties": false,
+      "description": "One observed effect tied to an exposure id.\n\n``evidence_grade`` is fixed to observed. A model prediction is a separate\nobject and cannot be stored here.",
+      "properties": {
+        "effect_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "endpoint_name": {
+          "minLength": 1,
+          "title": "Endpoint Name",
+          "type": "string"
+        },
+        "matrix": {
+          "minLength": 1,
+          "title": "Matrix",
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "time_scale": {
+          "$ref": "#/$defs/EffectTimeScale"
+        },
+        "dimension": {
+          "$ref": "#/$defs/EffectDimension"
+        },
+        "direction": {
+          "$ref": "#/$defs/EffectDirection"
+        },
+        "status": {
+          "$ref": "#/$defs/ObservationStatus"
+        },
+        "exposure_ref": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Exposure Ref",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "numeric_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Numeric Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "sample_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sample Id"
+        },
+        "time_since_exposure": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Since Exposure"
+        },
+        "time_since_exposure_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Since Exposure Unit"
+        },
+        "window_start": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Start"
+        },
+        "window_end": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window End"
+        },
+        "window_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Unit"
+        },
+        "exclusion_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exclusion Reason"
+        },
+        "evidence_grade": {
+          "const": "observed",
+          "default": "observed",
+          "title": "Evidence Grade",
+          "type": "string"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "effect_id",
+        "endpoint_name",
+        "matrix",
+        "method",
+        "time_scale",
+        "dimension",
+        "direction",
+        "status",
+        "exposure_ref",
+        "limitations"
+      ],
+      "title": "EffectObservation",
+      "type": "object"
+    },
+    "EffectParameter": {
+      "additionalProperties": false,
+      "description": "One direct-effect parameter. EC50 is a concentration, not a clearance.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "fixed": {
+          "title": "Fixed",
+          "type": "boolean"
+        },
+        "estimation_method": {
+          "minLength": 1,
+          "title": "Estimation Method",
+          "type": "string"
+        },
+        "standard_error": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Standard Error"
+        },
+        "ci_lower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci Lower"
+        },
+        "ci_upper": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci Upper"
+        },
+        "ci_level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci Level"
+        }
+      },
+      "required": [
+        "fit_id",
+        "name",
+        "value",
+        "unit",
+        "fixed",
+        "estimation_method"
+      ],
+      "title": "EffectParameter",
+      "type": "object"
+    },
+    "EffectTimeScale": {
+      "description": "How the effect clock relates to the linked exposure.",
+      "enum": [
+        "direct",
+        "interval",
+        "time_to_event"
+      ],
+      "title": "EffectTimeScale",
+      "type": "string"
+    },
+    "ErrorModel": {
+      "enum": [
+        "additive",
+        "proportional",
+        "combined",
+        "unspecified"
+      ],
+      "title": "ErrorModel",
+      "type": "string"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "description": "One named diagnostic number.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "ModelFit": {
+      "additionalProperties": false,
+      "description": "One fit against one dataset. Fits are appended, not overwritten.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "dataset_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "software_version": {
+          "minLength": 1,
+          "title": "Software Version",
+          "type": "string"
+        },
+        "estimation_method": {
+          "minLength": 1,
+          "title": "Estimation Method",
+          "type": "string"
+        },
+        "context_of_use": {
+          "minLength": 10,
+          "title": "Context Of Use",
+          "type": "string"
+        },
+        "diagnostic_status": {
+          "$ref": "#/$defs/DiagnosticStatus",
+          "default": "not_run"
+        },
+        "converged": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Converged"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "fit_id",
+        "model_id",
+        "dataset_id",
+        "software_version",
+        "estimation_method",
+        "context_of_use"
+      ],
+      "title": "ModelFit",
+      "type": "object"
+    },
+    "ModelSpec": {
+      "additionalProperties": false,
+      "description": "A named structural model and the question it is allowed to answer.",
+      "properties": {
+        "model_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "model_type": {
+          "minLength": 1,
+          "title": "Model Type",
+          "type": "string"
+        },
+        "equations_ref": {
+          "minLength": 1,
+          "title": "Equations Ref",
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Parameters",
+          "type": "array"
+        },
+        "error_model": {
+          "$ref": "#/$defs/ErrorModel"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "question_of_interest": {
+          "minLength": 10,
+          "title": "Question Of Interest",
+          "type": "string"
+        },
+        "context_of_use": {
+          "minLength": 10,
+          "title": "Context Of Use",
+          "type": "string"
+        },
+        "estimation_implemented": {
+          "default": false,
+          "title": "Estimation Implemented",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "model_id",
+        "model_type",
+        "equations_ref",
+        "parameters",
+        "error_model",
+        "assumptions",
+        "question_of_interest",
+        "context_of_use"
+      ],
+      "title": "ModelSpec",
+      "type": "object"
+    },
+    "ObservationStatus": {
+      "enum": [
+        "quantified",
+        "BLQ",
+        "above_ULOQ",
+        "missing",
+        "invalid"
+      ],
+      "title": "ObservationStatus",
+      "type": "string"
+    },
+    "PredictedEffectRecord": {
+      "additionalProperties": false,
+      "description": "Serializable schema contract for a model-predicted effect.",
+      "properties": {
+        "fit_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Fit Id",
+          "type": "string"
+        },
+        "effect_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "exposure_ref": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Exposure Ref",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "derived_from": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Derived From",
+          "type": "array"
+        },
+        "evidence_grade": {
+          "const": "predicted",
+          "default": "predicted",
+          "title": "Evidence Grade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fit_id",
+        "effect_id",
+        "exposure_ref",
+        "value",
+        "unit",
+        "derived_from"
+      ],
+      "title": "PredictedEffectRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable PD contract exported to ``schemas/pd_records.schema.json``.",
+  "properties": {
+    "effect_observations": {
+      "items": {
+        "$ref": "#/$defs/EffectObservation"
+      },
+      "title": "Effect Observations",
+      "type": "array"
+    },
+    "direct_effect_pairs": {
+      "items": {
+        "$ref": "#/$defs/DirectEffectPair"
+      },
+      "title": "Direct Effect Pairs",
+      "type": "array"
+    },
+    "model_specs": {
+      "items": {
+        "$ref": "#/$defs/ModelSpec"
+      },
+      "title": "Model Specs",
+      "type": "array"
+    },
+    "model_fits": {
+      "items": {
+        "$ref": "#/$defs/ModelFit"
+      },
+      "title": "Model Fits",
+      "type": "array"
+    },
+    "effect_parameters": {
+      "items": {
+        "$ref": "#/$defs/EffectParameter"
+      },
+      "title": "Effect Parameters",
+      "type": "array"
+    },
+    "predicted_effects": {
+      "items": {
+        "$ref": "#/$defs/PredictedEffectRecord"
+      },
+      "title": "Predicted Effects",
+      "type": "array"
+    },
+    "diagnostics": {
+      "items": {
+        "$ref": "#/$defs/DiagnosticRecord"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "schema_name": {
+      "const": "pharmacology-pd-records",
+      "default": "pharmacology-pd-records",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "PdAnalysisRecords",
+  "type": "object"
+}

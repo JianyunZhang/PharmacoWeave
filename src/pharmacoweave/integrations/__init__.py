@@ -8,9 +8,11 @@ from pharmacoweave.integrations.ephysweave import attach_neural_endpoints, read_
 from pharmacoweave.integrations.external_backends import run_backend, supported_backends
 from pharmacoweave.integrations.omicsweave import attach_biomarker_evidence
 from pharmacoweave.integrations.pharmacology_evidence import (
+    collect_run_evidence,
     evidence_from_adme,
     evidence_from_emax,
     evidence_from_nca,
+    evidence_from_pk_fit,
     evidence_from_tox,
     exchange_from_records,
     round_trip_exchange,
@@ -25,9 +27,11 @@ __all__ = [
     "attach_biomarker_evidence",
     "attach_candidate_bundle",
     "attach_neural_endpoints",
+    "collect_run_evidence",
     "evidence_from_adme",
     "evidence_from_emax",
     "evidence_from_nca",
+    "evidence_from_pk_fit",
     "evidence_from_tox",
     "exchange_from_records",
     "read_neural_endpoint",

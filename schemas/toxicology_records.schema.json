@@ -1,0 +1,195 @@
+{
+  "$defs": {
+    "ToxEndpoint": {
+      "additionalProperties": false,
+      "description": "One observed toxicology finding. ``evidence_grade`` stays observed.",
+      "properties": {
+        "endpoint_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "compound_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Compound Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ToxKind"
+        },
+        "finding": {
+          "minLength": 1,
+          "title": "Finding",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/ToxSeverity"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "dose_event_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dose Event Id"
+        },
+        "exposure_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Ref"
+        },
+        "numeric_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Numeric Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "incidence_affected": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incidence Affected"
+        },
+        "incidence_examined": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Incidence Examined"
+        },
+        "evidence_grade": {
+          "const": "observed",
+          "default": "observed",
+          "title": "Evidence Grade",
+          "type": "string"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "endpoint_id",
+        "compound_id",
+        "kind",
+        "finding",
+        "severity",
+        "limitations"
+      ],
+      "title": "ToxEndpoint",
+      "type": "object"
+    },
+    "ToxKind": {
+      "enum": [
+        "body_weight_change",
+        "in_life_observation",
+        "serum_chemistry",
+        "histopathology",
+        "mortality"
+      ],
+      "title": "ToxKind",
+      "type": "string"
+    },
+    "ToxSeverity": {
+      "enum": [
+        "not_graded",
+        "minimal",
+        "mild",
+        "moderate",
+        "marked"
+      ],
+      "title": "ToxSeverity",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable toxicology contract exported to ``schemas/toxicology_records.schema.json``.",
+  "properties": {
+    "endpoints": {
+      "items": {
+        "$ref": "#/$defs/ToxEndpoint"
+      },
+      "title": "Endpoints",
+      "type": "array"
+    },
+    "schema_name": {
+      "const": "pharmacology-toxicology-records",
+      "default": "pharmacology-toxicology-records",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "ToxEndpointSet",
+  "type": "object"
+}

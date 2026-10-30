@@ -35,6 +35,16 @@ _LIMITATIONS = (
 
 
 @dataclass(frozen=True)
+class ParameterUncertainty:
+    """Asymptotic standard error and confidence interval for one estimate."""
+
+    standard_error: float | None = None
+    ci_lower: float | None = None
+    ci_upper: float | None = None
+    ci_level: float | None = None
+
+
+@dataclass(frozen=True)
 class LogLinearScreen:
     """Whether ln(concentration) versus time can identify a declining bolus curve."""
 
@@ -198,8 +208,12 @@ def _succeeded(
     predicted: tuple[float, ...],
     warnings: list[str],
     metrics: list[Metric],
+    clearance_uncertainty: ParameterUncertainty | None = None,
+    volume_uncertainty: ParameterUncertainty | None = None,
 ) -> IvBolusFit:
     fit_id = _fit_id(profile)
+    cl_unc = clearance_uncertainty or ParameterUncertainty()
+    v_unc = volume_uncertainty or ParameterUncertainty()
     diagnostic = DiagnosticRecord(
         fit_id=fit_id,
         status=status,
@@ -227,6 +241,10 @@ def _succeeded(
             unit="L/h",
             estimation_method=method,
             route=Route.IV_BOLUS,
+            standard_error=cl_unc.standard_error,
+            ci_lower=cl_unc.ci_lower,
+            ci_upper=cl_unc.ci_upper,
+            ci_level=cl_unc.ci_level,
         ),
         ParameterEstimate(
             fit_id=fit_id,
@@ -236,6 +254,10 @@ def _succeeded(
             unit="L",
             estimation_method=method,
             route=Route.IV_BOLUS,
+            standard_error=v_unc.standard_error,
+            ci_lower=v_unc.ci_lower,
+            ci_upper=v_unc.ci_upper,
+            ci_level=v_unc.ci_level,
         ),
     )
     return _pack(profile, fit, estimates, diagnostic, predicted)

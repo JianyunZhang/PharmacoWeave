@@ -13,7 +13,10 @@ from pharmacoweave.core.evidence import EvidenceExchange
 from pharmacoweave.core.modeling import AnalysisRecords
 from pharmacoweave.core.provenance import ResultBundleManifest
 from pharmacoweave.core.study import PharmacologyStudy
+from pharmacoweave.dmpk.records import InVitroAdmeSet
+from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
+from pharmacoweave.toxicology.records import ToxEndpointSet
 
 CONTRACTS: dict[str, type[BaseModel]] = {
     "result_bundle.schema.json": ResultBundleManifest,
@@ -21,6 +24,9 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "pharmacology_study.schema.json": PharmacologyStudy,
     "analysis_records.schema.json": AnalysisRecords,
     "nca_config.schema.json": NcaConfig,
+    "pd_records.schema.json": PdAnalysisRecords,
+    "dmpk_records.schema.json": InVitroAdmeSet,
+    "toxicology_records.schema.json": ToxEndpointSet,
 }
 
 

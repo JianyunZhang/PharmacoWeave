@@ -24,6 +24,7 @@ from pharmacoweave.core.units import (
     parse_unit,
 )
 from pharmacoweave.errors import ContractViolation
+from pharmacoweave.version import SCHEMA_VERSION
 
 
 class ToxKind(StrEnum):
@@ -88,6 +89,23 @@ class ToxEndpoint(Record):
             raise ValueError("Histopathology requires a severity grade.")
         if self.numeric_value is not None and self.unit is not None:
             _check_unit(self.kind, self.unit)
+        return self
+
+
+class ToxEndpointSet(Record):
+    """Machine-readable toxicology contract exported to ``schemas/toxicology_records.schema.json``."""
+
+    endpoints: list[ToxEndpoint] = Field(default_factory=list)
+    schema_name: Literal["pharmacology-toxicology-records"] = "pharmacology-toxicology-records"
+    schema_version: str = SCHEMA_VERSION
+
+    @model_validator(mode="after")
+    def unique_and_versioned(self) -> "ToxEndpointSet":
+        if self.schema_version != SCHEMA_VERSION:
+            raise ValueError(f"schema_version must be {SCHEMA_VERSION}.")
+        ids = [endpoint.endpoint_id for endpoint in self.endpoints]
+        if len(ids) != len(set(ids)):
+            raise ValueError("endpoint_id values must be unique.")
         return self
 
 

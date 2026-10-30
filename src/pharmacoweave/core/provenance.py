@@ -1,8 +1,8 @@
 """Result-bundle manifest.
 
-A bundle written by this version records validated study data. ``analysis_executed``
-stays false, and NCA or fit tables are listed under ``omitted`` so a missing
-file is not read as an empty analysis.
+A bundle written without analyses records validated study data with
+``analysis_executed=False`` and lists unexecuted analysis roles under
+``omitted`` so a missing file is never read as an empty analysis.
 """
 
 from typing import Literal
@@ -68,7 +68,16 @@ class ResultBundleManifest(Record):
     def analysis_flag_matches_files(self) -> "ResultBundleManifest":
         if self.schema_version != SCHEMA_VERSION:
             raise ValueError(f"schema_version must be {SCHEMA_VERSION}.")
-        analysis_roles = {"nca_parameters", "model_parameters", "predictions", "residuals", "diagnostics"}
+        analysis_roles = {
+            "nca_parameters",
+            "model_parameters",
+            "predictions",
+            "residuals",
+            "diagnostics",
+            "emax_parameters",
+            "emax_predictions",
+            "derived_observations",
+        }
         listed = analysis_roles & set(self.data)
         if self.analysis_executed and not listed:
             raise ValueError("analysis_executed requires analysis artifacts to be listed in data.")

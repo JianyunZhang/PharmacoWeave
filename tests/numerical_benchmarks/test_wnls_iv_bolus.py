@@ -57,6 +57,11 @@ def test_noise_free_curve_recovers_clearance_and_volume(weight: str) -> None:
     values = _values(fit)
     assert values["CL"] == pytest.approx(0.05, rel=1e-8)
     assert values["V"] == pytest.approx(0.25, rel=1e-8)
+    for estimate in fit.estimates:
+        assert estimate.standard_error == pytest.approx(0.0, abs=1e-11)
+        assert estimate.ci_level == 0.95
+        assert estimate.ci_lower == pytest.approx(estimate.value, rel=1e-8)
+        assert estimate.ci_upper == pytest.approx(estimate.value, rel=1e-8)
     assert fit.fit.limitations
 
 
@@ -68,9 +73,16 @@ def test_noisy_example_recovers_clearance_and_volume(weight: str) -> None:
     assert fit.fit.converged is True
     assert fit.diagnostic.status is DiagnosticStatus.WARNING
     assert fit.estimates
-    values = _values(fit)
-    assert values["CL"] == pytest.approx(TRUE_CLEARANCE_L_H, rel=RECOVERY_RELATIVE_TOLERANCE)
-    assert values["V"] == pytest.approx(TRUE_VOLUME_L, rel=RECOVERY_RELATIVE_TOLERANCE)
+    by_name = {estimate.parameter: estimate for estimate in fit.estimates}
+    assert by_name["CL"].value == pytest.approx(TRUE_CLEARANCE_L_H, rel=RECOVERY_RELATIVE_TOLERANCE)
+    assert by_name["V"].value == pytest.approx(TRUE_VOLUME_L, rel=RECOVERY_RELATIVE_TOLERANCE)
+    for name, truth in (("CL", TRUE_CLEARANCE_L_H), ("V", TRUE_VOLUME_L)):
+        estimate = by_name[name]
+        assert estimate.standard_error is not None and estimate.standard_error > 0
+        assert estimate.ci_lower is not None and estimate.ci_upper is not None
+        assert estimate.ci_level == 0.95
+        assert 0 < estimate.ci_lower < estimate.value < estimate.ci_upper
+        assert estimate.ci_lower <= truth <= estimate.ci_upper
     assert all("T1440" not in observation_id and "PRE" not in observation_id for observation_id in fit.observation_ids)
     assert min(fit.observed_mg_l) > 0
 

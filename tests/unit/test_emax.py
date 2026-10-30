@@ -61,13 +61,23 @@ def test_flat_effect_and_short_series_do_not_report_ec50() -> None:
 
 
 def test_baseline_hit_identical_concentrations_and_wrong_direction_fail() -> None:
-    baseline = fit_direct_emax(
+    baseline_nls = fit_direct_emax(
         [_pair(1, 1.0, 10.0), _pair(2, 5.0, 40.0), _pair(3, 10.0, 50.0)],
         e0=10.0,
         e0_unit="percent",
     )
-    assert baseline.diagnostic.status is DiagnosticStatus.FAIL
-    assert "baseline" in baseline.reason
+    assert baseline_nls.diagnostic.status is DiagnosticStatus.FAIL
+    assert baseline_nls.estimates == ()
+    assert "plateau" in baseline_nls.reason
+
+    baseline_linearized = fit_direct_emax(
+        [_pair(1, 1.0, 10.0), _pair(2, 5.0, 40.0), _pair(3, 10.0, 50.0)],
+        e0=10.0,
+        e0_unit="percent",
+        method="linearized",
+    )
+    assert baseline_linearized.diagnostic.status is DiagnosticStatus.FAIL
+    assert "baseline" in baseline_linearized.reason
 
     same_concentration = fit_direct_emax(
         [_pair(index, 5.0, 20.0 + index) for index in range(1, 4)],

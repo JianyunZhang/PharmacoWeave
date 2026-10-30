@@ -1,10 +1,11 @@
 """PharmacologyEvidence built from exposure and analysis records.
 
-Estimated NCA parameters, direct-Emax parameters, in vitro ADME rows, and
-toxicology endpoints keep their evidence grade. Model effect predictions stay
-predicted. Nothing in this module imports TheraWeave.
+Estimated NCA parameters, PK compartment fits, direct/sigmoid Emax parameters,
+in vitro ADME rows, and toxicology endpoints keep their evidence grade. Model
+effect predictions stay predicted. Nothing in this module imports TheraWeave.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from pharmacoweave.core.evidence import (
@@ -15,10 +16,16 @@ from pharmacoweave.core.evidence import (
     EvidenceType,
     ProjectName,
 )
-from pharmacoweave.core.modeling import NcaParameterSet, auc_inf_is_reportable
+from pharmacoweave.core.modeling import (
+    DiagnosticStatus,
+    NcaParameterSet,
+    ParameterSemantic,
+    auc_inf_is_reportable,
+)
 from pharmacoweave.dmpk.records import AdmeStatus, InVitroAdmeRecord
 from pharmacoweave.integrations.guards import screen_exchange
 from pharmacoweave.pd_models.emax import DirectEmaxFit
+from pharmacoweave.pk_models.fit_iv import IvBolusFit
 from pharmacoweave.toxicology.records import ToxEndpoint
 
 _NCA_MEASUREMENT = {
@@ -30,6 +37,28 @@ _NCA_MEASUREMENT = {
     "half_life": "half_life",
     "clearance": "clearance",
     "volume": "volume",
+}
+_PK_FIT_MEASUREMENT = {
+    ParameterSemantic.CL: "clearance",
+    ParameterSemantic.CL_OVER_F: "clearance",
+    ParameterSemantic.V: "volume",
+    ParameterSemantic.V_OVER_F: "volume",
+    ParameterSemantic.VZ: "volume",
+    ParameterSemantic.VZ_OVER_F: "volume",
+    ParameterSemantic.V1: "volume",
+    ParameterSemantic.V2: "volume",
+    ParameterSemantic.Q: "clearance",
+    ParameterSemantic.KA: "ka",
+    ParameterSemantic.KEL: "lambda_z",
+    ParameterSemantic.K12: "k12",
+    ParameterSemantic.K21: "k21",
+    ParameterSemantic.HALF_LIFE: "half_life",
+    ParameterSemantic.F: "bioavailability",
+}
+_EMAX_MEASUREMENT = {
+    "Emax": "emax",
+    "EC50": "ec50",
+    "hill": "hill",
 }
 _NCA_NOTE = (
     "Estimated from single-dose IV bolus NCA. Not an observed concentration and not a dosing recommendation."
@@ -82,6 +111,56 @@ def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[Evide
     return records
 
 
+def evidence_from_pk_fit(result: IvBolusFit, *, run_id: str) -> list[EvidenceRecord]:
+    """Estimated compartmental PK parameters with explicit ``derived_from`` provenance."""
+
+    if not run_id.strip():
+        raise ValueError("run_id is required.")
+    derived = [f"fit:{result.fit.fit_id}", f"subject:{result.subject_id}"]
+    derived.extend(f"observation:{obs_id}" for obs_id in result.observation_ids)
+    limitations = list(result.diagnostic.limitations)
+    if RESEARCH_USE_LIMITATION not in limitations:
+        limitations.insert(0, RESEARCH_USE_LIMITATION)
+    if result.diagnostic.status is DiagnosticStatus.FAIL or not result.estimates:
+        return [
+            _record(
+                evidence_id=f"pkfit-{run_id}-{result.fit.fit_id}-not-identifiable",
+                run_id=run_id,
+                entity_type="IvBolusFit",
+                entity_id=result.fit.fit_id,
+                measurement_type="clearance",
+                evidence_type=EvidenceType.ESTIMATED,
+                qc_status=EvidenceQc.NOT_REVIEWED,
+                claim_type="pk_fit_not_identifiable",
+                unit=None,
+                numeric_value=None,
+                limitations=limitations,
+                derived_from=derived,
+                applicability="Research-use PK compartment fit. Parameters were not reported because the fit failed.",
+                subject_id=result.subject_id,
+            )
+        ]
+    return [
+        _record(
+            evidence_id=f"pkfit-{run_id}-{result.fit.fit_id}-{estimate.parameter}",
+            run_id=run_id,
+            entity_type="IvBolusFit",
+            entity_id=result.fit.fit_id,
+            measurement_type=_PK_FIT_MEASUREMENT[estimate.semantic],
+            evidence_type=EvidenceType.ESTIMATED,
+            qc_status=EvidenceQc.NOT_REVIEWED,
+            claim_type=estimate.semantic.value,
+            unit=estimate.unit,
+            numeric_value=estimate.value,
+            limitations=limitations,
+            derived_from=derived,
+            applicability="Research-use compartmental PK parameter estimate. Not a dosing recommendation.",
+            subject_id=result.subject_id,
+        )
+        for estimate in result.estimates
+    ]
+
+
 def evidence_from_emax(result: DirectEmaxFit, *, run_id: str) -> list[EvidenceRecord]:
     """Estimated Emax parameters, plus predicted effects when the fit reports them."""
 
@@ -107,13 +186,19 @@ def evidence_from_emax(result: DirectEmaxFit, *, run_id: str) -> list[EvidenceRe
                 applicability="Research-use direct Emax. EC50 was not reported because the fit failed.",
             )
         ]
+    hill_fixed = any(est.name == "hill" and est.fixed for est in result.estimates)
+    param_note = (
+        "E0 was fixed and hill was fixed at 1. This is not an observed effect."
+        if hill_fixed
+        else "E0 was fixed and hill was estimated on the original effect scale. This is not an observed effect."
+    )
     records = [
         _record(
             evidence_id=f"{result.fit.fit_id}-{estimate.name}",
             run_id=run_id,
             entity_type="DirectEmaxFit",
             entity_id=result.fit.fit_id,
-            measurement_type="emax" if estimate.name == "Emax" else "ec50",
+            measurement_type=_EMAX_MEASUREMENT.get(estimate.name, estimate.name.lower()),
             evidence_type=EvidenceType.ESTIMATED,
             qc_status=EvidenceQc.NOT_REVIEWED,
             claim_type=estimate.name,
@@ -121,7 +206,7 @@ def evidence_from_emax(result: DirectEmaxFit, *, run_id: str) -> list[EvidenceRe
             numeric_value=estimate.value,
             limitations=[
                 RESEARCH_USE_LIMITATION,
-                "E0 was fixed and hill was fixed at 1. This is not an observed effect.",
+                param_note,
             ],
             derived_from=derived,
             applicability="Research-use direct-effect parameter. Not a dosing recommendation.",
@@ -209,7 +294,37 @@ def evidence_from_tox(record: ToxEndpoint, *, run_id: str) -> EvidenceRecord:
         limitations=list(record.limitations),
         derived_from=derived,
         applicability="Research-use toxicology observation. Not a clinical dosing recommendation.",
+        subject_id=record.subject_id,
     )
+
+
+def collect_run_evidence(
+    *,
+    run_id: str,
+    nca_parameters: Sequence[NcaParameterSet] | None = None,
+    pk_fits: Sequence[IvBolusFit] | None = None,
+    emax_fits: Sequence[DirectEmaxFit] | None = None,
+    adme_records: Sequence[InVitroAdmeRecord] | None = None,
+    tox_endpoints: Sequence[ToxEndpoint] | None = None,
+) -> list[EvidenceRecord]:
+    """Build and screen PharmacologyEvidence records across all run outputs."""
+
+    records: list[EvidenceRecord] = []
+    for nca in nca_parameters or ():
+        records.extend(evidence_from_nca(nca, run_id=run_id))
+    for pk_fit in pk_fits or ():
+        records.extend(evidence_from_pk_fit(pk_fit, run_id=run_id))
+    for emax_fit in emax_fits or ():
+        records.extend(evidence_from_emax(emax_fit, run_id=run_id))
+    for adme in adme_records or ():
+        built = evidence_from_adme(adme, run_id=run_id)
+        if built is not None:
+            records.append(built)
+    for tox in tox_endpoints or ():
+        records.append(evidence_from_tox(tox, run_id=run_id))
+    if records:
+        screen_exchange(EvidenceExchange(records=records))
+    return records
 
 
 def exchange_from_records(records: list[EvidenceRecord]) -> EvidenceExchange:
@@ -257,6 +372,7 @@ def _record(
     limitations: list[str],
     derived_from: list[str],
     applicability: str,
+    subject_id: str | None = None,
 ) -> EvidenceRecord:
     return EvidenceRecord(
         evidence_id=evidence_id,
@@ -273,4 +389,5 @@ def _record(
         limitations=limitations,
         derived_from=derived_from,
         applicability=applicability,
+        subject_id=subject_id,
     )

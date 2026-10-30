@@ -1,8 +1,8 @@
-"""Auditable BLQ handling.
+"""Auditable BLQ handling and derived observation tables.
 
-Applying a policy returns a new analysis column. It does not rewrite
-``numeric_value`` or ``status`` on the observation. The default NCA rule,
-``keep_as_censored``, leaves the analysis value empty.
+Applying a policy returns a new analysis column or derived table. It does not
+rewrite ``numeric_value`` or ``status`` on the source observation. The default
+NCA rule, ``keep_as_censored``, leaves the analysis value empty.
 """
 
 from dataclasses import dataclass
@@ -10,7 +10,8 @@ from enum import StrEnum
 
 from pydantic import Field, model_validator
 
-from pharmacoweave.core.entities import Assay, Observation, ObservationStatus, Record
+from pharmacoweave.core.entities import Assay, FiniteFloat, Identifier, Observation, ObservationStatus, Record
+from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.errors import PharmacoWeaveError
 
 
@@ -39,6 +40,12 @@ class BlqPolicy(Record):
         return self
 
 
+DEFAULT_BLQ_POLICY = BlqPolicy(
+    rule=BlqRule.KEEP_AS_CENSORED,
+    rationale="Default research policy keeps BLQ censored without numeric substitution.",
+)
+
+
 @dataclass(frozen=True)
 class AnalysisObservation:
     """A derived analysis value. The source observation stays unchanged."""
@@ -51,6 +58,26 @@ class AnalysisObservation:
     caution: str | None
 
 
+class DerivedObservationRow(Record):
+    """One auditable derived observation row. Source Observation stays immutable."""
+
+    observation_id: Identifier
+    sample_id: Identifier
+    subject_id: Identifier | None = None
+    analyte_id: Identifier | None = None
+    time_since_dose: FiniteFloat | None = None
+    time_unit: str | None = None
+    is_predose: bool = False
+    stored_status: ObservationStatus
+    stored_numeric_value: FiniteFloat | None = None
+    stored_unit: str | None = None
+    included_in_analysis: bool
+    analysis_value: FiniteFloat | None = None
+    analysis_unit: str | None = None
+    policy_rule: str = Field(min_length=1)
+    caution: str | None = None
+
+
 def apply_blq_policy(
     observations: list[Observation],
     assays: list[Assay],
@@ -60,6 +87,47 @@ def apply_blq_policy(
 
     by_assay = {assay.assay_id: assay for assay in assays}
     return [_apply_one(observation, by_assay.get(observation.assay_id or ""), policy) for observation in observations]
+
+
+def derive_study_observations(
+    study: PharmacologyStudy,
+    policy: BlqPolicy | None = None,
+) -> list[DerivedObservationRow]:
+    """Build an auditable derived-observation table without mutating ``study``."""
+
+    active_policy = policy if policy is not None else DEFAULT_BLQ_POLICY
+    samples = {sample.sample_id: sample for sample in study.biosamples}
+    derived = apply_blq_policy(study.observations, study.assays, active_policy)
+    rows: list[DerivedObservationRow] = []
+    for obs, item in zip(study.observations, derived, strict=True):
+        sample = samples.get(obs.sample_id)
+        is_predose = bool(sample.is_predose or sample.time_since_dose < 0) if sample is not None else False
+        included = item.included and not is_predose
+        rule = f"predose:{item.rule}" if is_predose else item.rule
+        caution = item.caution
+        if is_predose:
+            predose_note = "Predose sample excluded from post-dose PK series."
+            caution = f"{caution} {predose_note}" if caution else predose_note
+        rows.append(
+            DerivedObservationRow(
+                observation_id=obs.observation_id,
+                sample_id=obs.sample_id,
+                subject_id=sample.subject_id if sample is not None else None,
+                analyte_id=obs.analyte_id,
+                time_since_dose=sample.time_since_dose if sample is not None else None,
+                time_unit=sample.time_since_dose_unit if sample is not None else None,
+                is_predose=is_predose,
+                stored_status=obs.status,
+                stored_numeric_value=obs.numeric_value,
+                stored_unit=obs.unit,
+                included_in_analysis=included,
+                analysis_value=item.analysis_value,
+                analysis_unit=item.analysis_unit,
+                policy_rule=rule,
+                caution=caution,
+            )
+        )
+    return rows
 
 
 def _apply_one(observation: Observation, assay: Assay | None, policy: BlqPolicy) -> AnalysisObservation:

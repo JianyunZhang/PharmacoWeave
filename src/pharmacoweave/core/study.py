@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, PrivateAttr
 
@@ -101,13 +101,28 @@ class PharmacologyStudy(Record):
         run_id: str,
         mode: str = "research",
         nca_parameters: list[NcaParameterSet] | None = None,
-        fits: Sequence[object] | None = None,
+        fits: Sequence[Any] | None = None,
+        emax_fits: Sequence[Any] | None = None,
+        adme_records: Sequence[Any] | None = None,
+        tox_endpoints: Sequence[Any] | None = None,
+        blq_policy: Any | None = None,
     ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
         from pharmacoweave.core.bundle import export_bundle
 
-        return export_bundle(self, path, run_id=run_id, mode=mode, nca_parameters=nca_parameters, fits=fits)
+        return export_bundle(
+            self,
+            path,
+            run_id=run_id,
+            mode=mode,
+            nca_parameters=nca_parameters,
+            fits=fits,
+            emax_fits=emax_fits,
+            adme_records=adme_records,
+            tox_endpoints=tox_endpoints,
+            blq_policy=blq_policy,
+        )
 
     def run_nca(self, config: str | Path) -> list[NcaParameterSet]:
         """Run single-dose IV bolus NCA. The study must already validate."""

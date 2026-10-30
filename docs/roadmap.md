@@ -28,24 +28,24 @@
 ## 已完成：直接效应、体外 ADME、毒理记录和证据往返（0.0.4）
 
 - 效应观测带时间尺度（`direct`、`interval`、`time_to_event`）和量纲（`fraction`、`percent`、`concentration`、`rate`、`time`）。它引用一条暴露，不把预测写成实测。
-- 直接效应 Emax：基线固定，Hill 系数固定为 1。`E = E0 + Emax * C / (EC50 + C)`。浓度–效应对不足、效应不随浓度变化、效应等于基线，或声明方向与 Emax 符号相反时，诊断为失败，不输出 EC50。AUC 和 Cmax 不能当作这个模型的浓度。滞后和间接反应不估计。
+- 直接效应 Emax：基线固定，Hill 系数固定为 1。浓度–效应对不足、效应不随浓度变化、或声明方向与 Emax 符号相反时，诊断为失败，不输出 EC50。AUC 和 Cmax 不能当作这个模型的浓度。滞后和间接反应不估计。
 - 体外 ADME 记录：通透性（`cm/s`、`um/s`、`nm/s`）、微粒体清除率（`uL/min/mg_protein`）和肝细胞清除率（`uL/min/million_cells`）。`L/h` 会被拒绝。不做体内外推。
 - 毒理终点链接剂量事件或暴露 id。不能生成临床给药建议。
 - `PharmacologyEvidence` 用 `derived_from` 指向剂量、暴露或拟合。预测 ADMET 在往返后仍是 `predicted`。不导入 TheraWeave。
 
-## 当前基线（0.0.4）模块状态与边界
+## 已完成：统计加固与 Phase 2 全链路收口（0.0.5）
+
+- **直接效应与 Sigmoid Emax 原始尺度非线性拟合**：将默认估计器升级为原始效应尺度的阻尼 Levenberg–Marquardt 非线性最小二乘（`direct_emax_nls_v1` / `sigmoid_emax_nls_v1`），消除双倒数线性化的低浓度噪声放大以及带噪低浓度观测略低于基线 `E0` 时的拒算脆弱性；开放可选 Sigmoid Hill 系数估计（`fit_sigmoid_emax` / `estimate_hill`），同时保留 `method="linearized"` 供对比。高浓度平台未覆盖、过渡区缺失观测、海森曲率比退化或效应方向矛盾时诊断为失败，不输出 `EC50` 与 `hill`。
+- **参数渐近标准误与 95% 置信区间**：基于收敛点 $J^T W J$ 协方差矩阵、Student-$t$ 分位数与正参数对数尺度 Delta 变换，为一室加权非线性拟合（`CL`、`V`）与直接/Sigmoid Emax（`Emax`、`EC50`、`hill`）填充 `standard_error`、`ci_lower`、`ci_upper` 和 `ci_level=0.95`；自由度不足或海森矩阵奇异时保持空值并记录警告。
+- **半对数图、加权残差图、浓度–效应图与 CLI 解耦**：新增半对数浓度–时间 SVG（标示 LLOQ 虚线、拟合叠加曲线与终末相选点框）、加权相对残差–时间 SVG 及浓度–效应拟合 SVG；解除 `pharmacoweave nca --bundle` 对 `fit_iv_bolus` 的默认隐式耦合（可通过 `--with-fit` 显式开启）。
+- **Phase 2 结果包落盘、Schema 导出与派生/平行样收口**：结果包新增 `analysis/derived_observations.parquet`、`analysis/emax_parameters.parquet`、`analysis/emax_predictions.parquet`、`experimental/in_vitro_adme.parquet`、`experimental/tox_endpoints.parquet`，并自动汇总核验写入 `evidence/pharmacology_evidence.json`；同步生成 `pd_records.schema.json`、`dmpk_records.schema.json`、`toxicology_records.schema.json`；在 `core/profiles.py` 提供 `collapse_replicates` 可审计算术/几何均值聚合与 CV% 统计，并补齐 `pharmacoweave emax` CLI 子命令。
+
+## 当前基线（0.0.5）模块状态与边界
 
 - `available`：`core`、`ingestion`、`bioanalysis`、`pk_nca`（仅单次静脉推注连续采血）。
 - `partial`：`pk_models`、`diagnostics`、`reporting`、`integrations`、`pd_models`、`pkpd`、`dmpk`、`toxicology`。
 - `reserved`：`population_pk`、`pbpk`、`qsp`、`simulation`。
-- 当前仍显式拒绝：稀疏/破坏性采样、稳态、尿药、静脉输注、血管外给药、多次给药、二室模型、Sigmoid Hill 估计、间接反应、效应滞后、血浆蛋白结合、体内外推（IVIVE）、SEND 导出和临床给药建议。
-
-## 计划：统计加固与 Phase 2 全链路收口（0.0.5）
-
-- **直接效应 Emax 原始尺度非线性拟合与可选 Hill 估计**：将 `pd_models` 中的双倒数线性化替换为原始效应空间的阻尼非线性最小二乘，消除低浓度噪声放大以及带噪观测跨越基线 `E0` 时的拒算脆弱性；新增可选 Sigmoid Emax（估计 `hill` 系数）。高浓度平台覆盖不足、海森曲率比退化或效应方向矛盾时诊断为失败，不输出 `EC50` 与 `hill`。先冻结带噪声合成基准与退化失败用例再开放接口。
-- **参数渐近标准误与置信区间**：利用收敛点 $J^T W J$ 协方差矩阵，为一室加权非线性拟合与直接效应 Emax 填充 `ParameterEstimate` 的 `standard_error`、`ci_lower` 和 `ci_upper`。信息矩阵奇异或自由度不足时保持空值并记录诊断，不伪造有限区间。
-- **半对数图、加权残差图与 CLI 解耦**：新增半对数浓度–时间 SVG（标示 LLOQ 阈值线、拟合曲线与终末相选点窗口）、加权/相对残差–时间 SVG 及浓度–效应拟合 SVG；解除 `pharmacoweave nca --bundle` 对 `fit_iv_bolus` 的隐式耦合。
-- **Phase 2 结果包落盘、Schema 导出与派生层收口**：将 `EffectObservation`、`DirectEmaxFit`、`InVitroAdmeRecord`、`ToxEndpoint` 及新生成的 `PharmacologyEvidence` 写入 `PharmacologyResultBundle`、同步至 `schemas/` 并补齐 CLI 入口；在 `core/profiles.py` 串联 `bioanalysis` 的可审计 BLQ 派生策略与 `replicate_id` 平行样聚合，落盘派生分析表。
+- 当前仍显式拒绝：稀疏/破坏性采样、稳态、尿药、静脉输注、血管外给药、多次给药、二室模型、间接反应、效应滞后、血浆蛋白结合、体内外推（IVIVE）、SEND 导出和临床给药建议。
 
 ## 计划：血管外给药、恒速输注与二室模型（0.0.6，Phase 1 余量）
 

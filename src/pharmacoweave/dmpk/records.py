@@ -15,6 +15,7 @@ from pharmacoweave.core.entities import FiniteFloat, Identifier, Record
 from pharmacoweave.core.evidence import RESEARCH_USE_LIMITATION
 from pharmacoweave.core.units import CLEARANCE, parse_unit
 from pharmacoweave.errors import AnalysisError, UnitError
+from pharmacoweave.version import SCHEMA_VERSION
 
 PERMEABILITY_TO_CM_S = {"cm/s": 1.0, "um/s": 1e-4, "nm/s": 1e-7}
 MICROSOMAL_TO_UL_MIN_MG = {"uL/min/mg_protein": 1.0, "mL/min/mg_protein": 1000.0}
@@ -70,6 +71,21 @@ class InVitroAdmeRecord(Record):
             raise ValueError("failed_qc requires qc_reason.")
         if self.status is AdmeStatus.NOT_MEASURED and self.qc_reason is not None:
             raise ValueError("not_measured does not carry qc_reason.")
+        return self
+
+
+class InVitroAdmeSet(Record):
+    """Machine-readable DMPK contract exported to ``schemas/dmpk_records.schema.json``."""
+
+    records: list[InVitroAdmeRecord] = Field(default_factory=list)
+    schema_name: Literal["pharmacology-dmpk-records"] = "pharmacology-dmpk-records"
+    schema_version: str = SCHEMA_VERSION
+
+    @model_validator(mode="after")
+    def unique_and_versioned(self) -> "InVitroAdmeSet":
+        if self.schema_version != SCHEMA_VERSION:
+            raise ValueError(f"schema_version must be {SCHEMA_VERSION}.")
+        validate_adme_records(self.records)
         return self
 
 

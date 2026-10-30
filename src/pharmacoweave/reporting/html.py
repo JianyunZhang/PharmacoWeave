@@ -1,4 +1,4 @@
-"""HTML rendering for the data-validation report."""
+"""HTML rendering for the data-validation and research analysis report."""
 
 from datetime import datetime
 
@@ -22,10 +22,14 @@ def render_validation_report(
     schema_version: str,
     nca_parameters: list[NcaParameterSet] | None = None,
     fit_rows: list[dict[str, str]] | None = None,
+    emax_rows: list[dict[str, str]] | None = None,
+    semilog_svg: str | None = None,
     goodness_of_fit_svg: str | None = None,
     residual_diagnostics_svg: str | None = None,
+    weighted_residuals_svg: str | None = None,
+    concentration_effect_svg: str | None = None,
 ) -> str:
-    """Render the validation inventory, plus NCA or fit rows when that analysis was run."""
+    """Render the validation inventory, plus NCA, PK fit, or Emax sections when run."""
 
     environment = Environment(
         loader=PackageLoader("pharmacoweave.reporting", "templates"),
@@ -49,8 +53,12 @@ def render_validation_report(
         generated_at=generated_at.isoformat(),
         nca_rows=[_nca_row(record) for record in nca_parameters or []],
         fit_rows=fit_rows or [],
+        emax_rows=emax_rows or [],
+        semilog_svg=semilog_svg,
         goodness_of_fit_svg=goodness_of_fit_svg,
         residual_diagnostics_svg=residual_diagnostics_svg,
+        weighted_residuals_svg=weighted_residuals_svg,
+        concentration_effect_svg=concentration_effect_svg,
     )
 
 

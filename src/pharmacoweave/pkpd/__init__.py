@@ -6,6 +6,7 @@ indirect-response estimation are refused.
 
 from pharmacoweave.core.roadmap import status
 from pharmacoweave.pkpd.link import (
+    DirectEmaxRequest,
     ExposureKind,
     ExposureValue,
     LinkedDirectEffects,
@@ -20,6 +21,7 @@ STATUS = status("pkpd")
 
 __all__ = [
     "STATUS",
+    "DirectEmaxRequest",
     "ExposureKind",
     "ExposureValue",
     "LinkedDirectEffects",

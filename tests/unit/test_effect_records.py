@@ -5,14 +5,17 @@ from pydantic import ValidationError
 
 from pharmacoweave.core.entities import ObservationStatus
 from pharmacoweave.core.evidence import RESEARCH_USE_LIMITATION
-from pharmacoweave.errors import AnalysisError, ContractViolation
+from pharmacoweave.core.modeling import DiagnosticStatus
+from pharmacoweave.errors import ContractViolation
 from pharmacoweave.pd_models import (
+    DirectEffectPair,
     EffectDimension,
     EffectDirection,
     EffectObservation,
     EffectTimeScale,
     PredictedEffect,
     effect_observation_from_prediction,
+    emax_effect,
     estimate_hill,
 )
 
@@ -109,6 +112,24 @@ def test_prediction_cannot_be_labeled_observed() -> None:
         _effect(evidence_grade="predicted")
 
 
-def test_hill_estimation_is_refused() -> None:
-    with pytest.raises(AnalysisError, match="hill"):
-        estimate_hill()
+def test_sigmoid_hill_estimation_requires_sufficient_points() -> None:
+    pairs = [
+        DirectEffectPair(
+            effect_id=f"EFF-{idx}",
+            exposure_ref=f"CONC-{idx}",
+            concentration=conc,
+            concentration_unit="mg/L",
+            effect=emax_effect(concentration=conc, e0=10.0, emax=80.0, ec50=4.0, hill=2.0),
+            effect_unit="percent",
+        )
+        for idx, conc in enumerate((1.0, 2.0, 4.0, 8.0, 20.0), start=1)
+    ]
+    fitted = estimate_hill(pairs, e0=10.0, e0_unit="percent", direction=EffectDirection.INCREASE)
+    assert fitted.diagnostic.status is DiagnosticStatus.PASS
+    by_name = {item.name: item for item in fitted.estimates}
+    assert by_name["hill"].fixed is False
+    assert by_name["hill"].value == pytest.approx(2.0, rel=1e-6)
+
+    too_few = estimate_hill(pairs[:3], e0=10.0, e0_unit="percent")
+    assert too_few.diagnostic.status is DiagnosticStatus.FAIL
+    assert too_few.estimates == ()

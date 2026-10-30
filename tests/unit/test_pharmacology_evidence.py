@@ -12,9 +12,11 @@ from pharmacoweave.core.evidence import EvidenceQc, EvidenceRecord, EvidenceType
 from pharmacoweave.core.modeling import NcaParameterSet
 from pharmacoweave.errors import ContractViolation
 from pharmacoweave.integrations import (
+    collect_run_evidence,
     evidence_from_adme,
     evidence_from_emax,
     evidence_from_nca,
+    evidence_from_pk_fit,
     evidence_from_tox,
     exchange_from_records,
     round_trip_exchange,
@@ -23,6 +25,7 @@ from pharmacoweave.integrations import (
 from pharmacoweave.integrations.guards import load_exchange, promote_to_observation, screen_record
 from pharmacoweave.integrations.theraweave import attach_candidate_bundle
 from pharmacoweave.pd_models import DirectEffectPair, fit_direct_emax
+from pharmacoweave.pk_models.wnls import fit_iv_bolus_wnls
 from pharmacoweave.pkpd import fit_linked_direct_emax
 
 
@@ -81,6 +84,34 @@ def test_round_trip_keeps_predicted_admet_apart_from_estimates(tmp_path, repo_ro
     assert any(record.evidence_type is EvidenceType.ESTIMATED for record in attached.external_evidence)
     with pytest.raises(ContractViolation):
         promote_to_observation(nca[0])
+
+
+def test_pk_fit_and_collect_run_evidence_preserve_provenance(repo_root) -> None:
+    study = build_study()
+    nca = study.run_nca(repo_root / "configs" / "nca_single_dose_iv.yaml")
+    pk_fits = fit_iv_bolus_wnls(study, weight="1/y^2")
+    pk_records = evidence_from_pk_fit(pk_fits[0], run_id="run-pk")
+    assert {rec.claim_type for rec in pk_records} == {"CL", "V"}
+    assert all(rec.evidence_type is EvidenceType.ESTIMATED for rec in pk_records)
+    assert all(any(link.startswith("observation:") for link in rec.derived_from) for rec in pk_records)
+
+    _linked, emax_fit = fit_linked_direct_emax(
+        build_effects(),
+        build_exposures(),
+        e0=E0,
+        e0_unit="percent",
+        estimate_hill_coefficient=True,
+    )
+    collected = collect_run_evidence(
+        run_id="run-all",
+        nca_parameters=nca,
+        pk_fits=pk_fits,
+        emax_fits=[emax_fit],
+        adme_records=build_adme(),
+        tox_endpoints=[build_tox()],
+    )
+    assert any(rec.claim_type == "hill" and rec.measurement_type == "hill" for rec in collected)
+    assert any(rec.entity_type == "IvBolusFit" and rec.claim_type == "CL" for rec in collected)
 
 
 def test_failed_emax_evidence_does_not_report_ec50() -> None:
@@ -143,3 +174,31 @@ def test_phase2_modules_do_not_import_external_engines() -> None:
                 elif isinstance(node, ast.ImportFrom) and node.module:
                     imported.add(node.module.split(".")[0].lower())
             assert imported.isdisjoint(forbidden)
+
+
+def test_core_does_not_import_analysis_spokes_at_module_top_level() -> None:
+    forbidden_spokes = {
+        "pk_nca",
+        "pk_models",
+        "pd_models",
+        "pkpd",
+        "dmpk",
+        "toxicology",
+        "population_pk",
+        "pbpk",
+        "qsp",
+        "simulation",
+    }
+    core_dir = Path(__file__).resolve().parents[2] / "src" / "pharmacoweave" / "core"
+    for path in core_dir.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    parts = alias.name.split(".")
+                    if len(parts) >= 2 and parts[0] == "pharmacoweave":
+                        assert parts[1] not in forbidden_spokes, f"{path.name} imports {alias.name} at top level"
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                parts = node.module.split(".")
+                if len(parts) >= 2 and parts[0] == "pharmacoweave":
+                    assert parts[1] not in forbidden_spokes, f"{path.name} imports {node.module} at top level"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.5 — 2026-10-30
+
+- 直接效应与 Sigmoid Emax 默认改用原始效应尺度的阻尼 Levenberg–Marquardt 非线性最小二乘（`direct_emax_nls_v1` / `sigmoid_emax_nls_v1`），消除低浓度噪声放大以及带噪低浓度观测略低于固定基线 `E0` 时的拒算脆弱性；新增可选 Sigmoid Hill 系数估计（`fit_sigmoid_emax` / `estimate_hill`），同时保留 `method="linearized"` 供显式对比。高浓度平台覆盖不足、过渡区无观测、海森曲率比退化或效应方向矛盾时诊断为失败，不输出 `EC50` 或 `hill`。
+- 基于收敛点 $J^T W J$ 协方差矩阵、Student-$t$ 分位数与正参数对数尺度 Delta 变换，为一室静脉推注加权非线性拟合（`CL`、`V`）与原始尺度 Emax/Sigmoid 拟合（`Emax`、`EC50`、`hill`）填充渐近标准误 `standard_error` 与 95% 置信区间（`ci_lower`、`ci_upper`、`ci_level=0.95`）。
+- 新增纯标准库半对数浓度–时间图（`figures/concentration_time_semilog.svg`，含 LLOQ 阈值线、拟合曲线叠加与终末相选点标记）、加权相对残差图（`figures/weighted_residuals.svg`）及浓度–效应拟合曲线图（`figures/concentration_effect.svg`）；解除 `pharmacoweave nca --bundle` 对 `fit_iv_bolus` 的隐式耦合（默认纯 NCA，可通过 `--with-fit` 显式附加对数线性拟合）。
+- 打通 Phase 2 全链路落盘与 Schema 导出：在结果包中持久化 `analysis/derived_observations.parquet`、`analysis/emax_parameters.parquet`、`analysis/emax_predictions.parquet`、`experimental/in_vitro_adme.parquet`、`experimental/tox_endpoints.parquet`，自动汇集并经证据守卫核验写入 `evidence/pharmacology_evidence.json`；导出 `pd_records.schema.json`、`dmpk_records.schema.json`、`toxicology_records.schema.json`；新增 `collapse_replicates` 可审计平行样聚合（算术/几何均值与 CV%）及 `pharmacoweave emax` CLI 子命令。
+
 ## 0.0.4 — 2026-10-30
 
 - 效应观测记录时间尺度和量纲，并保持实测与预测分开。直接效应 Emax（基线固定、Hill 系数为 1）在无噪声合成曲线上回收 Emax 和 EC50。点数不足、效应平坦、效应等于基线，或方向与 Emax 符号相反时诊断为失败，不输出 EC50。AUC 和 Cmax 不能当作直接效应的浓度。BLQ 不替换成 0。滞后和间接反应不估计。

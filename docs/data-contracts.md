@@ -1,10 +1,21 @@
 # 数据契约
 
-Schema 版本是 `0.1.0`。Pydantic 模型是来源，`schemas/` 是导出的 JSON Schema。重新生成：
+Schema 版本是 `0.1.0`。Pydantic 模型是唯一真源，`schemas/` 是导出的 8 份 JSON Schema。重新生成：
 
 ```bash
 python -m pharmacoweave.schema_export
 ```
+
+导出的 Schema 清单：
+
+- `schemas/result_bundle.schema.json`（`ResultBundleManifest`）
+- `schemas/evidence_exchange.schema.json`（`EvidenceExchange`）
+- `schemas/pharmacology_study.schema.json`（`PharmacologyStudy`）
+- `schemas/analysis_records.schema.json`（`AnalysisRecords`，含 PK 参数渐近标准误与置信区间字段）
+- `schemas/nca_config.schema.json`（`NcaConfig`）
+- `schemas/pd_records.schema.json`（`PdAnalysisRecords`，含 `EffectObservation`、`DirectEffectPair`、`EffectParameter`、`PredictedEffectRecord`）
+- `schemas/dmpk_records.schema.json`（`InVitroAdmeSet`）
+- `schemas/toxicology_records.schema.json`（`ToxEndpointSet`）
 
 ## 研究目录
 
@@ -36,36 +47,21 @@ python -m pharmacoweave.schema_export
 
 `observation_type` 取 `concentration`、`effect`、`toxicity`。`status` 取 `quantified`、`BLQ`、`above_ULOQ`、`missing`、`invalid`。只有 `quantified` 同时拥有 `numeric_value` 和 `unit`。
 
-研究目录的列契约在 0.0.4 没有加列。效应的时间尺度和量纲在 `EffectObservation` 上，不在 `observations.csv` 里。它必须引用一条 `exposure_ref`。`time_scale=direct` 记录 `time_since_exposure`；`interval` 记录窗口；`time_to_event` 的数值本身是时间。量纲是 `fraction`（`1` 或 `fold`）、`percent`、`concentration`、`rate` 或 `time`。`evidence_grade` 固定为 observed。模型预测是单独的 `PredictedEffect`，不能写进这条记录。
+### Phase 2 领域记录
 
-体外 ADME 用 `InVitroAdmeRecord`。允许的单位是 `cm/s`、`um/s`、`nm/s`、`uL/min/mg_protein`、`mL/min/mg_protein`、`uL/min/million_cells` 和 `mL/min/million_cells`。`L/h` 不是这些记录的单位。`not_measured` 和 `failed_qc` 不带数值。
+- **PD 效应与 Emax**：`EffectObservation` 强制携带 `time_scale`、`dimension`、`exposure_ref` 和 `evidence_grade="observed"`；`EffectParameter` 记录 `value`、`unit`、`fixed`、`estimation_method` 及可选 `standard_error`、`ci_lower`、`ci_upper`、`ci_level`；模型预测点固定为 `evidence_grade="predicted"`。
+- **体外 ADME**：`InVitroAdmeRecord` 允许 `cm/s`、`um/s`、`nm/s`、`uL/min/mg_protein`、`mL/min/mg_protein`、`uL/min/million_cells` 和 `mL/min/million_cells`，拒绝体内血浆清除率单位 `L/h`。
+- **毒理终点**：`ToxEndpoint` 必须引用 `dose_event_id` 或 `exposure_ref`，并携带非临床给药建议声明。
 
-毒理终点用 `ToxEndpoint`。它必须有 `dose_event_id` 或 `exposure_ref`，并且 limitations 含有研究用、非临床给药建议这句话。发生率成对出现，分子不能大于分母。
+## 标识符与单位
 
-## 标识符
+标识符匹配 `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$`。封闭单位词表的基准是小时、毫克药物、千克体重、升和摩尔，支持 `ug/mL`、`mg*h/L`、`L/h`、`mg/kg`、`1/h`、`percent`、`fold` 等显式组合，未知原子（如 `IU`）被拒绝。
 
-标识符匹配 `^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$`。研究、受试者、检测、给药、样本和观测在各自表内唯一。
+## 结果包产物
 
-## 单位
+`manifest.json` 的 `schema_name` 是 `pharmacology-result-bundle`，`quality_status` 固定为 `research_only`。
 
-封闭词表的基准是小时、毫克药物、千克体重、升和摩尔。可组合，例如 `ug/mL`、`mg*h/L`、`L/h`、`mg/kg`、`1/h`。`kg` 是体重。`percent` 和 `pct` 是无量纲效应刻度，50 percent = 0.5。`fold` 与 `1` 同量纲。它们都不是浓度。未知原子，例如 `foot` 或 `IU`，会被拒绝。
-
-## 结果包
-
-`manifest.json` 的 `schema_name` 是 `pharmacology-result-bundle`，`quality_status` 固定为 `research_only`。`data` 列出实际写出的相对路径。`omitted` 列出故意没有写出的分析产物。`files` 带 SHA-256 和媒体类型。
-
-实验观测按类型分开：
-
-- `experimental/concentration_observations.parquet`
-- `experimental/pd_observations.parquet`
-- `experimental/toxicology_observations.parquet`
-
-三张表使用同一观测列契约。空表仍然带列名。
-
-证据文件使用 `pharmacology-evidence-exchange`。它引用外部结论，不把外部结论复制进观测表。
-
-## 分析记录
-
-`schemas/analysis_records.schema.json` 描述模型说明、拟合、参数、NCA 参数集和诊断。0.0.1 不写出这些表。NCA 参数模型已经执行的报告规则包括：终末相未合格时不能带 λz、t½、AUC∞；静脉与 CL/F 不能同时出现；血管外给药与 CL、V 不能同时出现。
-
-`schemas/nca_config.schema.json` 只接受单次静脉推注、连续采血和 `linear_up_log_down`。
+- 实验观测表：`experimental/concentration_observations.parquet`、`experimental/pd_observations.parquet`、`experimental/toxicology_observations.parquet`（研究原始表保持只读），以及可选传入的 `experimental/in_vitro_adme.parquet`、`experimental/tox_endpoints.parquet`。
+- 派生与分析表（仅在对应分析运行后写出）：`analysis/derived_observations.parquet`、`analysis/nca_parameters.parquet`、`analysis/model_parameters.parquet`、`analysis/predictions.parquet`、`analysis/residuals.parquet`、`analysis/emax_parameters.parquet`、`analysis/emax_predictions.parquet`、`analysis/diagnostics.json`。
+- 诊断图（原生 SVG）：`figures/concentration_time.svg`、`figures/concentration_time_semilog.svg`、`figures/goodness_of_fit.svg`、`figures/residual_diagnostics.svg`、`figures/weighted_residuals.svg`、`figures/concentration_effect.svg`。
+- 证据交换：`evidence/pharmacology_evidence.json`（自动汇集并经 `screen_exchange` 核验所有运行产出的 `estimated`、`predicted` 与体外/毒理 `observed` 证据）。

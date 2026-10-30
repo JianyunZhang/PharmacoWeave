@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "AdmeAssayKind": {
+      "enum": [
+        "permeability",
+        "microsomal_clearance",
+        "hepatocyte_clearance"
+      ],
+      "title": "AdmeAssayKind",
+      "type": "string"
+    },
+    "AdmeStatus": {
+      "enum": [
+        "measured",
+        "not_measured",
+        "failed_qc"
+      ],
+      "title": "AdmeStatus",
+      "type": "string"
+    },
+    "InVitroAdmeRecord": {
+      "additionalProperties": false,
+      "description": "One in vitro ADME result. ``evidence_grade`` stays observed.",
+      "properties": {
+        "record_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "compound_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Compound Id",
+          "type": "string"
+        },
+        "assay_kind": {
+          "$ref": "#/$defs/AdmeAssayKind"
+        },
+        "system": {
+          "minLength": 1,
+          "title": "System",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AdmeStatus"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "replicate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replicate Id"
+        },
+        "qc_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Qc Reason"
+        },
+        "evidence_grade": {
+          "const": "observed",
+          "default": "observed",
+          "title": "Evidence Grade",
+          "type": "string"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "record_id",
+        "compound_id",
+        "assay_kind",
+        "system",
+        "status",
+        "limitations"
+      ],
+      "title": "InVitroAdmeRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable DMPK contract exported to ``schemas/dmpk_records.schema.json``.",
+  "properties": {
+    "records": {
+      "items": {
+        "$ref": "#/$defs/InVitroAdmeRecord"
+      },
+      "title": "Records",
+      "type": "array"
+    },
+    "schema_name": {
+      "const": "pharmacology-dmpk-records",
+      "default": "pharmacology-dmpk-records",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "InVitroAdmeSet",
+  "type": "object"
+}

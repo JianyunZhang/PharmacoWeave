@@ -12,6 +12,7 @@ from pharmacoweave.dmpk.records import (
     AdmeAssayKind,
     AdmeStatus,
     InVitroAdmeRecord,
+    InVitroAdmeSet,
     scale_to_in_vivo_clearance,
     validate_adme_records,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "AdmeAssayKind",
     "AdmeStatus",
     "InVitroAdmeRecord",
+    "InVitroAdmeSet",
     "scale_to_in_vivo_clearance",
     "validate_adme_records",
 ]

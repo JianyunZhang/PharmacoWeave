@@ -8,8 +8,9 @@ not replaced with zero.
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from pharmacoweave.core.entities import FiniteFloat, Identifier, ObservationStatus, Record
 from pharmacoweave.core.units import AUC_AMOUNT, AUC_MASS, CONC_AMOUNT, CONC_MASS, parse_unit
@@ -45,6 +46,16 @@ class ExposureValue(Record):
         elif self.value <= 0:
             raise ValueError("auc must be positive.")
         return self
+
+
+class DirectEmaxRequest(Record):
+    """Input contract for linking direct effects to explicit concentrations."""
+
+    effects: list[EffectObservation] = Field(min_length=1)
+    exposures: list[ExposureValue] = Field(min_length=1)
+    e0: FiniteFloat
+    e0_unit: str
+    fit_id: Identifier = "direct-emax"
 
 
 @dataclass(frozen=True)
@@ -156,8 +167,10 @@ def fit_linked_direct_emax(
     e0: float,
     e0_unit: str,
     fit_id: str = "direct-emax",
+    method: Literal["nonlinear_ls", "linearized"] = "nonlinear_ls",
+    estimate_hill_coefficient: bool = False,
 ) -> tuple[LinkedDirectEffects, DirectEmaxFit]:
-    """Link effects to concentrations and fit direct Emax."""
+    """Link effects to concentrations and fit direct or sigmoid Emax."""
 
     linked = link_direct_effects(effects, exposures)
     fit = fit_direct_emax(
@@ -166,5 +179,7 @@ def fit_linked_direct_emax(
         e0_unit=e0_unit,
         direction=linked.direction,
         fit_id=fit_id,
+        method=method,
+        estimate_hill_coefficient=estimate_hill_coefficient,
     )
     return linked, fit
