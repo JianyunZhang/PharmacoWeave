@@ -1,6 +1,6 @@
 # PharmacoWeave
 
-定量药理学研究用 Python 工具包。当前版本 **0.0.3** 锁定实验数据模型、单位、质量控制、结果包和跨项目证据边界，并计算一种 NCA：单次静脉推注、连续采血。它可以用对数线性回归或加权非线性最小二乘估计该模型的 CL 和 V，并写出观测–预测图和残差图。它不计算其他试验设计，也不给出给药建议。
+定量药理学研究用 Python 工具包。当前版本 **0.0.4** 在单次静脉推注 NCA 和一室 CL、V 拟合之上，增加直接效应 Emax、体外 ADME 记录、研究用毒理终点，以及带 `derived_from` 的 PharmacologyEvidence。预测与实测分开。它不计算其他试验设计，不做体内外推，也不给出给药建议。
 
 **Research use only.** 本软件不是医疗器械，不构成监管申报、GxP 或临床决策工具。参考 ICH M15 的记录结构，并不表示本软件满足该指南。
 
@@ -31,7 +31,7 @@ study.export_bundle("results/iv-bolus-validation", run_id="iv-bolus-validation")
 pharmacoweave capabilities
 ```
 
-`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 只接受 `configs/nca_single_dose_iv.yaml` 里的设计。`pk_models` 提供一室静脉推注的对数线性拟合，以及权重为 `1/y` 或 `1/y^2` 的加权非线性最小二乘。`pd_models` 及之后的包可以导入，导入不会运行分析。
+`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 只接受 `configs/nca_single_dose_iv.yaml` 里的设计。`pk_models` 提供一室静脉推注的对数线性拟合，以及权重为 `1/y` 或 `1/y^2` 的加权非线性最小二乘。`pd_models` 估计基线固定、Hill 系数为 1 的直接效应 Emax。`pkpd` 只把效应连到显式浓度。`dmpk` 校验通透性、微粒体和肝细胞清除率记录。`toxicology` 记录研究用终点。`population_pk`、`pbpk`、`qsp` 和 `simulation` 仍是 reserved，导入不会运行分析。
 
 ```bash
 pharmacoweave nca examples/data/iv_bolus_single_dose \
@@ -69,3 +69,5 @@ pharmacoweave fit examples/data/iv_bolus_noisy \
 第一版准备接受的 NCA 设计写在 `configs/nca_single_dose_iv.yaml`：单次静脉推注、连续采血、linear-up/log-down。加载该文件不会计算 NCA。
 
 `examples/data/iv_bolus_noisy/` 是带乘性噪声的一室静脉推注。加权拟合应在 10% 相对误差内回收 CL = 0.40 L/h 和 V = 2.0 L。24 h 仍然是 BLQ。
+
+`examples/direct_effect_and_evidence.py` 是无噪声直接效应曲线，Emax = 80 percent，EC50 = 8 mg/L，并带有体外 ADME 和一条组织病理学记录。这不是动物实验，也不是给药方案。

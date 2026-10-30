@@ -1,8 +1,31 @@
-"""Joint PK/PD estimation is not implemented.
+"""Direct concentration-effect linkage.
 
-Importing this module does not run an analysis.
+AUC and Cmax are not used as the driver of a direct effect. Lag and
+indirect-response estimation are refused.
 """
 
 from pharmacoweave.core.roadmap import status
+from pharmacoweave.pkpd.link import (
+    ExposureKind,
+    ExposureValue,
+    LinkedDirectEffects,
+    OmittedEffect,
+    fit_effect_lag,
+    fit_indirect_response,
+    fit_linked_direct_emax,
+    link_direct_effects,
+)
 
 STATUS = status("pkpd")
+
+__all__ = [
+    "STATUS",
+    "ExposureKind",
+    "ExposureValue",
+    "LinkedDirectEffects",
+    "OmittedEffect",
+    "fit_effect_lag",
+    "fit_indirect_response",
+    "fit_linked_direct_emax",
+    "link_direct_effects",
+]

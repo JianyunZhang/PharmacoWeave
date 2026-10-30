@@ -5,7 +5,7 @@
 > **适用版本**：PharmacoWeave 0.0.1 (Pre-Alpha, commit `02240d9`) 及后续演进规划  
 > **关联文档**：`docs/project-evaluation.md`、`docs/architecture.md`、`docs/development-plan.md`、`docs/roadmap.md`  
 > **文档定位**：针对运行时管线与研发步骤的修订方案、对标 SDGR（Schrödinger）软件套件的异同剖析、核心差异化创新路径及三层生态整合蓝图  
-> **与当前 main 的关系**：文中的“现状”按 **0.0.1** 书写。**0.0.2**（commit `7fd9028`）已经落地单次静脉推注 NCA 和对数线性 CL/V 拟合，绘图使用标准库 SVG，没有把 SciPy 或 Matplotlib 放进必装依赖。加权非线性拟合和残差图已在 0.0.3 落地。派生分析数据集、方法学准入门禁和证据包导出仍是后续建议。当前进度以 `docs/roadmap.md` 为准。
+> **与当前 main 的关系**：文中的“现状”按 **0.0.1** 书写。**0.0.2**（commit `7fd9028`）已经落地单次静脉推注 NCA 和对数线性 CL/V 拟合，绘图使用标准库 SVG，没有把 SciPy 或 Matplotlib 放进必装依赖。加权非线性拟合和残差图已在 0.0.3 落地。0.0.4 导出带 `derived_from` 的 PharmacologyEvidence，并保持预测与实测分开。派生分析数据集和方法学准入门禁仍是后续建议。当前进度以 `docs/roadmap.md` 为准。
 
 ---
 

@@ -52,3 +52,10 @@ def test_infusion_rate_keeps_body_mass_distinct() -> None:
 def test_unknown_unit_is_rejected() -> None:
     with pytest.raises(UnitError):
         parse_unit("foot")
+
+
+def test_percent_is_dimensionless_and_is_not_a_concentration() -> None:
+    assert convert(50.0, "percent", "1") == pytest.approx(0.5)
+    assert convert(1.0, "fold", "1") == pytest.approx(1.0)
+    with pytest.raises(UnitError):
+        convert(50.0, "percent", "mg/L")

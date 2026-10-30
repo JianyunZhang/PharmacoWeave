@@ -8,6 +8,10 @@ Canonical scale factors are: hour, milligram of drug, kilogram of body
 weight, litre, and mole. Conversions inside one dimension are linear.
 Molar and mass concentrations are not converted into each other, because
 that requires a molecular weight and has to be an explicit step.
+
+``percent`` and ``pct`` are a dimensionless effect scale (50 percent = 0.5).
+``fold`` is a dimensionless factor of 1, the same dimension as ``1``.
+Neither is a concentration.
 """
 
 import math
@@ -75,6 +79,9 @@ _ATOMS: dict[str, tuple[Dimensions, float]] = {
     "mmol": (AMOUNT, 1e-3),
     "mol": (AMOUNT, 1.0),
     "1": (DIMENSIONLESS, 1.0),
+    "fold": (DIMENSIONLESS, 1.0),
+    "percent": (DIMENSIONLESS, 0.01),
+    "pct": (DIMENSIONLESS, 0.01),
 }
 
 _TOKEN = re.compile(r"[A-Za-z]+|1")
