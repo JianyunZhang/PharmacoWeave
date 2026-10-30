@@ -1,32 +1,32 @@
 # PharmacoWeave 流程优化、SDGR 对比与生态整合战略方案
 
-> **文档版本**：v1.0  
-> **编写日期**：2026-10-30  
-> **适用版本**：PharmacoWeave 0.0.1 (Pre-Alpha, commit `02240d9`) 及后续演进规划  
-> **关联文档**：`docs/project-evaluation.md`、`docs/architecture.md`、`docs/development-plan.md`、`docs/roadmap.md`  
+> **文档版本**：v1.1  
+> **更新日期**：2026-10-30  
+> **适用版本**：PharmacoWeave 0.0.4 (Pre-Alpha, commit `8ad0585`) 及 `0.0.5`–`0.1.0` 演进规划  
+> **关联文档**：`docs/roadmap.md`、`docs/project-evaluation.md`、`docs/architecture.md`、`docs/development-plan.md`  
 > **文档定位**：针对运行时管线与研发步骤的修订方案、对标 SDGR（Schrödinger）软件套件的异同剖析、核心差异化创新路径及三层生态整合蓝图  
-> **与当前 main 的关系**：文中的“现状”按 **0.0.1** 书写。**0.0.2**（commit `7fd9028`）已经落地单次静脉推注 NCA 和对数线性 CL/V 拟合，绘图使用标准库 SVG，没有把 SciPy 或 Matplotlib 放进必装依赖。加权非线性拟合和残差图已在 0.0.3 落地。0.0.4 导出带 `derived_from` 的 PharmacologyEvidence，并保持预测与实测分开。派生分析数据集和方法学准入门禁仍是后续建议。当前进度以 `docs/roadmap.md` 为准。
+> **与当前 main 的关系**：本文初版写于 `0.0.1`；截至 **0.0.4**（commit `8ad0585`），单次静脉推注 NCA、50 位十进制冻结参考、纯 Python 阻尼 LM 加权非线性拟合、标准库原生 SVG 浓度/残差图，以及带 `derived_from` 的 `PharmacologyEvidence` 往返均已落地，且核心包保持零 SciPy / Matplotlib 必装依赖。下文中的派生分析数据集落盘、原始空间 Emax 非线性拟合、声明式列映射、预测偏差审计及跨项目时序对齐已纳入 `0.0.5`–`0.1.0` 路线（详见 `docs/roadmap.md`）。
 
 ---
 
 ## 一、 执行流程与研发步骤的修改及改进方案
 
-结合当前代码实现（`src/pharmacoweave/`）与既有路线规划（`docs/roadmap.md`、`docs/project-evaluation.md`），需从 **运行时数据与分析执行链路（Runtime Pipeline）** 和 **工程研发推进顺序（Development Steps）** 两个层面对现有流程进行修正。
+结合当前代码实现（`src/pharmacoweave/`）与既有路线规划（`docs/roadmap.md`、`docs/project-evaluation.md`），需从 **运行时数据与分析执行链路（Runtime Pipeline）** 和 **工程研发推进顺序（Development Steps）** 两个层面对现有流程进行演进优化。
 
 ### 1.1 运行时执行链路（Runtime Pipeline）的四项结构性修正
 
 #### 修正 1：解耦只读输入 `PharmacologyStudy` 与单次运行产物 `StudyRunResult`
-- **现状痛点**：
-  - `Record` 基类配置为 `frozen=True`（不可变模型），`study.attach_candidates()` 返回新实例而非原地修改，这与 `docs/development-plan.md` 第 7.5 节预想的原地调用链存在语义冲突。
-  - 更关键的是，进入 Phase 1 后，NCA 计算出的 `NcaParameterSet` 与模型拟合产出的 `ModelFit`、`ParameterEstimate`、`DiagnosticRecord`（汇总为 `AnalysisRecords`）若直接挂载回 `PharmacologyStudy` 实例，会污染原始研究输入对象，违背“同一份干净实验数据可使用不同配置/模型重复运行并输出独立 `run_id` 结果包”的设计原则。
+- **现状分析**：
+  - `Record` 基类配置为 `frozen=True`（不可变模型），`study.attach_candidates()` 返回新实例而非原地修改。
+  - 在 `0.0.2`–`0.0.3` 中，`export_bundle()` 通过可选参数接收 `nca_results` 与 `model_fits` 保持了 `PharmacologyStudy` 只读；随着 `0.0.4` 引入 `DirectEmaxFit`、`InVitroAdmeRecord`、`ToxEndpoint` 和新生成的 `PharmacologyEvidence`，扁平参数列表逐渐膨胀，适合聚合为统一的单次运行产物容器。
 - **改进方案**：
-  引入独立的单次运行结果聚合对象 `StudyRunResult`（或 `AnalysisRun`），将运行流重构为纯函数式三段管道：
+  引入独立的单次运行结果聚合对象 `StudyRunResult`（或扩展结构化运行上下文），将运行流收拢为纯函数式三段管道：
 
 ```mermaid
 flowchart LR
-    A["PharmacologyStudy<br/>(只读实验输入)"] --> C["Execution Engine<br/>(validate / run_nca / fit_model)"]
+    A["PharmacologyStudy<br/>(只读实验输入)"] --> C["Execution Engine<br/>(validate / run_nca / fit_model / fit_emax)"]
     B["AnalysisConfig / ModelSpec<br/>(分析配置与模型声明)"] --> C
-    C --> D["StudyRunResult<br/>(AnalysisRecords + 派生表 + 图表 + 审计日志)"]
+    C --> D["StudyRunResult<br/>(NCA + PK/PD Fits + 派生表 + 图表 + PharmacologyEvidence)"]
     D --> E["export_bundle()<br/>(写出带 SHA-256 的不可变目录)"]
 ```
 
@@ -45,54 +45,53 @@ flowchart LR
 
 #### 修正 2：补齐悬空的“分析数据集派生层（Derived Analysis Dataset / ADPC 层）”
 - **现状痛点**：
-  - `bioanalysis/qc.py` 中的 `apply_blq_policy()` 生成了不可变的 `AnalysisObservation`，但目前在整个运行链路中处于“悬空”状态：既未接入 `pk_nca/runner.py`，在 `core/bundle.py` 的 `_PATHS` 清单中也未定义落盘路径。
-  - 缺少数值计算前的**单位归一化**（如同一研究中混有 `ng/mL` 与 `ug/mL` 观测记录）以及**技术平行样（`replicate_id`）聚合策略**（算术均值、几何均值或保留独立测量）。
-- **改进方案**：
-  在跨表校验通过之后、进入 NCA 或非线性拟合之前，显式插入 `derive_analysis_dataset()` 标准步骤，并将派生结果写入 `analysis/derived_observations.parquet`：
-  1. **单位标准化**：按目标分析量纲统一转换时间（如 `h`）、浓度（如 `ug/mL` 或 `nmol/L`）与剂量单位；
+  - `bioanalysis/qc.py` 中的 `apply_blq_policy()` 生成了不可变的 `AnalysisObservation`，但目前在整个运行链路中仍未与 `core/profiles.py` 贯通，在 `core/bundle.py` 的 `_PATHS` 清单中也未定义落盘路径。
+  - `core/profiles.py` 已实现受试者级浓度时间轴提取与量纲统一，但尚缺对技术平行样（`replicate_id`）的可审计聚合辅助函数（`collapse_replicates`）。
+- **改进方案（目标版本 `0.0.5`）**：
+  在跨表校验通过之后、进入 NCA 或非线性拟合之前，显式串联派生分析层，并将派生结果写入 `analysis/derived_observations.parquet`：
+  1. **单位标准化**：按目标分析量纲统一转换时间（如 `h`）、浓度（如 `ug/mL` 或显式分子量下的 `nmol/L`）与剂量单位；
   2. **BLQ 与超限规则派生**：调用 `apply_blq_policy()`，保留原始 `Observation` 不变，生成带 `rule` 与 `caution` 审计字段的派生列；
   3. **平行样处理**：显式按配置聚合同一 `sample_id` 下的 `replicate_id` 记录并记录聚合前离散度（CV%）；
-  4. **异常与排除过滤**：对标记了 `exclusion_reason` 的点设置 `included=False`，确保不进入积分/拟合但完整保留在派生表与图表中（用特殊符号标示被剔除点）。
+  4. **异常与排除过滤**：对标记了 `exclusion_reason` 的点设置 `included=False`，确保不进入积分/拟合但完整保留在派生表审计记录中。
 
-#### 修正 3：将重复校验重构为“三级递进校验门禁（3-Stage Validation Gate）”
-- **现状痛点**：
-  - 当前 `from_files()`、`run_nca()`、`export_bundle()` 会三次重复触发相同的 `validate_study()`，但缺少**实验设计与所选分析方法匹配度**的校验（例如将口服或多剂量数据集传入仅支持 `iv_bolus + single_dose` 的 `NcaConfig` 时，现有 `runner.py` 未检查 `study.dose_events` 的真实给药途径和给药频次）。
+#### 修正 3：演进为职责正交的“三级递进校验门禁（3-Stage Validation Gate）”
+- **现状与进展**：
+  - `0.0.2`–`0.0.4` 已在 `core/profiles.py`、`pk_nca/`、`pk_models/` 和 `pkpd/` 中补充了单次静脉推注设计核查与瞬时浓度类型核查，但 `from_files()`、`run_nca()`、`export_bundle()` 之间仍存在重复全量校验。
 - **改进方案**：
-  拆分为职责正交的三级门禁：
+  收敛为职责正交的三级门禁：
   - **L1 记录模式门禁（Schema & Record Gate）**：单行字段类型、时区、封闭单位词表、BLQ 禁填数值校验（文件读取时执行一次）；
   - **L2 跨表关系与证据守卫门禁（Relational & Evidence Gate）**：外键完整性、绝对/相对时钟一致性、Assay 基质与 LLOQ 核对、跨项目证据防篡改守卫（产出可复用的 `ValidationReport` 摘要）；
-  - **L3 方法学适用性门禁（Method Eligibility Gate）**：在运行具体 NCA 或房室模型前，逐个 `Subject` 核查给药途径（IV vs Extravascular）、给药事件数（单次 vs 多次）、基质类型（血浆 vs 尿液/组织）与有效定量点数是否满足算法前置假设；不满足的受试者不抛未捕获异常中断整批任务，而是写入 `NcaParameterSet.excluded_reason` 并附明确诊断码。
+  - **L3 方法学适用性门禁（Method Eligibility Gate）**：在运行具体 NCA、PK 或 PD 模型前，逐个 `Subject` 核查给药途径（IV vs Extravascular）、给药事件数（单次 vs 多次）、基质类型与有效定量点数是否满足算法前置假设；不满足时输出结构化排除原因与诊断码。
 
 #### 修正 4：前置增加“声明式原始实验表映射器（Declarative Ingest Mapper）”
 - **现状痛点**：
   - `ingestion/tabular.py` 要求输入 CSV/Parquet 列名严格对齐内部标准字段，而实验室 LC-MS/MS 工作站（Sciex Analyst、MassLynx、Thermo Xcalibur）或 CRO 交付的原始宽表/异构长表列名差异极大，人工改表既易出错又会破坏原始文件的哈希溯源链。
-- **改进方案**：
+- **改进方案（目标版本 `0.1.0`）**：
   支持可选的 `ingest_mapping.yaml` 映射配置：先对未经手工篡改的实验室原始导出文件计算 `source_files.json` SHA-256 摘要，再通过声明式列映射、单位绑定与宽表转长表（melt）规则在内存中构建 `PharmacologyStudy`。
 
 ---
 
-### 1.2 研发推进步骤（Development Roadmap）的四项顺序调优
+### 1.2 研发推进步骤（Development Roadmap）落地状态与后续切片
 
-对比 `docs/project-evaluation.md` 原定的 Phase 1 顺序，建议做如下工程顺序调整：
+结合 `0.0.2`–`0.0.4` 的实际工程验证，研发推进顺序确定如下：
 
 ```mermaid
 flowchart TD
-    S0["Step 1.0: 冻结外部黄金基准与病态失败集<br/>(Benchmark-First TDD)"] --> S1["Step 1.1: 可选依赖分层配置<br/>(保持 core 轻量，拆分 pk/plotting extras)"]
-    S1 --> S2["Step 1.2: 分析数据集派生层与 L3 准入门禁<br/>(单位归一 / BLQ 派生落盘 / 平行样聚合)"]
-    S2 --> S3["Step 1.3: NCA 核心计算引擎实现<br/>(Linear-up Log-down + λz 自动选点)"]
-    S3 --> S4["Step 1.4: 一室静脉加权非线性拟合器<br/>(ParameterEstimate + 收敛与局限性诊断)"]
-    S4 --> S5["Step 1.5: 诊断图表生成与结果包解封<br/>(线性/半对数图 + 残差图 + analysis_executed=True)"]
-    S5 --> S6["Step 1.6: 提前打通 PharmacologyEvidence 导出<br/>(形成 PharmacoWeave → TheraWeave 最小闭环)"]
+    Done1["已完成 (0.0.2–0.0.3): 单次 IV NCA + 50 位十进制冻结参考 + 阻尼 LM-WNLS + 原生 SVG"] --> Done2["已完成 (0.0.4): 直接效应 Emax + 体外 ADME + 研究毒理记录 + PharmacologyEvidence 往返"]
+    Done2 --> Next5["下一步 (0.0.5): 原始尺度 LM-Emax / Hill + 参数 SE&CI + 半对数图 + Phase 2 Bundle/Schema 收口"]
+    Next5 --> Next6["后续 (0.0.6): 血管外 & 输注 NCA + 口服一室 / 二室 IV 拟合 + 显式分子量换算"]
+    Next6 --> Next7["后续 (0.0.7): 蛋白结合 fu + 显式假设研究级 IVIVE + 先验预测 vs 实测偏差审计"]
+    Next7 --> Next8["后续 (0.1.0): PK–Ephys–Omics 时钟同步可追溯流 + YAML 映射 + verify-bundle / diff"]
 ```
 
-1. **Benchmark-First 顺序前置（将原 Step 1.6 提至 Step 1.0）**：
-   严格落实 `CONTRIBUTING.md` 规范，在写任何一行 NCA 或拟合实现代码前，先在 `tests/numerical_benchmarks/` 和 `tests/regression/` 中固化由外部独立参考工具（如 R `PKNCA`）生成的标准真值 JSON，同时纳入**病态与拒算测试集**（浓度反弹、双峰曲线、仅 2 个定量点、终末外推 > 20%、口服数据误用 IV 配置）。
-2. **核心包与重型科学计算包分层装配（修正依赖策略）**：
-   避免把 `scipy`、`matplotlib` 强塞进基础必装依赖。基础安装 `pip install pharmacoweave` 保持极简，供 CI 与兄弟项目快速执行 Schema 及证据守卫校验；NCA 梯形法与对数线性回归仅依赖标准库 `math` 或轻量 `numpy`；非线性优化与静态绘图通过 `pyproject.toml` 的 `[project.optional-dependencies]`（如 `pharmacoweave[pk]`、`pharmacoweave[plotting]`、`pharmacoweave[standard]`）按需安装。
-3. **提前在 Phase 1 末打通 `PharmacologyEvidence` 导出闭环**：
-   不等到 Phase 2，只要单室 IV NCA/拟合跑通，即提供 `export_evidence_exchange()` 将合格的体内暴露参数（`CL`、`V`、`t½`、`AUC∞`，标记 `evidence_type="estimated"` 及 `derived_from` Bundle 哈希）导出为标准证据包，尽早验证与 `TheraWeave` 的往返联调。
-4. **增强 CLI 全生命周期体验**：
-   在 `cli.py` 现有 `validate`、`capabilities`、`export-schemas` 基础上，新增 `pharmacoweave init-study`（生成带注释的标准目录脚手架）与 `pharmacoweave verify-bundle`（离线核对已有结果包内全部文件的 SHA-256 完整性及 Schema 合规性）。
+1. **Benchmark-First 准则持续生效**：
+   `0.0.3` 已通过 50 位十进制独立手算参考 `iv_bolus_quiet_nca.json` 证明了无需引入第三方包即可建立高精度回归真值。`0.0.5` 的带噪 Emax / Hill 与 `0.0.6` 的血管外/输注 NCA 继续严格执行“先冻结基准与退化失败用例，再开放公开函数”。
+2. **坚持零重型必装依赖策略**：
+   `0.0.2`–`0.0.4` 已证明标准库数学原语足以支撑阻尼 Levenberg–Marquardt 非线性最小二乘和原生 SVG 矢量诊断图。后续一室口服、二室静脉与直接效应 Sigmoid Emax 继续沿用该纯 Python 数值内核，将重型科学计算或化学信息学组件（如 RDKit、DuckDB）严格限制在可选扩展或进程外适配器中。
+3. **从内存级 `PharmacologyEvidence` 升级到结果包级闭环（`0.0.5`）**：
+   `0.0.4` 已打通 `evidence_from_nca`、`evidence_from_emax`、`evidence_from_adme`、`evidence_from_tox` 的内存构建与 JSON 往返；`0.0.5` 将其正式写入 `PharmacologyResultBundle`，打通文件级交付。
+4. **增强 CLI 全生命周期体验（`0.0.5`–`0.1.0`）**：
+   在现有 `validate`、`capabilities`、`export-schemas`、`nca`、`fit` 基础上，解除 `nca --bundle` 与 `fit_iv_bolus` 的隐式耦合，并逐步增加 `emax`、`verify-bundle` 与 `diff` 命令。
 
 ---
 
@@ -216,12 +215,12 @@ flowchart TB
 
 ---
 
-## 五、 近期优先落地行动项汇总
+## 五、 下一阶段优先落地行动项汇总（基于 `0.0.4` 基线）
 
-| 优先级 | 行动项 | 涉及模块 / 路径 | 预期产出与验收标准 |
+| 目标版本 | 行动项 | 涉及模块 / 路径 | 预期产出与科学验收标准 |
 | :---: | :--- | :--- | :--- |
-| **P0** | 冻结外部 NCA 与一室拟合黄金基准集 + 病态失败集 | `tests/numerical_benchmarks/`、`tests/regression/` | 包含标准真值与至少 5 类拒算/警告边界用例 |
-| **P0** | 重构 `StudyRunResult` 并补齐 `derive_analysis_dataset()` | `core/study.py`、`core/bundle.py`、`bioanalysis/qc.py` | 原始 `Study` 保持只读，BLQ 与单位归一派生表落盘为 Parquet |
-| **P0** | 拆分可选依赖并实现 NCA + 一室 IV 非线性拟合与诊断图 | `pyproject.toml`、`pk_nca/`、`pk_models/`、`reporting/` | 核心包保持轻量；`analysis_executed=True` 端到端产出完整报告包 |
-| **P1** | 补充声明式实验室原始表列映射器与 `PharmacologyEvidence` 导出 | `ingestion/`、`integrations/` | 支持原始 LC-MS/MS 导出表直接入库溯源，跑通与 `TheraWeave` 证据往返 |
-| **P1** | 构建“先验预测–后验实测”偏差审计模块及外部 CADD 导入桥接 | `diagnostics/`、`integrations/` | 支持挂载 `TheraWeave` 或 SDGR 预测包，自动输出 Fold Error / AAFE 校准报告 |
+| **`0.0.5`** | 原始空间阻尼 LM 直接效应 / Sigmoid Emax 拟合 + 参数 `SE` / `CI` | `pd_models/emax.py`、`pk_models/wnls.py`、`tests/numerical_benchmarks/` | 替换双倒数线性化以消除噪声放大；奇异曲率比时拒绝输出 `EC50`/`hill` 与置信区间 |
+| **`0.0.5`** | Phase 2 产物落盘、Schema 同步、派生表与半对数/加权残差 SVG | `core/bundle.py`、`core/profiles.py`、`reporting/figures.py`、`schema_export.py`、`cli.py` | 补齐半对数图与加权残差图；解耦 `nca --bundle` 隐式拟合；Phase 2 记录与新生成证据写入 Bundle |
+| **`0.0.6`** | 单次血管外给药 / 恒速输注 NCA、口服一室 / 二室 IV 拟合与显式分子量换算 | `pk_nca/`、`pk_models/`、`core/units.py`、`tests/regression/` | 先建立 50 位十进制独立参考 JSON；口服强制 `CL/F`、`Vz/F` 且拦截 flip-flop 不可辨识 |
+| **`0.0.7`** | 蛋白结合（`fu`）、显式生理假设研究级 IVIVE 与先验预测偏差审计 | `dmpk/`、`diagnostics/`、`integrations/` | 研究级 IVIVE 严格锁定 `evidence_type="predicted"`；输出 `TheraWeave`/CADD 预测 Fold Error 与 AAFE |
+| **`0.1.0`** | 跨项目时序对齐可追溯流、声明式 `ingest_mapping.yaml` 与 `verify-bundle` / `diff` | `pkpd/`、`ingestion/`、`cli.py`、`examples/` | 强制校验 `review_status="accepted"`、`timebase_id` 与 `sync_error_ms`，跑通 PK–Ephys/Omics 示范管线 |
