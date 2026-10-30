@@ -1,0 +1,18 @@
+{
+  "study_id": "PW-SYNTH-IV-NOISY-001",
+  "title": "Synthetic noisy single-dose IV bolus plasma PK",
+  "study_type": "pk",
+  "data_class": "synthetic",
+  "species": "Rattus norvegicus",
+  "design_version": "1",
+  "timebases": [
+    {
+      "timebase_id": "STUDY-CLOCK",
+      "description": "Synthetic protocol clock, UTC."
+    }
+  ],
+  "protocol_id": "SYNTH-PROTOCOL-NOISY-001",
+  "ncbi_taxon_id": 10116,
+  "description": "Synthetic plasma concentrations for a one-compartment IV bolus with multiplicative noise. Dose = 1 mg, CL = 0.40 L/h, V = 2.0 L. Quantified values were drawn once from C(t) * exp(0.10 * z) using random.Random(20261030) and rounded to 8 decimal places. The 24 h sample is below the 0.01 ug/mL LLOQ and is stored as BLQ. This is not an animal experiment and not a dosing recommendation.",
+  "research_use_only": true
+}

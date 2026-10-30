@@ -52,7 +52,7 @@ flowchart TB
 
 写出的目录包含研究表、实验表、来源、软件版本、运行时、证据、身份链接、校验 JSON 和 HTML 清单。每个文件有 SHA-256。`manifest.json` 自身的摘要写在 `manifest.sha256`。
 
-`analysis_executed` 在本版本恒为 false。NCA、参数、预测、残差、诊断和 PK 报告出现在 `omitted`，并说明缺席原因。缺文件因此表示“没有运行分析”，而不是“分析产生了空表”。
+未运行分析时 `analysis_executed` 为 false。NCA、拟合参数、预测、残差、诊断图和 PK 报告列在 `omitted`，并说明缺席原因。缺文件因此表示“没有运行分析”，而不是“分析产生了空表”。`pharmacoweave nca --bundle` 会把 `analysis_executed` 设为 true，并写入 NCA 表、浓度–时间图，以及一室静脉推注对数线性拟合的参数、残差和拟合优度图。只传入 NCA 结果、不传入拟合时，不会补造拟合图。
 
 `provenance/runtime.json` 记录写出校验包的解释器。它不是密封的分析环境锁；`environment.lock` 也列在 `omitted`。
 

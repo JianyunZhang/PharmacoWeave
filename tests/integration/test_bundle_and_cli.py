@@ -98,3 +98,30 @@ def test_cli_validates_the_example_and_reports_capabilities(tmp_path, repo_root,
         == 0
     )
     assert (nca_bundle / "analysis" / "nca_parameters.parquet").is_file()
+    assert (nca_bundle / "figures" / "goodness_of_fit.svg").is_file()
+    assert (nca_bundle / "figures" / "residual_diagnostics.svg").is_file()
+    gof = (nca_bundle / "figures" / "goodness_of_fit.svg").read_text(encoding="utf-8")
+    assert gof.count("<circle") == 16
+    assert "not plotted as zero" in gof
+    fit_bundle = tmp_path / "cli-fit"
+    assert (
+        main(
+            [
+                "fit",
+                str(EXAMPLE_DIR),
+                "--method",
+                "weighted_nls",
+                "--weight",
+                "1/y^2",
+                "--bundle",
+                str(fit_bundle),
+                "--run-id",
+                "cli-fit",
+            ]
+        )
+        == 0
+    )
+    assert (fit_bundle / "figures" / "residual_diagnostics.svg").is_file()
+    captured_fit = capsys.readouterr().out
+    assert "CL=" in captured_fit
+    assert "status=fail" not in captured_fit

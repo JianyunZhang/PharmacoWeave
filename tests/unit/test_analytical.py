@@ -76,7 +76,8 @@ def test_reference_rejects_incompatible_units_and_negative_time() -> None:
         )
 
 
-def test_builtin_spec_is_not_an_estimator() -> None:
-    assert ONE_COMPARTMENT_IV_BOLUS.estimation_implemented is False
+def test_builtin_spec_estimates_only_this_iv_bolus() -> None:
+    assert ONE_COMPARTMENT_IV_BOLUS.estimation_implemented is True
     assert ONE_COMPARTMENT_IV_BOLUS.parameters == ["CL", "V"]
     assert "Dose/V" in ONE_COMPARTMENT_IV_BOLUS.equations_ref
+    assert "1/y^2" in " ".join(ONE_COMPARTMENT_IV_BOLUS.assumptions)

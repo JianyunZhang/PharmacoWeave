@@ -1,0 +1,2 @@
+dose_event_id,subject_id,compound_id,absolute_time,dose_value,dose_unit,route,formulation,infusion_duration,infusion_duration_unit,body_weight_normalized_value,body_weight_normalized_unit
+DOSE-SUBJ-01,SUBJ-01,PW-0001,2024-03-02T09:00:00Z,1,mg,iv_bolus,saline solution,,,4,mg/kg

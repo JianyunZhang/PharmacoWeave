@@ -1,0 +1,11 @@
+sample_id,subject_id,collection_time_absolute,time_since_dose,time_since_dose_unit,dose_event_id,matrix,collection_site,timebase_id,is_predose
+SUBJ-01-PRE,SUBJ-01,2024-03-02T08:55:00Z,-5,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,true
+SUBJ-01-T0015,SUBJ-01,2024-03-02T09:15:00Z,15,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0030,SUBJ-01,2024-03-02T09:30:00Z,30,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0060,SUBJ-01,2024-03-02T10:00:00Z,60,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0120,SUBJ-01,2024-03-02T11:00:00Z,120,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0240,SUBJ-01,2024-03-02T13:00:00Z,240,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0360,SUBJ-01,2024-03-02T15:00:00Z,360,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0480,SUBJ-01,2024-03-02T17:00:00Z,480,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T0720,SUBJ-01,2024-03-02T21:00:00Z,720,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false
+SUBJ-01-T1440,SUBJ-01,2024-03-03T09:00:00Z,1440,min,DOSE-SUBJ-01,plasma,venous,STUDY-CLOCK,false

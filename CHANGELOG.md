@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.3 — 2026-10-30
+
+- 一室静脉推注拟合写出观测值–预测值和残差–时间 SVG。BLQ 不画成 0。`pharmacoweave nca --bundle` 和 `pharmacoweave fit --bundle` 把这两张图写入结果包的 `figures/`。
+- 增加权重为 `1/y` 和 `1/y^2` 的一室静脉推注非线性最小二乘。带噪声合成例子在 10% 相对误差内回收 CL 和 V。浓度不下降或不可辨识时诊断为失败，不输出清除率。对数线性拟合仍然可用。
+- 在 `tests/regression/iv_bolus_quiet_nca.json` 冻结无噪声静脉推注 NCA 的十进制参考值。相对误差上限写在 `docs/validation.md`。
+
 ## 0.0.2 — 2026-10-30
 
 - 计算单次静脉推注、连续采血的 NCA：linear-up/log-down、对数线性回推 C0、adjusted R² 终末相。

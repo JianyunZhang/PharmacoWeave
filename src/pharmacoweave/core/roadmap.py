@@ -46,19 +46,19 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "pk_models",
         "P1",
         "partial",
-        "Analytical IV bolus concentrations and a log-linear CL, V fit. Other structures are not estimated.",
+        "IV bolus concentrations, log-linear OLS, and weighted NLS for CL and V. Other structures are not estimated.",
     ),
     ModuleStatus(
         "diagnostics",
         "P0",
         "partial",
-        "Diagnostic records that cannot be marked pass without stated limitations. No figures.",
+        "Pass requires limitations. IV bolus fits write observed-vs-predicted and residual-vs-time SVG figures.",
     ),
     ModuleStatus(
         "reporting",
         "P0",
         "partial",
-        "HTML data-validation report. A PK analysis report is written only after an analysis runs.",
+        "HTML validation report. NCA rows and IV bolus residual figures are included only after that analysis runs.",
     ),
     ModuleStatus(
         "integrations",
