@@ -13,6 +13,7 @@ import jsonschema
 
 from pharmacoweave.core.entities import ObservationType
 from pharmacoweave.core.evidence import EvidenceExchange, ReviewStatus
+from pharmacoweave.core.modeling import NcaParameterSet
 from pharmacoweave.core.provenance import (
     BundleFile,
     OmittedArtifact,
@@ -33,6 +34,7 @@ from pharmacoweave.ingestion.tabular import (
     subject_row,
     write_named_table,
 )
+from pharmacoweave.reporting.figures import concentration_time_svg
 from pharmacoweave.reporting.html import render_validation_report
 from pharmacoweave.schema_export import schema_directory
 from pharmacoweave.version import SCHEMA_VERSION, __version__
@@ -121,8 +123,13 @@ def export_bundle(
     *,
     run_id: str,
     mode: str = "research",
+    nca_parameters: list[NcaParameterSet] | None = None,
 ) -> ResultBundleManifest:
-    """Validate ``study`` and write a new bundle directory."""
+    """Validate ``study`` and write a new bundle directory.
+
+    Pass ``nca_parameters`` from ``run_nca`` to store the calculation. Omitting
+    them leaves ``analysis_executed`` false.
+    """
 
     report = validate_study(study, mode=mode)
     if not report.ok:
@@ -132,13 +139,26 @@ def export_bundle(
         raise IngestError(f"{destination} already exists. Each run writes a new directory.")
     destination.mkdir(parents=True)
     try:
-        return _write_bundle(study, destination, run_id=run_id, report=report)
+        return _write_bundle(
+            study,
+            destination,
+            run_id=run_id,
+            report=report,
+            nca_parameters=nca_parameters,
+        )
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
         raise
 
 
-def _write_bundle(study, destination: Path, *, run_id: str, report) -> ResultBundleManifest:
+def _write_bundle(
+    study,
+    destination: Path,
+    *,
+    run_id: str,
+    report,
+    nca_parameters: list[NcaParameterSet] | None,
+) -> ResultBundleManifest:
     created_at = datetime.now(UTC)
     counts = _counts(study, report)
     _write_json(destination / _PATHS["study_metadata"], json.loads(study.metadata.model_dump_json()))
@@ -178,9 +198,15 @@ def _write_bundle(study, destination: Path, *, run_id: str, report) -> ResultBun
         destination / _PATHS["source_files"],
         {"files": [item.model_dump(mode="json") for item in study.source_files]},
     )
+    analysis_executed = nca_parameters is not None
     _write_json(
         destination / _PATHS["analysis_parameters"],
-        {"analysis_executed": False, "parameters": {}, "note": _ANALYSIS_NOTE},
+        {
+            "analysis_executed": analysis_executed,
+            "parameters": {},
+            "note": _ANALYSIS_NOTE if not analysis_executed else "Single-dose IV bolus NCA was run.",
+            "terminal_phase_rule": None if not analysis_executed else "pharmacoweave.lambda_z.adjusted_r2.v1",
+        },
     )
     _write_json(destination / _PATHS["software_versions"], _software_versions())
     _write_json(
@@ -204,15 +230,30 @@ def _write_bundle(study, destination: Path, *, run_id: str, report) -> ResultBun
     validation_payload["ok"] = report.ok
     _write_json(destination / _PATHS["ingest_validation"], validation_payload)
     _write_json(destination / _PATHS["quality_metrics"], counts)
+    paths = dict(_PATHS)
+    omitted = list(_OMITTED)
+    if nca_parameters is not None:
+        from pharmacoweave.core.profiles import iv_bolus_profiles
+
+        nca_path = "analysis/nca_parameters.parquet"
+        figure_path = "figures/concentration_time.svg"
+        paths["nca_parameters"] = nca_path
+        paths["concentration_time_figure"] = figure_path
+        _write_nca_parquet(destination / nca_path, nca_parameters)
+        figure = destination / figure_path
+        figure.parent.mkdir(parents=True, exist_ok=True)
+        figure.write_text(concentration_time_svg(iv_bolus_profiles(study)), encoding="utf-8")
+        omitted = [item for item in omitted if item.role not in {"nca_parameters", "concentration_time_figure"}]
     html = render_validation_report(
         study,
         report,
         run_id=run_id,
         generated_at=created_at,
         counts=counts,
-        omitted=list(_OMITTED),
+        omitted=omitted,
         version=__version__,
         schema_version=SCHEMA_VERSION,
+        nca_parameters=nca_parameters,
     )
     report_path = destination / _PATHS["validation_report"]
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -225,7 +266,7 @@ def _write_bundle(study, destination: Path, *, run_id: str, report) -> ResultBun
             sha256=_sha256(destination / relative),
             media_type=_media_type(relative),
         )
-        for role, relative in _PATHS.items()
+        for role, relative in paths.items()
     ]
     manifest = ResultBundleManifest(
         run_id=run_id,
@@ -233,9 +274,9 @@ def _write_bundle(study, destination: Path, *, run_id: str, report) -> ResultBun
         created_at=created_at,
         producer=Producer(version=__version__),
         files=files,
-        data=dict(_PATHS),
-        omitted=list(_OMITTED),
-        analysis_executed=False,
+        data=paths,
+        omitted=omitted,
+        analysis_executed=analysis_executed,
         warnings=[issue.message for issue in report.issues if issue.severity == "warning"],
     )
     payload = json.loads(manifest.model_dump_json())
@@ -293,6 +334,74 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _write_nca_parquet(path: Path, records: list[NcaParameterSet]) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    columns = (
+        "subject_id",
+        "analyte_id",
+        "route",
+        "dose_event_id",
+        "auc_method",
+        "terminal_phase_qualified",
+        "auc_last",
+        "auc_last_unit",
+        "auc_inf",
+        "auc_inf_unit",
+        "auc_inf_extrap_fraction",
+        "cmax",
+        "cmax_unit",
+        "tmax",
+        "tmax_unit",
+        "lambda_z",
+        "lambda_z_unit",
+        "half_life",
+        "half_life_unit",
+        "terminal_phase_n_points",
+        "terminal_phase_adjusted_r2",
+        "clearance_semantic",
+        "clearance",
+        "clearance_unit",
+        "volume_semantic",
+        "volume",
+        "volume_unit",
+        "excluded_reason",
+        "warnings",
+    )
+    floats = {
+        "auc_last",
+        "auc_inf",
+        "auc_inf_extrap_fraction",
+        "cmax",
+        "tmax",
+        "lambda_z",
+        "half_life",
+        "terminal_phase_adjusted_r2",
+        "clearance",
+        "volume",
+    }
+    ints = {"terminal_phase_n_points"}
+    rows: list[dict[str, object]] = []
+    for record in records:
+        payload = record.model_dump(mode="json")
+        payload["warnings"] = " | ".join(record.warnings)
+        rows.append({column: payload.get(column) for column in columns})
+    fields = []
+    for name in columns:
+        if name in floats:
+            datatype: pa.DataType = pa.float64()
+        elif name in ints:
+            datatype = pa.int64()
+        elif name == "terminal_phase_qualified":
+            datatype = pa.bool_()
+        else:
+            datatype = pa.string()
+        fields.append(pa.field(name, datatype, nullable=name != "terminal_phase_qualified"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.Table.from_pylist(rows, schema=pa.schema(fields)), path)
+
+
 def _media_type(path: str) -> str:
     if path.endswith(".json"):
         return "application/json"
@@ -300,4 +409,6 @@ def _media_type(path: str) -> str:
         return "application/vnd.apache.parquet"
     if path.endswith(".html"):
         return "text/html"
+    if path.endswith(".svg"):
+        return "image/svg+xml"
     return "application/octet-stream"

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from pydantic import Field, PrivateAttr
 
 if TYPE_CHECKING:
+    from pharmacoweave.core.modeling import NcaParameterSet
     from pharmacoweave.core.provenance import ResultBundleManifest
     from pharmacoweave.core.validation import ValidationReport
 
@@ -29,8 +30,8 @@ class PharmacologyStudy(Record):
     """One study in memory.
 
     ``from_files`` reads a directory. ``check`` checks foreign keys, clocks,
-    assay limits, and evidence boundaries. ``run_nca`` loads an NCA config and
-    stops, because the calculator is not part of this version.
+    assay limits, and evidence boundaries. ``run_nca`` runs single-dose IV
+    bolus NCA.
     """
 
     metadata: StudyMetadata
@@ -92,19 +93,26 @@ class PharmacologyStudy(Record):
 
         return validate_study(self, mode=mode)
 
-    def export_bundle(self, path: str | Path, *, run_id: str, mode: str = "research") -> ResultBundleManifest:
+    def export_bundle(
+        self,
+        path: str | Path,
+        *,
+        run_id: str,
+        mode: str = "research",
+        nca_parameters: list[NcaParameterSet] | None = None,
+    ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
         from pharmacoweave.core.bundle import export_bundle
 
-        return export_bundle(self, path, run_id=run_id, mode=mode)
+        return export_bundle(self, path, run_id=run_id, mode=mode, nca_parameters=nca_parameters)
 
-    def run_nca(self, config: str | Path) -> None:
-        """Load an NCA configuration. The calculator is not implemented."""
+    def run_nca(self, config: str | Path) -> list[NcaParameterSet]:
+        """Run single-dose IV bolus NCA. The study must already validate."""
 
         from pharmacoweave.pk_nca.runner import run_nca
 
-        run_nca(self, config)
+        return run_nca(self, config)
 
     def attach_candidates(self, path: str | Path) -> PharmacologyStudy:
         """Attach a TheraWeave evidence file. Predicted ADMET stays predicted."""

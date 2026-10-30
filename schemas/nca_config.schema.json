@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Reporting rules for single-dose IV bolus rich sampling.\n\nLoading a config does not calculate NCA. Other designs fail validation\nhere so they are not silently passed to a later calculator.",
+  "description": "Reporting rules for single-dose IV bolus rich sampling.\n\nOther designs fail validation here instead of being passed to this calculator.",
   "properties": {
     "analysis": {
       "const": "nca",

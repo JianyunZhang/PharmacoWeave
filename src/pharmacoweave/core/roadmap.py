@@ -38,15 +38,15 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
     ),
     ModuleStatus(
         "pk_nca",
-        "P0",
-        "partial",
-        "Config and result schema for single-dose IV bolus rich sampling. No NCA calculator.",
+        "P1",
+        "available",
+        "Single-dose IV bolus rich-sampling NCA with linear-up/log-down and an adjusted-R² terminal phase.",
     ),
     ModuleStatus(
         "pk_models",
-        "P0",
+        "P1",
         "partial",
-        "Tested one-compartment IV bolus analytical concentrations. No parameter estimation.",
+        "Analytical IV bolus concentrations and a log-linear CL, V fit. Other structures are not estimated.",
     ),
     ModuleStatus(
         "diagnostics",

@@ -19,9 +19,7 @@ from pharmacoweave.ingestion.tabular import observations_frame, read_study_direc
 def test_committed_example_matches_the_case_and_validates() -> None:
     loaded = PharmacologyStudy.from_files(EXAMPLE_DIR, mode="strict")
     built = build_study()
-    assert [item.observation_id for item in loaded.observations] == [
-        item.observation_id for item in built.observations
-    ]
+    assert [item.observation_id for item in loaded.observations] == [item.observation_id for item in built.observations]
     report = loaded.check(mode="strict")
     assert report.ok and report.issues == []
     assert loaded.source_files
