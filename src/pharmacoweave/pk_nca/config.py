@@ -1,4 +1,4 @@
-"""NCA configuration for the one design this version is prepared to accept."""
+"""NCA configuration for the single-dose rich-serial designs supported in 0.0.6."""
 
 from typing import Literal
 
@@ -9,13 +9,16 @@ from pharmacoweave.version import SCHEMA_VERSION
 
 
 class NcaConfig(Record):
-    """Reporting rules for single-dose IV bolus rich sampling.
+    """Reporting rules for single-dose rich-serial plasma NCA.
 
-    Other designs fail validation here instead of being passed to this calculator.
+    Supported routes are ``iv_bolus``, ``iv_infusion``, ``oral``,
+    ``subcutaneous``, and ``intramuscular``. Multiple dosing, sparse destructive
+    sampling, urine excretion, steady state, and ``other`` routes fail
+    validation here instead of being passed to a calculator.
     """
 
     analysis: Literal["nca"]
-    design_route: Literal["iv_bolus"]
+    design_route: Literal["iv_bolus", "iv_infusion", "oral", "subcutaneous", "intramuscular"]
     dosing: Literal["single_dose"]
     sampling: Literal["rich_serial"]
     auc_method: Literal["linear_up_log_down"]

@@ -22,8 +22,8 @@ from pharmacoweave.core.entities import (
 )
 from pharmacoweave.core.evidence import ReviewStatus
 from pharmacoweave.core.study import PharmacologyStudy
-from pharmacoweave.core.units import AMOUNT, DRUG_MASS, convert, parse_unit
-from pharmacoweave.errors import ContractViolation
+from pharmacoweave.core.units import AMOUNT, DRUG_MASS, convert, convert_with_molecular_weight, parse_unit
+from pharmacoweave.errors import ContractViolation, UnitError
 from pharmacoweave.integrations.guards import screen_record
 
 KNOWN_MATRICES = frozenset(
@@ -294,6 +294,7 @@ def _samples(study: PharmacologyStudy, issues: list[ValidationIssue]) -> None:
 
 def _observations(study: PharmacologyStudy, issues: list[ValidationIssue]) -> None:
     samples = {item.sample_id: item for item in study.biosamples}
+    compounds = {item.compound_id: item for item in study.compounds}
     analytes = {item.analyte_id: item for item in study.analytes}
     assays = {item.assay_id: item for item in study.assays}
     grouped: dict[tuple[str, str | None, ObservationType], list[str]] = defaultdict(list)
@@ -362,7 +363,25 @@ def _observations(study: PharmacologyStudy, issues: list[ValidationIssue]) -> No
             and assay.lloq is not None
             and assay.limit_unit is not None
         ):
-            measured = convert(observation.numeric_value, observation.unit, assay.limit_unit)
+            compound = compounds.get(analyte.compound_id) if analyte and analyte.compound_id else None
+            try:
+                measured = convert_with_molecular_weight(
+                    observation.numeric_value,
+                    observation.unit,
+                    assay.limit_unit,
+                    molecular_weight=None if compound is None else compound.molecular_weight,
+                    molecular_weight_unit=None if compound is None else compound.molecular_weight_unit,
+                )
+            except UnitError as exc:
+                _add(
+                    issues,
+                    "error",
+                    "unit_conversion_failed",
+                    str(exc),
+                    "observation",
+                    observation.observation_id,
+                )
+                continue
             if measured < assay.lloq and not math.isclose(measured, assay.lloq, rel_tol=1e-6, abs_tol=1e-9):
                 _add(
                     issues,

@@ -1,0 +1,372 @@
+{
+  "$defs": {
+    "BiasDirection": {
+      "enum": [
+        "over_prediction",
+        "under_prediction",
+        "none"
+      ],
+      "title": "BiasDirection",
+      "type": "string"
+    },
+    "PredictionAuditEntry": {
+      "additionalProperties": false,
+      "description": "One prior compared against one posterior estimate.",
+      "properties": {
+        "prior_evidence_id": {
+          "minLength": 1,
+          "title": "Prior Evidence Id",
+          "type": "string"
+        },
+        "estimate_evidence_id": {
+          "minLength": 1,
+          "title": "Estimate Evidence Id",
+          "type": "string"
+        },
+        "prior_source_project": {
+          "minLength": 1,
+          "title": "Prior Source Project",
+          "type": "string"
+        },
+        "compound_id": {
+          "minLength": 1,
+          "title": "Compound Id",
+          "type": "string"
+        },
+        "measurement_type": {
+          "minLength": 1,
+          "title": "Measurement Type",
+          "type": "string"
+        },
+        "prior_claim_type": {
+          "minLength": 1,
+          "title": "Prior Claim Type",
+          "type": "string"
+        },
+        "estimate_claim_type": {
+          "minLength": 1,
+          "title": "Estimate Claim Type",
+          "type": "string"
+        },
+        "predicted_value_original": {
+          "title": "Predicted Value Original",
+          "type": "number"
+        },
+        "predicted_unit_original": {
+          "minLength": 1,
+          "title": "Predicted Unit Original",
+          "type": "string"
+        },
+        "predicted_value": {
+          "exclusiveMinimum": 0,
+          "title": "Predicted Value",
+          "type": "number"
+        },
+        "estimated_value": {
+          "exclusiveMinimum": 0,
+          "title": "Estimated Value",
+          "type": "number"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "conversion": {
+          "enum": [
+            "same_unit",
+            "linear",
+            "body_weight",
+            "molecular_weight"
+          ],
+          "title": "Conversion",
+          "type": "string"
+        },
+        "ratio": {
+          "exclusiveMinimum": 0,
+          "title": "Ratio",
+          "type": "number"
+        },
+        "fold_error": {
+          "minimum": 1,
+          "title": "Fold Error",
+          "type": "number"
+        },
+        "log10_error": {
+          "title": "Log10 Error",
+          "type": "number"
+        },
+        "within_2_fold": {
+          "title": "Within 2 Fold",
+          "type": "boolean"
+        },
+        "within_3_fold": {
+          "title": "Within 3 Fold",
+          "type": "boolean"
+        },
+        "outlier_2_fold": {
+          "title": "Outlier 2 Fold",
+          "type": "boolean"
+        },
+        "bias_direction": {
+          "$ref": "#/$defs/BiasDirection"
+        },
+        "subject_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Id"
+        },
+        "analyte_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Analyte Id"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "prior_evidence_id",
+        "estimate_evidence_id",
+        "prior_source_project",
+        "compound_id",
+        "measurement_type",
+        "prior_claim_type",
+        "estimate_claim_type",
+        "predicted_value_original",
+        "predicted_unit_original",
+        "predicted_value",
+        "estimated_value",
+        "unit",
+        "conversion",
+        "ratio",
+        "fold_error",
+        "log10_error",
+        "within_2_fold",
+        "within_3_fold",
+        "outlier_2_fold",
+        "bias_direction"
+      ],
+      "title": "PredictionAuditEntry",
+      "type": "object"
+    },
+    "PredictionAuditSummary": {
+      "additionalProperties": false,
+      "description": "Agreement summary for one measurement type.",
+      "properties": {
+        "measurement_type": {
+          "minLength": 1,
+          "title": "Measurement Type",
+          "type": "string"
+        },
+        "n_comparisons": {
+          "minimum": 1,
+          "title": "N Comparisons",
+          "type": "integer"
+        },
+        "afe": {
+          "exclusiveMinimum": 0,
+          "title": "Afe",
+          "type": "number"
+        },
+        "aafe": {
+          "minimum": 1,
+          "title": "Aafe",
+          "type": "number"
+        },
+        "fraction_within_2_fold": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Fraction Within 2 Fold",
+          "type": "number"
+        },
+        "fraction_within_3_fold": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Fraction Within 3 Fold",
+          "type": "number"
+        },
+        "n_outlier_2_fold": {
+          "minimum": 0,
+          "title": "N Outlier 2 Fold",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "measurement_type",
+        "n_comparisons",
+        "afe",
+        "aafe",
+        "fraction_within_2_fold",
+        "fraction_within_3_fold",
+        "n_outlier_2_fold"
+      ],
+      "title": "PredictionAuditSummary",
+      "type": "object"
+    },
+    "SkippedPredictionAudit": {
+      "additionalProperties": false,
+      "description": "A prior (or a prior/estimate pair) that was not compared, with the reason.",
+      "properties": {
+        "prior_evidence_id": {
+          "minLength": 1,
+          "title": "Prior Evidence Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "estimate_evidence_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimate Evidence Id"
+        }
+      },
+      "required": [
+        "prior_evidence_id",
+        "reason"
+      ],
+      "title": "SkippedPredictionAudit",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Machine-readable audit exported to ``schemas/prediction_audit.schema.json``.",
+  "properties": {
+    "audit_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Audit Id",
+      "type": "string"
+    },
+    "n_priors": {
+      "minimum": 0,
+      "title": "N Priors",
+      "type": "integer"
+    },
+    "n_estimates": {
+      "minimum": 0,
+      "title": "N Estimates",
+      "type": "integer"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/PredictionAuditEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "skipped": {
+      "items": {
+        "$ref": "#/$defs/SkippedPredictionAudit"
+      },
+      "title": "Skipped",
+      "type": "array"
+    },
+    "summaries": {
+      "items": {
+        "$ref": "#/$defs/PredictionAuditSummary"
+      },
+      "title": "Summaries",
+      "type": "array"
+    },
+    "overall_aafe": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Overall Aafe"
+    },
+    "overall_fraction_within_2_fold": {
+      "anyOf": [
+        {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Overall Fraction Within 2 Fold"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Limitations",
+      "type": "array"
+    },
+    "prior_evidence_type": {
+      "const": "predicted",
+      "default": "predicted",
+      "title": "Prior Evidence Type",
+      "type": "string"
+    },
+    "estimate_evidence_type": {
+      "const": "estimated",
+      "default": "estimated",
+      "title": "Estimate Evidence Type",
+      "type": "string"
+    },
+    "research_use_only": {
+      "const": true,
+      "default": true,
+      "title": "Research Use Only",
+      "type": "boolean"
+    },
+    "schema_name": {
+      "const": "pharmacology-prediction-audit",
+      "default": "pharmacology-prediction-audit",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "audit_id",
+    "n_priors",
+    "n_estimates",
+    "limitations"
+  ],
+  "title": "PredictionAuditReport",
+  "type": "object"
+}

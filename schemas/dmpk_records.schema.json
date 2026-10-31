@@ -4,7 +4,10 @@
       "enum": [
         "permeability",
         "microsomal_clearance",
-        "hepatocyte_clearance"
+        "hepatocyte_clearance",
+        "fu_plasma",
+        "fu_mic",
+        "blood_to_plasma_ratio"
       ],
       "title": "AdmeAssayKind",
       "type": "string"
@@ -16,6 +19,13 @@
         "failed_qc"
       ],
       "title": "AdmeStatus",
+      "type": "string"
+    },
+    "HepaticClearanceModel": {
+      "enum": [
+        "well_stirred"
+      ],
+      "title": "HepaticClearanceModel",
       "type": "string"
     },
     "InVitroAdmeRecord": {
@@ -122,16 +132,316 @@
       ],
       "title": "InVitroAdmeRecord",
       "type": "object"
+    },
+    "IviveClearancePrediction": {
+      "additionalProperties": false,
+      "description": "One exploratory hepatic clearance prediction. ``evidence_grade`` stays predicted.",
+      "properties": {
+        "prediction_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Prediction Id",
+          "type": "string"
+        },
+        "compound_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Compound Id",
+          "type": "string"
+        },
+        "species": {
+          "minLength": 1,
+          "title": "Species",
+          "type": "string"
+        },
+        "physiology_profile_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Physiology Profile Id",
+          "type": "string"
+        },
+        "source_record_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Source Record Id",
+          "type": "string"
+        },
+        "assay_kind": {
+          "enum": [
+            "microsomal_clearance",
+            "hepatocyte_clearance"
+          ],
+          "title": "Assay Kind",
+          "type": "string"
+        },
+        "clint_app_value": {
+          "exclusiveMinimum": 0,
+          "title": "Clint App Value",
+          "type": "number"
+        },
+        "clint_app_unit": {
+          "enum": [
+            "uL/min/mg_protein",
+            "uL/min/million_cells"
+          ],
+          "title": "Clint App Unit",
+          "type": "string"
+        },
+        "fu_inc": {
+          "exclusiveMinimum": 0,
+          "title": "Fu Inc",
+          "type": "number"
+        },
+        "fu_plasma": {
+          "exclusiveMinimum": 0,
+          "title": "Fu Plasma",
+          "type": "number"
+        },
+        "blood_to_plasma_ratio": {
+          "exclusiveMinimum": 0,
+          "title": "Blood To Plasma Ratio",
+          "type": "number"
+        },
+        "fu_blood": {
+          "exclusiveMinimum": 0,
+          "title": "Fu Blood",
+          "type": "number"
+        },
+        "clint_u_vitro_value": {
+          "exclusiveMinimum": 0,
+          "title": "Clint U Vitro Value",
+          "type": "number"
+        },
+        "scaling_factor_value": {
+          "exclusiveMinimum": 0,
+          "title": "Scaling Factor Value",
+          "type": "number"
+        },
+        "scaling_factor_unit": {
+          "enum": [
+            "mg_protein/g_liver",
+            "million_cells/g_liver"
+          ],
+          "title": "Scaling Factor Unit",
+          "type": "string"
+        },
+        "liver_weight_g": {
+          "exclusiveMinimum": 0,
+          "title": "Liver Weight G",
+          "type": "number"
+        },
+        "body_weight_kg": {
+          "exclusiveMinimum": 0,
+          "title": "Body Weight Kg",
+          "type": "number"
+        },
+        "hepatic_blood_flow_l_h": {
+          "exclusiveMinimum": 0,
+          "title": "Hepatic Blood Flow L H",
+          "type": "number"
+        },
+        "clint_u_hepatic_l_h": {
+          "exclusiveMinimum": 0,
+          "title": "Clint U Hepatic L H",
+          "type": "number"
+        },
+        "hepatic_extraction_ratio": {
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Hepatic Extraction Ratio",
+          "type": "number"
+        },
+        "hepatic_blood_clearance_l_h": {
+          "exclusiveMinimum": 0,
+          "title": "Hepatic Blood Clearance L H",
+          "type": "number"
+        },
+        "hepatic_plasma_clearance_l_h": {
+          "exclusiveMinimum": 0,
+          "title": "Hepatic Plasma Clearance L H",
+          "type": "number"
+        },
+        "hepatic_plasma_clearance_l_h_kg": {
+          "exclusiveMinimum": 0,
+          "title": "Hepatic Plasma Clearance L H Kg",
+          "type": "number"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "derived_from": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Derived From",
+          "type": "array"
+        },
+        "model": {
+          "$ref": "#/$defs/HepaticClearanceModel",
+          "default": "well_stirred"
+        },
+        "clearance_unit": {
+          "const": "L/h",
+          "default": "L/h",
+          "title": "Clearance Unit",
+          "type": "string"
+        },
+        "evidence_grade": {
+          "const": "predicted",
+          "default": "predicted",
+          "title": "Evidence Grade",
+          "type": "string"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "prediction_id",
+        "compound_id",
+        "species",
+        "physiology_profile_id",
+        "source_record_id",
+        "assay_kind",
+        "clint_app_value",
+        "clint_app_unit",
+        "fu_inc",
+        "fu_plasma",
+        "blood_to_plasma_ratio",
+        "fu_blood",
+        "clint_u_vitro_value",
+        "scaling_factor_value",
+        "scaling_factor_unit",
+        "liver_weight_g",
+        "body_weight_kg",
+        "hepatic_blood_flow_l_h",
+        "clint_u_hepatic_l_h",
+        "hepatic_extraction_ratio",
+        "hepatic_blood_clearance_l_h",
+        "hepatic_plasma_clearance_l_h",
+        "hepatic_plasma_clearance_l_h_kg",
+        "assumptions",
+        "limitations",
+        "derived_from"
+      ],
+      "title": "IviveClearancePrediction",
+      "type": "object"
+    },
+    "PhysiologicalScalingParams": {
+      "additionalProperties": false,
+      "description": "Caller-supplied physiology for one species/individual. No defaults are filled in.",
+      "properties": {
+        "profile_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "species": {
+          "minLength": 1,
+          "title": "Species",
+          "type": "string"
+        },
+        "body_weight_kg": {
+          "exclusiveMinimum": 0,
+          "title": "Body Weight Kg",
+          "type": "number"
+        },
+        "liver_weight_g": {
+          "exclusiveMinimum": 0,
+          "title": "Liver Weight G",
+          "type": "number"
+        },
+        "hepatic_blood_flow_l_h": {
+          "exclusiveMinimum": 0,
+          "title": "Hepatic Blood Flow L H",
+          "type": "number"
+        },
+        "source": {
+          "description": "Citation or provenance of the assumed values.",
+          "minLength": 3,
+          "title": "Source",
+          "type": "string"
+        },
+        "microsomal_protein_mg_per_g_liver": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Microsomal Protein Mg Per G Liver"
+        },
+        "hepatocellularity_million_cells_per_g_liver": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hepatocellularity Million Cells Per G Liver"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "profile_id",
+        "species",
+        "body_weight_kg",
+        "liver_weight_g",
+        "hepatic_blood_flow_l_h",
+        "source"
+      ],
+      "title": "PhysiologicalScalingParams",
+      "type": "object"
     }
   },
   "additionalProperties": false,
-  "description": "Machine-readable DMPK contract exported to ``schemas/dmpk_records.schema.json``.",
+  "description": "Machine-readable DMPK contract exported to ``schemas/dmpk_records.schema.json``.\n\n``physiology_profiles`` are caller-supplied assumptions, and\n``ivive_predictions`` are exploratory predicted records that cite both an\nin vitro record and a profile in this set.",
   "properties": {
     "records": {
       "items": {
         "$ref": "#/$defs/InVitroAdmeRecord"
       },
       "title": "Records",
+      "type": "array"
+    },
+    "physiology_profiles": {
+      "items": {
+        "$ref": "#/$defs/PhysiologicalScalingParams"
+      },
+      "title": "Physiology Profiles",
+      "type": "array"
+    },
+    "ivive_predictions": {
+      "items": {
+        "$ref": "#/$defs/IviveClearancePrediction"
+      },
+      "title": "Ivive Predictions",
       "type": "array"
     },
     "schema_name": {

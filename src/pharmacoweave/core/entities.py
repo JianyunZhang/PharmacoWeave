@@ -19,6 +19,7 @@ from pharmacoweave.core.units import (
     DRUG_MASS,
     MASS_PER_AMOUNT,
     TIME,
+    convert_with_molecular_weight,
     parse_unit,
 )
 
@@ -208,6 +209,17 @@ class Compound(Record):
             if dimensions != MASS_PER_AMOUNT:
                 raise ValueError("molecular_weight_unit must be drug mass per amount, such as g/mol.")
         return self
+
+    def convert_quantity(self, value: float, source: str, target: str) -> float:
+        """Convert between mass and molar drug units using this compound's molecular weight."""
+
+        return convert_with_molecular_weight(
+            value,
+            source,
+            target,
+            molecular_weight=self.molecular_weight,
+            molecular_weight_unit=self.molecular_weight_unit,
+        )
 
 
 class Analyte(Record):

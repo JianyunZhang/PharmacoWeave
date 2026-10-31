@@ -22,13 +22,15 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "core",
         "P0",
         "available",
-        "Study entities, closed unit vocabulary, replicate collapsing, validation, and result bundles.",
+        "Study entities, closed units, explicit MW conversion, replicate collapsing, validation, "
+        "observation bridge, bundles, verify-bundle, and diff.",
     ),
     ModuleStatus(
         "ingestion",
         "P0",
         "available",
-        "Read and write study directories as CSV, TSV, or Parquet plus study_metadata.json.",
+        "Read and write study directories (CSV, TSV, Parquet) and declarative ingest_mapping.yaml "
+        "preserving raw file SHA-256.",
     ),
     ModuleStatus(
         "bioanalysis",
@@ -40,19 +42,19 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "pk_nca",
         "P1",
         "available",
-        "Single-dose IV bolus rich-sampling NCA with linear-up/log-down and an adjusted-R² terminal phase.",
+        "Single-dose rich-serial NCA for IV bolus, IV infusion, and extravascular (oral/SC/IM) designs.",
     ),
     ModuleStatus(
         "pk_models",
         "P1",
         "partial",
-        "IV bolus log-linear OLS and weighted NLS (with asymptotic SE and 95% CI) for CL and V.",
+        "1c IV bolus (OLS/WNLS), 1c extravascular (ka, CL/F, V/F), and 2c IV bolus (CL, V1, Q, V2) with SE and 95% CI.",
     ),
     ModuleStatus(
         "diagnostics",
         "P0",
         "partial",
-        "Pass requires limitations. Writes semi-log, GoF, residual, weighted-residual, and Emax SVG diagnostics.",
+        "Pass requires limitations. SVG diagnostics, plus prior-vs-estimated fold-error audit (AFE, AAFE, 2/3-fold).",
     ),
     ModuleStatus(
         "reporting",
@@ -63,14 +65,16 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
     ModuleStatus(
         "integrations",
         "P0",
-        "partial",
-        "Evidence guards and PharmacologyEvidence export across NCA, PK fits, Emax, ADME, and toxicology.",
+        "available",
+        "Evidence guards, PharmacologyEvidence export, prediction audit, and multi-scale Ephys/Omics "
+        "time alignment with clock sync checks.",
     ),
     ModuleStatus(
         "pd_models",
         "P1",
         "partial",
-        "Original-scale nonlinear LS for direct and sigmoid Emax (with SE and 95% CI). Indirect response not fitted.",
+        "Original-scale nonlinear LS for direct and sigmoid Emax; study observation bridging to "
+        "EffectObservation. Indirect response not fitted.",
     ),
     ModuleStatus(
         "pkpd",
@@ -82,13 +86,14 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "dmpk",
         "P1",
         "partial",
-        "In vitro permeability, microsomal clearance, and hepatocyte clearance records and schema. No IVIVE scaling.",
+        "In vitro permeability, microsomal/hepatocyte CLint, fu_plasma, fu_mic, and B:P records. "
+        "Explicit-assumption well-stirred IVIVE (predicted grade only). No dose advice.",
     ),
     ModuleStatus(
         "toxicology",
         "P1",
         "partial",
-        "Research-use tox endpoint records and schema linked to dose or exposure id. No clinical dose is produced.",
+        "Research-use tox endpoint records, schema, and study observation bridge. No clinical dose is produced.",
     ),
     ModuleStatus(
         "population_pk",

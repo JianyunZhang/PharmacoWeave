@@ -1,0 +1,102 @@
+schema_name: "pharmacology-ingest-mapping"
+schema_version: "0.1.0"
+
+study_metadata:
+  study_id: "PW-MAPPING-STUDY-001"
+  title: "Heterogeneous Lab PK Ingest Mapping Demonstration"
+  study_type: "pk"
+  data_class: "preclinical_animal"
+  species: "Rattus norvegicus"
+  design_version: "1.0"
+  timebases:
+    - timebase_id: "LAB-MASTER-CLOCK"
+      description: "Laboratory master NTP wall clock, UTC."
+
+tables:
+  subjects:
+    source_file: "animals.csv"
+    column_mapping:
+      Animal_Tag: "subject_id"
+      Weight_kg: "body_weight"
+      Sex_MF: "sex"
+    constants:
+      species: "Rattus norvegicus"
+      body_weight_unit: "kg"
+      study_id: "PW-MAPPING-STUDY-001"
+    value_transforms:
+      sex:
+        "M": "male"
+        "F": "female"
+
+  compounds:
+    source_file: "dosing.csv"
+    column_mapping:
+      Drug_Identifier: "compound_id"
+    constants:
+      name: "PW-MAPPING-DRUG Parent"
+
+  analytes:
+    source_file: "dosing.csv"
+    column_mapping:
+      Drug_Identifier: "compound_id"
+    constants:
+      analyte_id: "ANALYTE-DRUG-PARENT"
+      name: "PW-MAPPING-DRUG Parent in Plasma"
+      analyte_role: "parent"
+      matrix: "plasma"
+
+  assays:
+    source_file: "dosing.csv"
+    column_mapping: {}
+    constants:
+      assay_id: "ASSAY-BIOANALYSIS-01"
+      method: "LC-MS/MS"
+      analyte_id: "ANALYTE-DRUG-PARENT"
+      matrix: "plasma"
+      calibration_id: "CAL-CURVE-01"
+      lloq: 0.01
+      uloq: 10.0
+      limit_unit: "ug/mL"
+      qc_status: "accepted"
+
+  dosing_events:
+    source_file: "dosing.csv"
+    column_mapping:
+      Dose_ID: "dose_event_id"
+      Animal_Tag: "subject_id"
+      Drug_Identifier: "compound_id"
+      Admin_Route: "route"
+      Admin_Amount_mg: "dose_value"
+      Timestamp_UTC: "absolute_time"
+    constants:
+      dose_unit: "mg"
+
+  biosamples:
+    source_file: "pk_concentrations.csv"
+    column_mapping:
+      Sample_Barcode: "sample_id"
+      Animal_Tag: "subject_id"
+      Dose_ID: "dose_event_id"
+      Timepoint_Hours: "time_since_dose"
+      Sample_Time_UTC: "collection_time_absolute"
+    constants:
+      time_since_dose_unit: "h"
+      matrix: "plasma"
+      timebase_id: "LAB-MASTER-CLOCK"
+      is_predose: false
+
+  observations:
+    source_file: "pk_concentrations.csv"
+    column_mapping:
+      Sample_Barcode: "sample_id"
+      Observed_Conc_ug_mL: "numeric_value"
+      Quality_Flag: "status"
+    constants:
+      observation_type: "concentration"
+      unit: "ug/mL"
+      analyte_id: "ANALYTE-DRUG-PARENT"
+      assay_id: "ASSAY-BIOANALYSIS-01"
+    value_transforms:
+      status:
+        "QUANTIFIED": "quantified"
+        "BLQ": "BLQ"

@@ -20,10 +20,12 @@
   <div class="banner">
     <strong>Research use only.</strong>
     This is a research-use report for run <code>{{ run_id }}</code>.
-    {% if nca_rows or fit_rows or emax_rows %}
-    {% if nca_rows %}Single-dose IV bolus NCA was run.{% endif %}
-    {% if fit_rows %}A one-compartment IV bolus fit was run.{% endif %}
+    {% if nca_rows or fit_rows or emax_rows or ivive_rows or audit_summary_rows %}
+    {% if nca_rows %}Single-dose NCA was run.{% endif %}
+    {% if fit_rows %}{{ fit_banner }}{% endif %}
     {% if emax_rows %}Direct/sigmoid Emax exposure-response fitting was run.{% endif %}
+    {% if ivive_rows %}Exploratory well-stirred IVIVE was run (predicted grade).{% endif %}
+    {% if audit_summary_rows %}Prior prediction fold-error audit was run.{% endif %}
     It is not a dosing recommendation.
     {% else %}
     NCA, model fitting, and dosing recommendations were not run.
@@ -62,18 +64,19 @@
   {% endif %}
   {% if nca_rows %}
   <h2>NCA</h2>
-  <p>Units are mg/L, h, mg·h/L, 1/h, and L/h. For this mass scale, 1 mg/L is 1 µg/mL.</p>
+  <p>Units are mg/L, h, mg·h/L, 1/h, L/h, and L. Extravascular routes report apparent CL/F and Vz/F.</p>
   <table>
     <thead>
       <tr>
-        <th>Subject</th><th>AUC last</th><th>AUC inf</th><th>Extrap</th>
-        <th>Half-life</th><th>CL</th><th>Vz</th><th>Cmax</th><th>Tmax</th>
+        <th>Subject</th><th>Route</th><th>AUC last</th><th>AUC inf</th><th>Extrap</th>
+        <th>Half-life</th><th>Clearance</th><th>Volume</th><th>Cmax</th><th>Tmax</th>
       </tr>
     </thead>
     <tbody>
       {% for row in nca_rows %}
       <tr>
         <td>{{ row.subject_id }}</td>
+        <td><code>{{ row.route }}</code></td>
         <td>{{ row.auc_last }}</td>
         <td>{{ row.auc_inf }}</td>
         <td>{{ row.auc_inf_extrap_fraction }}</td>
@@ -92,22 +95,20 @@
   {{ semilog_svg | safe }}
   {% endif %}
   {% if fit_rows %}
-  <h2>IV bolus fit</h2>
-  <p>CL and V are blank when the diagnostic status is fail. BLQ concentrations are omitted and are not plotted as zero.</p>
+  <h2>Compartmental PK fit</h2>
+  <p>Parameters are blank when the diagnostic status is fail. BLQ concentrations are omitted and are not plotted as zero.</p>
   <table>
     <thead>
-      <tr><th>Subject</th><th>Method</th><th>Status</th><th>CL (L/h)</th><th>CL 95% CI</th><th>V (L)</th><th>V 95% CI</th></tr>
+      <tr><th>Subject</th><th>Model</th><th>Method</th><th>Status</th><th>Estimated Parameters (95% CI)</th></tr>
     </thead>
     <tbody>
       {% for row in fit_rows %}
       <tr>
         <td>{{ row.subject_id }}</td>
+        <td><code>{{ row.model_id }}</code></td>
         <td><code>{{ row.method }}</code></td>
         <td>{{ row.status }}</td>
-        <td>{{ row.clearance }}</td>
-        <td>{{ row.clearance_ci or "" }}</td>
-        <td>{{ row.volume }}</td>
-        <td>{{ row.volume_ci or "" }}</td>
+        <td>{{ row.parameters_summary }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -149,6 +150,100 @@
   {% if concentration_effect_svg %}
   <h2>Concentration vs effect</h2>
   {{ concentration_effect_svg | safe }}
+  {% endif %}
+  {% endif %}
+  {% if ivive_rows %}
+  <h2>Exploratory IVIVE (Well-Stirred)</h2>
+  <p>Exploratory hepatic clearance predictions under caller-supplied physiology. Predicted grade only; not an observed in vivo clearance.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Prediction ID</th><th>Compound</th><th>Species</th><th>Assay</th><th>CLint</th><th>fu,p</th><th>fu,inc</th><th>B:P</th><th>CLH,plasma (L/h)</th><th>CLH,plasma (L/h/kg)</th><th>ER</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in ivive_rows %}
+      <tr>
+        <td><code>{{ row.prediction_id }}</code></td>
+        <td>{{ row.compound_id }}</td>
+        <td>{{ row.species }}</td>
+        <td>{{ row.assay_kind }}</td>
+        <td>{{ row.clint_app }}</td>
+        <td>{{ row.fu_plasma }}</td>
+        <td>{{ row.fu_inc }}</td>
+        <td>{{ row.blood_to_plasma_ratio }}</td>
+        <td>{{ row.cl_plasma_l_h }}</td>
+        <td>{{ row.cl_plasma_l_h_kg }}</td>
+        <td>{{ row.extraction_ratio }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if audit_summary_rows %}
+  <h2>Prior vs. Posterior Prediction Audit</h2>
+  <p>Fold-error calibration between prior predictions (predicted) and in vivo estimates (estimated).</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Measurement</th><th>N</th><th>AFE</th><th>AAFE</th><th>Within 2-fold</th><th>Within 3-fold</th><th>Outliers (&gt;2-fold)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in audit_summary_rows %}
+      <tr>
+        <td><code>{{ row.measurement_type }}</code></td>
+        <td>{{ row.n_comparisons }}</td>
+        <td>{{ row.afe }}</td>
+        <td>{{ row.aafe }}</td>
+        <td>{{ row.fraction_within_2_fold }}</td>
+        <td>{{ row.fraction_within_3_fold }}</td>
+        <td>{{ row.n_outlier_2_fold }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if audit_entry_rows %}
+  <h3>Comparison Details</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Prior ID</th><th>Estimate ID</th><th>Measurement</th><th>Predicted</th><th>Estimated</th><th>Ratio (P/O)</th><th>Fold Error</th><th>Bias</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in audit_entry_rows %}
+      <tr>
+        <td><code>{{ row.prior_id }}</code></td>
+        <td><code>{{ row.estimate_id }}</code></td>
+        <td>{{ row.measurement_type }}</td>
+        <td>{{ row.predicted }}</td>
+        <td>{{ row.estimated }}</td>
+        <td>{{ row.ratio }}</td>
+        <td>{{ row.fold_error }}</td>
+        <td>{{ row.bias }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if audit_skipped_rows %}
+  <h3>Skipped Prior Audits</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Prior ID</th><th>Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in audit_skipped_rows %}
+      <tr>
+        <td><code>{{ row.prior_id }}</code></td>
+        <td>{{ row.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
   {% endif %}
   {% endif %}
   <h2>Not in this bundle</h2>

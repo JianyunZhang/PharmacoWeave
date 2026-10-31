@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Reporting rules for single-dose IV bolus rich sampling.\n\nOther designs fail validation here instead of being passed to this calculator.",
+  "description": "Reporting rules for single-dose rich-serial plasma NCA.\n\nSupported routes are ``iv_bolus``, ``iv_infusion``, ``oral``,\n``subcutaneous``, and ``intramuscular``. Multiple dosing, sparse destructive\nsampling, urine excretion, steady state, and ``other`` routes fail\nvalidation here instead of being passed to a calculator.",
   "properties": {
     "analysis": {
       "const": "nca",
@@ -8,7 +8,13 @@
       "type": "string"
     },
     "design_route": {
-      "const": "iv_bolus",
+      "enum": [
+        "iv_bolus",
+        "iv_infusion",
+        "oral",
+        "subcutaneous",
+        "intramuscular"
+      ],
       "title": "Design Route",
       "type": "string"
     },

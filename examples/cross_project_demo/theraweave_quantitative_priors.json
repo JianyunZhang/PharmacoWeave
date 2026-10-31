@@ -1,0 +1,44 @@
+{
+  "schema_name": "pharmacology-evidence-exchange",
+  "schema_version": "0.1.0",
+  "records": [
+    {
+      "evidence_id": "TW-QUANT-CL-001",
+      "source_project": "theraweave",
+      "source_run_id": "tw-quant-demo",
+      "source_artifact_id": "admet-prediction-cl",
+      "entity_type": "CandidateCompound",
+      "entity_id": "PW-0001",
+      "measurement_type": "clearance",
+      "evidence_type": "predicted",
+      "numeric_value": 0.055,
+      "unit": "L/h",
+      "qc_status": "not_applicable",
+      "claim_type": "clearance",
+      "applicability": "Candidate triage and prior prediction audit.",
+      "limitations": [
+        "In silico CADD clearance prediction. Not an observed clearance.",
+        "Research use only. Not a dosing recommendation."
+      ]
+    },
+    {
+      "evidence_id": "TW-QUANT-HL-001",
+      "source_project": "theraweave",
+      "source_run_id": "tw-quant-demo",
+      "source_artifact_id": "admet-prediction-hl",
+      "entity_type": "CandidateCompound",
+      "entity_id": "PW-0001",
+      "measurement_type": "half_life",
+      "evidence_type": "predicted",
+      "numeric_value": 3.8,
+      "unit": "h",
+      "qc_status": "not_applicable",
+      "claim_type": "half_life",
+      "applicability": "Candidate triage and prior prediction audit.",
+      "limitations": [
+        "In silico CADD half-life prediction.",
+        "Research use only. Not a dosing recommendation."
+      ]
+    }
+  ]
+}

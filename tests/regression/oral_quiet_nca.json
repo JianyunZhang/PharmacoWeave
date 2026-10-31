@@ -1,0 +1,108 @@
+{
+  "reference_id": "oral_quiet_nca_v1",
+  "pharmacoweave_case": "examples/data/oral_single_dose and examples.oral_absorption_case.build_oral_study",
+  "computed_with": "Independent decimal arithmetic at 50 digits, integrating from (0, 0) by linear-up/log-down without bolus C0 back-extrapolation, selecting post-Tmax (t > Tmax) terminal windows by pharmacoweave.lambda_z.adjusted_r2.v1, and reporting apparent clearance CL/F and apparent terminal volume Vz/F. This file was not produced by importing PharmacoWeave, PKNCA, Phoenix, or any other NCA package.",
+  "design_route": "oral",
+  "auc_method": "linear_up_log_down",
+  "time_zero_rule": "prepend (0, 0) when first quantified sample has t > 0; never back-extrapolate C0",
+  "terminal_phase_rule": "pharmacoweave.lambda_z.adjusted_r2.v1 on points strictly after Tmax (t > Tmax)",
+  "lambda_z_min_points": 3,
+  "lambda_z_min_adjusted_r2": "0.90",
+  "blq_rule": "omitted, not replaced with zero",
+  "concentration_note": "Stored ug/mL values are numerically equal to mg/L. Both subjects share this curve.",
+  "omitted_observations": [
+    {
+      "time_min": "-5",
+      "status": "BLQ",
+      "reason": "predose"
+    },
+    {
+      "time_min": "1440",
+      "status": "BLQ",
+      "reason": "below LLOQ 0.02 ug/mL; numeric_value is absent, not zero"
+    }
+  ],
+  "quantified_concentrations_mg_l": [
+    {
+      "time_h": "0.25",
+      "concentration": "0.605097"
+    },
+    {
+      "time_h": "0.5",
+      "concentration": "0.984313"
+    },
+    {
+      "time_h": "1",
+      "concentration": "1.333609"
+    },
+    {
+      "time_h": "1.5",
+      "concentration": "1.396536"
+    },
+    {
+      "time_h": "2",
+      "concentration": "1.336185"
+    },
+    {
+      "time_h": "4",
+      "concentration": "0.876962"
+    },
+    {
+      "time_h": "6",
+      "concentration": "0.535216"
+    },
+    {
+      "time_h": "8",
+      "concentration": "0.324790"
+    },
+    {
+      "time_h": "12",
+      "concentration": "0.119489"
+    }
+  ],
+  "shared_parameters": {
+    "auc_last_mg_h_l": "7.44837900545754297839e+0",
+    "auc_inf_mg_h_l": "7.92648944537879981398e+0",
+    "auc_inf_extrap_fraction": "6.03180567155108811122e-2",
+    "lambda_z_per_h": "2.49919244640797703920e-1",
+    "half_life_h": "2.77348461722580568803e+0",
+    "cmax_mg_l": "1.396536",
+    "tmax_h": "1.5",
+    "terminal_phase_n_points": 3,
+    "terminal_phase_adjusted_r2": "9.99999884395854798870e-1"
+  },
+  "subjects": [
+    {
+      "subject_id": "SUBJ-01",
+      "dose_mg": "0.5",
+      "clearance_semantic": "CL_over_F",
+      "cl_over_f_l_h": "6.30796272985014299623e-2",
+      "volume_semantic": "Vz_over_F",
+      "vz_over_f_l": "2.52400039817518269934e-1"
+    },
+    {
+      "subject_id": "SUBJ-02",
+      "dose_mg": "0.6",
+      "clearance_semantic": "CL_over_F",
+      "cl_over_f_l_h": "7.56955527582017159548e-2",
+      "volume_semantic": "Vz_over_F",
+      "vz_over_f_l": "3.02880047781021923920e-1"
+    }
+  ],
+  "acceptance": {
+    "relative": {
+      "auc_last": 1e-09,
+      "auc_inf": 1e-09,
+      "auc_inf_extrap_fraction": 1e-09,
+      "lambda_z": 1e-09,
+      "half_life": 1e-09,
+      "clearance": 1e-09,
+      "volume": 1e-09,
+      "terminal_phase_adjusted_r2": 1e-09,
+      "cmax": 1e-12
+    },
+    "absolute": {
+      "tmax_h": 1e-12
+    }
+  }
+}

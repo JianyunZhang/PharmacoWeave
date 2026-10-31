@@ -8,7 +8,18 @@ from pharmacoweave.core.evidence import EvidenceExchange, EvidenceQc, EvidenceRe
 from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.errors import ContractViolation, IngestError
 
-_PK_MEASUREMENTS = frozenset({"concentration", "clearance", "auc", "half_life", "volume"})
+_PK_MEASUREMENTS = frozenset(
+    {
+        "concentration",
+        "clearance",
+        "apparent_clearance",
+        "auc",
+        "half_life",
+        "volume",
+        "apparent_volume",
+        "ka",
+    }
+)
 _EPHYS_ENDPOINTS = frozenset({"neural_pd_endpoint", "behavioral_endpoint"})
 _NON_MEASUREMENT = frozenset({EvidenceType.PREDICTED, EvidenceType.LITERATURE, EvidenceType.HYPOTHESIS})
 

@@ -1,11 +1,11 @@
 # 验证
 
-0.0.5 在静脉推注 NCA、一室拟合、直接效应 Emax、体外 ADME、毒理记录和证据往返之上，补充了原始效应尺度阻尼非线性 Emax / Sigmoid Hill 拟合、参数渐近标准误与 95% 置信区间、可审计平行样聚合与派生观测表，以及半对数/加权残差/浓度–效应诊断 SVG 与 Phase 2 结果包全链路落盘验证。
+0.0.6 在 0.0.5 统计加固与 Phase 2 全链路落盘之上，补齐了单次血管外给药与静脉恒速输注 NCA 的 50 位十进制独立手算冻结参考、一室血管外吸收与二室静脉推注加权非线性拟合基准（含不可辨识拒算门禁），以及显式分子量支撑的质量–摩尔量纲互转验证。
 
 ## 已自动执行的检查
 
-- 单位维度和换算。
-- 单条记录规则：时区、BLQ、零浓度、输注时长、CL 与 CL/F、置信区间上下界顺序。
+- 单位维度和换算，含显式分子量下的质量–摩尔量纲互转与无分子量拒算。
+- 单条记录规则：时区、BLQ、零浓度、输注时长、`CL` 与 `CL/F` 及 `Vz` 与 `Vz/F` 语义隔离、置信区间上下界顺序。
 - 关系规则：外键、时钟、LLOQ、基质、未审核身份链接、临床数据的研究用提示。
 - BLQ 策略与派生观测表不修改原观测；有偏替换必须 `acknowledge_bias=true`；平行样聚合计算 CV% 且不把 BLQ 平均为 0。
 - 合成研究在 strict 模式下零错误、零警告。
@@ -82,6 +82,28 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 - **退化与不可辨识拒算保护**：仅覆盖线性区（`EC50` 超出最高测试浓度 1.25 倍）、全部落在高浓度平台、阶跃断层缺少 10%–90% 过渡区观测、海森曲率比退化、或 Sigmoid 定量点少于 4 个时，诊断强制为 `fail`，不输出 `EC50` 或 `hill`。
 - **PK WNLS 渐近不确定度**：`tests/numerical_benchmarks/test_wnls_iv_bolus.py` 校验 `ParameterEstimate` 的 `standard_error`、`ci_lower`、`ci_upper` 和 `ci_level == 0.95`，在带噪合成曲线上 95% CI 覆盖真值 `CL = 0.40 L/h` 与 `V = 2.0 L`。
 - **原生 SVG 诊断图**：`tests/unit/test_fit_figures.py` 通过 XML 解析器校验 `concentration_time_semilog.svg`、`weighted_residuals.svg` 和 `concentration_effect.svg`，确认 LLOQ 线、终末相标记和 Emax 曲线渲染正常且绝不把 BLQ 画成 0。
+
+## 0.0.6 血管外/输注冻结参考、房室扩展与显式分子量换算
+
+- **单次口服与静脉恒速输注冻结 NCA 参考**：`tests/regression/oral_quiet_nca.json`（`examples/data/oral_single_dose/`，两只大鼠，表观参数 `CL/F`、`Vz/F`）与 `tests/regression/iv_infusion_quiet_nca.json`（`examples/data/iv_infusion_single_dose/`，0.5 h 恒速静脉输注）均通过 50 位十进制独立手算生成。`test_oral_quiet_reference.py` 与 `test_iv_infusion_quiet_reference.py` 按与 `iv_bolus_quiet_nca.json` 相同的 1e-9 / 1e-12 误差上限严格锁死梯形积分、终末相选窗及表观/静脉语义字段。
+- **一室血管外吸收拟合（`fit_one_compartment_extravascular`）**：`tests/numerical_benchmarks/test_extravascular_and_two_compartment.py` 核验无噪声与带噪合成曲线在相对误差上限内回收 `ka`、`CL/F`、`V/F` 及正值对数尺度 95% CI；缺少达峰前上升点、达峰后点不足或 `ka ≈ ke` 发生 flip-flop 混淆时强制诊断为 `fail`，不输出参数。
+- **二室静脉推注双指数拟合（`fit_two_compartment_iv_bolus`）**：核验无噪声（`examples/data/two_compartment_iv_bolus/`，`CL = 0.25 L/h`、`V1 = 0.50 L`、`Q = 0.50 L/h`、`V2 = 1.0 L`）与带噪曲线回收四参数及 95% CI；单指数数据传入二室模型发生快慢相坍缩（`alpha / beta < 1.25` 或曲率退化）时强制诊断为 `fail`。
+- **显式分子量换算**：`tests/unit/test_units.py` 校验 `convert_with_molecular_weight` 与 `Compound.convert_quantity` 在给定正分子量（`g/mol`、`Da`、`kDa`）时精确互转质量与摩尔浓度/剂量/AUC，并验证 `convert()` 或缺失分子量时持续拒绝跨量纲互转。
+
+## 0.0.7 显式生理假设探索性 IVIVE 与预测校准审计
+
+- **Well-Stirred IVIVE 手算解析基准**：`tests/numerical_benchmarks/test_ivive_and_prediction_audit.py` 针对微粒体与肝细胞 CLint，基于 Yang et al. (2007) 经典方程（包含培养非特异性结合校正 $\text{CL}_{\text{int,u,vitro}} = \text{CL}_{\text{int,app}} / f_{u,\text{inc}}$、全血游离分数 $f_{u,b} = f_{u,p} / R_{b/p}$、全血肝清除率 $\text{CL}_{H,b} = Q_H f_{u,b} \text{CL}_{\text{int,u,H}} / (Q_H + f_{u,b} \text{CL}_{\text{int,u,H}})$ 与血浆肝清除率 $\text{CL}_{H,p} = R_{b/p} \cdot \text{CL}_{H,b}$），手算验证相对误差不超过 **1e-6**。
+- **高低清除率渐近极限验证**：在极低清除率极限下核验 $\text{CL}_{H,b} \to f_{u,b} \cdot \text{CL}_{\text{int,u,H}}$；在极高清除率极限下核验 $\text{CL}_{H,b} \to Q_H$ 且肝提取率 $E_H \to 1.0$；验证生理参数缺失 MPPGL/HPGL 或跨化合物借用蛋白结合记录时抛出 `AnalysisError`，调用 `human_starting_dose_from_ivive` 坚决拒绝推导人体起始剂量。
+- **先验预测对体内估算折叠误差审计**：`audit_study_predictions` / `audit_evidence_predictions` 严格核验比值 $P/O$、对称折叠误差 $\max(P/O, O/P)$、$\log_{10}$ 误差、2 倍/3 倍阈值标记以及按 `measurement_type` 分组的 AFE（$10^{\frac{1}{N}\sum \log_{10}(P/O)}$）与 AAFE（$10^{\frac{1}{N}\sum |\log_{10}(P/O)|}$），验证在 2 倍高估与 2 倍低估并存时 AFE 正负偏差抵消为 1.0 而 AAFE 保持 2.0，防止跨参数偏差相消。
+- **严格语义隔离与量纲自适应**：核验基于受试者体重的单位缩放（$\text{L/h/kg} \to \text{L/h}$）与基于化合物分子量的摩尔–质量换算；核验绝对与表观清除率（$CL$ vs $CL/F$）、通用与二室参数（排除 $Q$、$V2$）、母药与代谢物完全隔离不混同；核验输入证据只读不可变，非预测性先验或非估算性后验输入抛出 `ContractViolation`。
+- **Schema 与结果包落盘**：`schemas/prediction_audit.schema.json` 导出并严格冻结，校验 `analysis/ivive_predictions.parquet`、`analysis/prediction_audit.json` 与 HTML 报告内嵌表格。
+
+## 0.1.0 跨尺度时序对齐、声明式映射与结果包核验基准
+
+- **跨尺度端到端可追溯基准**：`tests/numerical_benchmarks/test_multiscale_traceability.py` 核验给药事件（`DOSE-SUBJ-01`）到体内暴露（Cmax / AUC_inf）、再到 EphysWeave 神经表型（海马 CA1 theta 频段功率，$\text{sync\_error} = 8.45\text{ ms} \le 50.0\text{ ms}$）与 OmicsWeave 组学终点（Cyp3a4 表达 log2FC，$\text{sync\_error} = 32.10\text{ ms} \le 50.0\text{ ms}$）、最终溯源至原始文件 SHA-256 摘要的全链条精确对应（`traceability_path` 与 `derived_from` 四跳完整性）。
+- **认识论与物理时钟硬性边界**：核验未审核或被拒绝的受试者身份链接（`review_status != ReviewStatus.ACCEPTED`）直接抛出 `AlignmentError`；时钟同步抖动超过声明阈值（$\text{sync\_error\_ms} > \text{max\_allowed\_sync\_error\_ms}$）直接抛出 `AlignmentError`；严守**代谢通量绝非浓度**底线，Omics 反应通量声明为浓度或附带浓度量纲时直接触发 `ContractViolation` 拒算。
+- **声明式原始异构表映射基准**：`tests/unit/test_ingest_mapping.py` 校验由 `animals.csv`、`dosing.csv`、`pk_concentrations.csv` 与 `ingest_mapping.yaml` 构建的完整研究，严格核验原始实验文件 SHA-256 哈希完整保存在 `study.source_files`（`role="raw_<table_name>"`），且转换后的规范数据通过 `study.check()` 校验。
+- **结果包离线哈希核验与差异对比基准**：`tests/unit/test_bundle_verify_and_diff.py` 校验 `verify_bundle` 对健康包返回 `is_valid=True`、对单字节篡改文件或丢失文件精准返回 `is_valid=False` 并指明破坏文件；核验 `diff_bundles` 对相同包返回 `identical=True`，对参数被修改 50% 的分析表返回 `identical=False` 并计算出精确相对误差（0.3333）。
 
 ## 明确不做的符合性声明
 

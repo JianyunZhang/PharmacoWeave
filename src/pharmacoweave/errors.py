@@ -30,6 +30,10 @@ class ContractViolation(PharmacoWeaveError):
     """An evidence payload crosses a project boundary it is not allowed to cross."""
 
 
+class AlignmentError(PharmacoWeaveError):
+    """Multi-scale or cross-project time alignment failed clock or identity verification."""
+
+
 class AnalysisError(PharmacoWeaveError):
     """An analysis could not be completed for the locked design."""
 

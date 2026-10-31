@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.0 — 2026-10-31
+
+- **研究目录观测向药效与毒理终点的显式桥接（`core/observation_bridge.py`）**：打通研究表 `observations`（`observation_type='effect'` 与 `'toxicity'`）向强类型 `EffectObservation` 与 `ToxEndpoint` 的显式桥接转换（`PharmacologyStudy.bridge_effects` 与 `bridge_toxicology`）；自适应解析关联 `Biosample`、`DoseEvent`、`Assay` 及给药时间差与生物基质，智能推导量纲（如 `%` / `percent` → `PERCENT`、`ratio` / `fraction` → `FRACTION`、浓度与速率量纲等），自动附加强制性 `RESEARCH_USE_LIMITATION` 与 `TOX_RESEARCH_LIMITATION`，并支持调用方细粒度参数重载（`endpoint_overrides`）。
+- **跨尺度时序对齐与端到端可追溯性（`integrations/alignment.py`）**：交付跨项目完整可追溯示范流（`dose_event → in vivo exposure → EphysWeave / OmicsWeave PD endpoint → source artifact`）；对齐流程强制执行：① 跨项目受试者标识在 `identity_map` 中必须存在且通过审核（`review_status="accepted"`，未审核或拒绝时直接拒联）；② 声明的 `timebase_id` 必须在研究元数据时间基准表中已注册；③ 显式校准时钟同步抖动（`sync_error_ms`），超限（`sync_error_ms > max_allowed_sync_error_ms`）时拒绝关联；④ 严守负向科学红线：**代谢通量绝不是浓度**（Omics 反应通量试图声明为浓度或附带浓度量纲时直接触发 `ContractViolation` 拒算）。
+- **声明式原始异构表映射工具（`ingestion/mapping.py`）**：支持通过 `ingest_mapping.yaml`（`IngestMappingConfig`）声明式映射异构湿实验导出表格（CSV/TSV/Parquet），实现列重命名、常量注入与枚举映射转换（如 `<LLOQ` / `BLQ` 自动映射为规范 `ObservationStatus.BLQ` 并抹除非实测数值），在零信息损失前提下将原始文件 SHA-256 摘要严格持久化至 `study.source_files` 确保证据链不可篡改，并提供 `PharmacologyStudy.from_mapping` 一键构建。
+- **离线结果包核验与差异对比工具链（`core/bundle_verify.py` & `core/bundle_diff.py`）**：CLI 新增 `verify-bundle` 与 `diff` 命令；`verify-bundle` 离线校验 `manifest.json` 与 `schemas/result_bundle.schema.json` 契约，重新逐一哈希全量落盘文件比对 SHA-256，排查文件篡改、文件丢失与未列盘多余文件；`diff` 命令对比两次分析运行结果包的元数据差异、文件增删改状态、Parquet 分析参数表数值变化（自动计算最大绝对/相对偏差并标注显著差异参数）与 JSON 诊断指标变动，支持 `--json` 格式化机器可读输出。
+- **契约与 Schema 升级（10 份落盘）**：版本号正式推进至 `0.1.0`；在 `schemas/` 中导出并冻结第 10 份数据契约 `ingest_mapping.schema.json`；提供端到端示范脚本 `examples/multiscale_ephys_omics_alignment.py` 与 `examples/ingest_mapping_demo.py`。
+
+## 0.0.7 — 2026-10-31
+
+- 扩展体外 ADME 记录与单位体系（`dmpk`）：`AdmeAssayKind` 新增血浆游离分数 `fu_plasma`、微粒体结合游离分数 `fu_mic` 与全血/血浆分配比 `blood_to_plasma_ratio`；单位系统引入 `fraction` 与 `ratio` 规范化映射，严格校验数值边界（`fu` 强制在 `(0, 1]` 范围且支持 `percent`/`pct` 转换，`blood_to_plasma_ratio > 0`），维持拒绝血浆清除率单位与未实测行绝不填充数值等安全防线。
+- 显式生理假设的研究级探索性 IVIVE（`dmpk/ivive.py`）：仅在调用方显式提供特定物种生理参数（`PhysiologicalScalingParams`：体重、肝重、肝血流 $Q_H$、微粒体蛋白含量 MPPGL 或肝细胞密度 HPGL，核心库不包含隐式物种默认表）以及结合参数（`fu_plasma`、`fu_inc`、`blood_to_plasma_ratio`，标量输入显式记录为假设）时，按 Yang et al. (2007) Well-Stirred 肝清除率模型计算探索性预测（`IviveClearancePrediction`）。预测记录强制锁定为 `evidence_grade="predicted"`，`scale_to_in_vivo_clearance` 保持拒绝单条体外记录换算，`human_starting_dose_from_ivive` 坚决拒绝推导首次人体推荐剂量。
+- 先验预测与后验体内估算折叠误差审计（`diagnostics/prediction_audit.py`）：对挂载的预测性先验证据（`TheraWeave` CADD、探索性 IVIVE 等 `evidence_type="predicted"`）与体内估算参数（`NcaParameterSet` 或房室拟合生成的 `estimated`）进行严格双向折叠误差校准审计（$P/O$、$\max(P/O, O/P)$、$\log_{10}$ 误差、2 倍/3 倍阈值标记与按 `measurement_type` 分组的 AFE、AAFE 诊断，防止跨参数正负偏差相消），保持输入记录严格只读不可变；严格语义隔离绝对清除率与表观清除率（$CL$ vs $CL/F$）、体积与表观体积（$V$ vs $V/F$）、通用参数与两室参数（排除 $Q$、$V2$）以及母药与代谢物，支持基于受试者体重的剂量/清除率单位换算与显式分子量摩尔转换。
+- 命令行与结果包全链路落地：新增 `pharmacoweave ivive` 与 `pharmacoweave audit-predictions` CLI 子命令；结果包持久化 `analysis/ivive_predictions.parquet` 与 `analysis/prediction_audit.json`，HTML 验证报告新增探索性 IVIVE 与预测审计展示；导出 `schemas/prediction_audit.schema.json`。
+
+## 0.0.6 — 2026-10-31
+
+- 开放单次血管外给药（`oral`、`subcutaneous`、`intramuscular`）与单次静脉恒速输注（`iv_infusion`）NCA（`nca_extravascular`、`nca_iv_infusion`、`nca_profile`）：血管外给药从 `(0, 0)` 起点积分且不执行静脉 `C0` 反向外推，终末相候选窗口限制在严格达峰后点（`t > Tmax`），生物利用度 `F` 未知时强制报告表观清除率 `CL/F` 与表观终末分布容积 `Vz/F`；静脉恒速输注强制校验正 `infusion_duration`，从 `(0, 0)` 积分并将终末相限制在 `t >= max(Tmax, infusion_duration)`。同步冻结 `tests/regression/oral_quiet_nca.json` 与 `tests/regression/iv_infusion_quiet_nca.json` 两份 50 位十进制独立手算参考。
+- 在 `pk_models` 中新增一室血管外一级吸收加权非线性拟合（`fit_one_compartment_extravascular`，估计 `ka`、`CL/F`、`V/F`）与二室静脉推注双指数加权非线性拟合（`fit_two_compartment_iv_bolus`，估计 `CL`、`V1`、`Q`、`V2`），提供渐近标准误与对数尺度 95% 置信区间，并开放 `weight="uniform"`；当吸收相观测缺失、`ka ≈ ke` 发生 flip-flop 不可辨识，或二室快慢相退化为单指数（`alpha / beta < 1.25`、快/慢相贡献过低或海森曲率比退化）时诊断为失败，不输出参数点估计。`pharmacoweave fit` 新增 `--model` 与 `--weight uniform` 选项。
+- 开放显式分子量支撑的质量–摩尔量纲互转（`convert_with_molecular_weight`、`Compound.convert_quantity`），词表新增摩尔浓度原子（`fM`、`pM`、`nM`、`uM`、`mM`、`M`）、`fmol` 及分子量单位（`Da`、`kDa`、`g/mol`）；未提供正分子量或调用纯同量纲 `convert()` 时继续拒绝质量与摩尔互转。
+- 扩展 `PharmacologyEvidence` 与跨项目证据守卫以承载表观药代参数（`apparent_clearance`、`apparent_volume`、`ka`），确保血管外 `CL_over_F` / `Vz_over_F` 绝不与静脉真实 `CL` / `V` 混同；同步更新 `schemas/` 导出的 JSON Schema 与 HTML/SVG 报告语义展示。
+
 ## 0.0.5 — 2026-10-30
 
 - 直接效应与 Sigmoid Emax 默认改用原始效应尺度的阻尼 Levenberg–Marquardt 非线性最小二乘（`direct_emax_nls_v1` / `sigmoid_emax_nls_v1`），消除低浓度噪声放大以及带噪低浓度观测略低于固定基线 `E0` 时的拒算脆弱性；新增可选 Sigmoid Hill 系数估计（`fit_sigmoid_emax` / `estimate_hill`），同时保留 `method="linearized"` 供显式对比。高浓度平台覆盖不足、过渡区无观测、海森曲率比退化或效应方向矛盾时诊断为失败，不输出 `EC50` 或 `hill`。

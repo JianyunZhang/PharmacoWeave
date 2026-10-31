@@ -1,0 +1,3 @@
+subject_id,study_id,group_id,species,sex,body_weight_value,body_weight_unit
+SUBJ-01,PW-SYNTH-ORAL-001,PO-2mgkg,Rattus norvegicus,female,0.25,kg
+SUBJ-02,PW-SYNTH-ORAL-001,PO-2mgkg,Rattus norvegicus,male,0.3,kg

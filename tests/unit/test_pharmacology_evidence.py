@@ -114,6 +114,81 @@ def test_pk_fit_and_collect_run_evidence_preserve_provenance(repo_root) -> None:
     assert any(rec.entity_type == "IvBolusFit" and rec.claim_type == "CL" for rec in collected)
 
 
+def test_oral_and_two_compartment_evidence_preserve_semantic_labels(repo_root) -> None:
+    from examples.oral_absorption_case import build_oral_study
+    from examples.two_compartment_iv_case import build_two_compartment_study
+
+    from pharmacoweave.pk_models import fit_one_compartment_extravascular, fit_two_compartment_iv_bolus
+
+    oral_study = build_oral_study()
+    oral_nca = oral_study.run_nca(repo_root / "configs" / "nca_single_dose_oral.yaml")
+    oral_nca_ev = evidence_from_nca(oral_nca[0], run_id="run-oral")
+    by_claim = {rec.claim_type: rec for rec in oral_nca_ev}
+    assert "CL_over_F" in by_claim and "clearance" not in by_claim
+    assert "Vz_over_F" in by_claim and "volume" not in by_claim
+    assert by_claim["CL_over_F"].measurement_type == "apparent_clearance"
+    assert by_claim["Vz_over_F"].measurement_type == "apparent_volume"
+
+    oral_fits = fit_one_compartment_extravascular(oral_study)
+    oral_fit_ev = evidence_from_pk_fit(oral_fits[0], run_id="run-oral")
+    assert {rec.claim_type for rec in oral_fit_ev} == {"ka", "CL_over_F", "V_over_F"}
+    assert all(rec.entity_type == "ExtravascularFit" for rec in oral_fit_ev)
+
+    two_comp_fits = fit_two_compartment_iv_bolus(build_two_compartment_study())
+    two_comp_ev = collect_run_evidence(run_id="run-2c", pk_fits=two_comp_fits)
+    assert {rec.claim_type for rec in two_comp_ev} == {"CL", "V1", "Q", "V2"}
+    assert all(rec.entity_type == "TwoCompartmentFit" for rec in two_comp_ev)
+
+
+def test_ivive_evidence_preserves_predicted_grade_and_lineage() -> None:
+    from pharmacoweave.dmpk import (
+        AdmeAssayKind,
+        AdmeStatus,
+        InVitroAdmeRecord,
+        PhysiologicalScalingParams,
+        predict_hepatic_clearance_well_stirred,
+    )
+    from pharmacoweave.integrations import evidence_from_ivive
+
+    clint = InVitroAdmeRecord(
+        record_id="ADME-MIC-EV",
+        compound_id="PW-0001",
+        assay_kind=AdmeAssayKind.MICROSOMAL_CLEARANCE,
+        system="human liver microsomes",
+        status=AdmeStatus.MEASURED,
+        limitations=["Research use only. Not a dosing recommendation."],
+        value=20.0,
+        unit="uL/min/mg_protein",
+    )
+    phys = PhysiologicalScalingParams(
+        profile_id="PHYS-HUMAN",
+        species="Homo sapiens",
+        body_weight_kg=70.0,
+        liver_weight_g=1800.0,
+        hepatic_blood_flow_l_h=90.0,
+        microsomal_protein_mg_per_g_liver=45.0,
+        source="Test source",
+    )
+    pred = predict_hepatic_clearance_well_stirred(
+        clint,
+        physiology=phys,
+        fu_plasma=0.1,
+        fu_inc=1.0,
+        blood_to_plasma_ratio=1.0,
+    )
+    ev = evidence_from_ivive(pred, run_id="run-ivive")
+    assert ev.evidence_type is EvidenceType.PREDICTED
+    assert ev.qc_status is EvidenceQc.NOT_APPLICABLE
+    assert ev.claim_type == "ivive_hepatic_plasma_clearance"
+    assert ev.measurement_type == "clearance"
+    assert ev.numeric_value == pred.hepatic_plasma_clearance_l_h
+    assert any(link == "adme:ADME-MIC-EV" for link in ev.derived_from)
+    assert any(link == "physiology:PHYS-HUMAN" for link in ev.derived_from)
+    assert any(link == "compound:PW-0001" for link in ev.derived_from)
+
+    screen_record(ev)
+
+
 def test_failed_emax_evidence_does_not_report_ec50() -> None:
     pairs = [
         DirectEffectPair(

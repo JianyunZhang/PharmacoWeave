@@ -1,0 +1,229 @@
+{
+  "$defs": {
+    "DataClass": {
+      "enum": [
+        "synthetic",
+        "preclinical_animal",
+        "clinical",
+        "literature",
+        "other"
+      ],
+      "title": "DataClass",
+      "type": "string"
+    },
+    "StudyMetadata": {
+      "additionalProperties": false,
+      "description": "Design context for one study. This is not an analysis result.",
+      "properties": {
+        "study_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Study Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "study_type": {
+          "$ref": "#/$defs/StudyType"
+        },
+        "data_class": {
+          "$ref": "#/$defs/DataClass"
+        },
+        "species": {
+          "minLength": 1,
+          "title": "Species",
+          "type": "string"
+        },
+        "design_version": {
+          "minLength": 1,
+          "title": "Design Version",
+          "type": "string"
+        },
+        "timebases": {
+          "items": {
+            "$ref": "#/$defs/Timebase"
+          },
+          "minItems": 1,
+          "title": "Timebases",
+          "type": "array"
+        },
+        "protocol_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Protocol Id"
+        },
+        "ncbi_taxon_id": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ncbi Taxon Id"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "research_use_only": {
+          "const": true,
+          "default": true,
+          "title": "Research Use Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "study_id",
+        "title",
+        "study_type",
+        "data_class",
+        "species",
+        "design_version",
+        "timebases"
+      ],
+      "title": "StudyMetadata",
+      "type": "object"
+    },
+    "StudyType": {
+      "enum": [
+        "pk",
+        "pd",
+        "pkpd",
+        "tk",
+        "dmpk",
+        "toxicology",
+        "other"
+      ],
+      "title": "StudyType",
+      "type": "string"
+    },
+    "TableMappingConfig": {
+      "additionalProperties": false,
+      "description": "Declarative column and constant mapping for one study table.",
+      "properties": {
+        "source_file": {
+          "minLength": 1,
+          "title": "Source File",
+          "type": "string"
+        },
+        "column_mapping": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Column Mapping",
+          "type": "object"
+        },
+        "constants": {
+          "additionalProperties": true,
+          "title": "Constants",
+          "type": "object"
+        },
+        "value_transforms": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Value Transforms",
+          "type": "object"
+        },
+        "delimiter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delimiter"
+        }
+      },
+      "required": [
+        "source_file"
+      ],
+      "title": "TableMappingConfig",
+      "type": "object"
+    },
+    "Timebase": {
+      "additionalProperties": false,
+      "description": "A named clock. Samples declare which clock their times use.",
+      "properties": {
+        "timebase_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Timebase Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timebase_id",
+        "description"
+      ],
+      "title": "Timebase",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Configuration mapping raw lab files to a canonical PharmacologyStudy.",
+  "properties": {
+    "schema_name": {
+      "const": "pharmacology-ingest-mapping",
+      "default": "pharmacology-ingest-mapping",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "study_metadata": {
+      "$ref": "#/$defs/StudyMetadata"
+    },
+    "tables": {
+      "additionalProperties": {
+        "$ref": "#/$defs/TableMappingConfig"
+      },
+      "title": "Tables",
+      "type": "object"
+    },
+    "research_use_only": {
+      "const": true,
+      "default": true,
+      "title": "Research Use Only",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "study_metadata",
+    "tables"
+  ],
+  "title": "IngestMappingConfig",
+  "type": "object"
+}

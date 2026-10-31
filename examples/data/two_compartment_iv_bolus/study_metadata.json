@@ -1,0 +1,18 @@
+{
+  "study_id": "PW-SYNTH-2C-IV-001",
+  "title": "Synthetic two-compartment IV bolus plasma PK",
+  "study_type": "pk",
+  "data_class": "synthetic",
+  "species": "Canis lupus familiaris",
+  "design_version": "1",
+  "timebases": [
+    {
+      "timebase_id": "STUDY-CLOCK",
+      "description": "Synthetic protocol clock, UTC."
+    }
+  ],
+  "protocol_id": "SYNTH-PROTOCOL-2C-001",
+  "ncbi_taxon_id": 9615,
+  "description": "Noise-free synthetic biexponential IV bolus plasma concentrations (Dose = 10 mg, CL = 0.50 L/h, V1 = 1.0 L, Q = 1.50 L/h, V2 = 3.0 L). The 48 h sample is below the 0.05 ug/mL LLOQ and stored as BLQ. Research-use synthetic fixture only.",
+  "research_use_only": true
+}

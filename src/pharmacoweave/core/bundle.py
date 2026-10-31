@@ -23,7 +23,7 @@ from pharmacoweave.core.provenance import (
     ResultBundleManifest,
 )
 from pharmacoweave.core.study import PharmacologyStudy
-from pharmacoweave.core.units import CONC_MASS, convert, parse_unit
+from pharmacoweave.core.units import CONC_AMOUNT, CONC_MASS, convert, parse_unit
 from pharmacoweave.core.validation import validate_study
 from pharmacoweave.errors import IngestError, UnitError, ValidationFailed
 from pharmacoweave.ingestion.tabular import (
@@ -141,6 +141,14 @@ _OMITTED = (
         reason="figures/concentration_effect.svg is absent because no PD Emax model was fit.",
     ),
     OmittedArtifact(
+        role="ivive_predictions",
+        reason="analysis/ivive_predictions.parquet is absent because no exploratory IVIVE was run.",
+    ),
+    OmittedArtifact(
+        role="prediction_audit",
+        reason="analysis/prediction_audit.json is absent because no prior-vs-estimate audit was run.",
+    ),
+    OmittedArtifact(
         role="analysis_report",
         reason=(
             "reports/analysis_report.html is absent. reports/validation_report.html is the data-validation inventory."
@@ -167,6 +175,8 @@ def export_bundle(
     adme_records: Sequence[Any] | None = None,
     tox_endpoints: Sequence[Any] | None = None,
     blq_policy: Any | None = None,
+    ivive_predictions: Sequence[Any] | None = None,
+    prediction_audit: Any | None = None,
 ) -> ResultBundleManifest:
     """Validate ``study`` and write a new bundle directory.
 
@@ -174,7 +184,9 @@ def export_bundle(
     ``fits`` to store PK parameters, residuals, and diagnostic figures. Pass
     ``emax_fits`` to store direct/sigmoid Emax curves, and ``adme_records`` or
     ``tox_endpoints`` to persist structured DMPK and toxicology records and
-    screened ``PharmacologyEvidence``.
+    screened ``PharmacologyEvidence``. Pass ``ivive_predictions`` (exploratory,
+    predicted grade) and ``prediction_audit`` (a ``PredictionAuditReport``) to
+    persist the IVIVE table and the prior-vs-estimate fold-error audit.
     """
 
     report = validate_study(study, mode=mode)
@@ -196,6 +208,8 @@ def export_bundle(
             adme_records=adme_records,
             tox_endpoints=tox_endpoints,
             blq_policy=blq_policy,
+            ivive_predictions=ivive_predictions,
+            prediction_audit=prediction_audit,
         )
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
@@ -214,9 +228,16 @@ def _write_bundle(
     adme_records: Sequence[Any] | None,
     tox_endpoints: Sequence[Any] | None,
     blq_policy: Any | None,
+    ivive_predictions: Sequence[Any] | None = None,
+    prediction_audit: Any | None = None,
 ) -> ResultBundleManifest:
     created_at = datetime.now(UTC)
     counts = _counts(study, report, adme_records=adme_records, tox_endpoints=tox_endpoints)
+    if ivive_predictions is not None:
+        counts["n_ivive_predictions"] = len(ivive_predictions)
+    if prediction_audit is not None:
+        counts["n_prediction_audit_entries"] = len(prediction_audit.entries)
+        counts["n_prediction_audit_skipped"] = len(prediction_audit.skipped)
     _write_json(destination / _PATHS["study_metadata"], json.loads(study.metadata.model_dump_json()))
     write_named_table(destination / _PATHS["subjects"], "subjects", [subject_row(item) for item in study.subjects])
     write_named_table(destination / _PATHS["compounds"], "compounds", [compound_row(item) for item in study.compounds])
@@ -265,15 +286,20 @@ def _write_bundle(
         {"files": [item.model_dump(mode="json") for item in study.source_files]},
     )
     analysis_executed = any(
-        item is not None for item in (nca_parameters, fits, emax_fits, blq_policy)
+        item is not None
+        for item in (nca_parameters, fits, emax_fits, blq_policy, ivive_predictions, prediction_audit)
     )
     notes: list[str] = []
     if nca_parameters is not None:
-        notes.append("Single-dose IV bolus NCA was run.")
+        notes.append("Single-dose NCA was run.")
     if fits is not None:
-        notes.append("One-compartment IV bolus fit was run.")
+        notes.append("Compartmental PK fit was run.")
     if emax_fits is not None:
         notes.append("Direct/sigmoid Emax exposure-response fitting was run.")
+    if ivive_predictions is not None:
+        notes.append("Exploratory explicit-assumption well-stirred IVIVE was run; outputs stay predicted.")
+    if prediction_audit is not None:
+        notes.append("Prior predictions were audited against in vivo estimates with fold-error metrics.")
     if blq_policy is not None and not notes:
         notes.append("Derived observations were materialized under an explicit BLQ policy.")
 
@@ -311,6 +337,7 @@ def _write_bundle(
         emax_fits=emax_fits,
         adme_records=adme_records,
         tox_endpoints=tox_endpoints,
+        ivive_predictions=ivive_predictions,
     )
     counts["n_pharmacology_evidence"] = len(exchange.records)
     _write_json(destination / _PATHS["pharmacology_evidence"], json.loads(exchange.model_dump_json()))
@@ -338,9 +365,9 @@ def _write_bundle(
 
     semilog_text: str | None = None
     if nca_parameters is not None or fits is not None:
-        from pharmacoweave.core.profiles import iv_bolus_profiles
+        from pharmacoweave.core.profiles import single_dose_profiles
 
-        profiles = iv_bolus_profiles(study)
+        profiles = single_dose_profiles(study)
         semilog_overlays = _semilog_overlays(fits)
         term_counts = _terminal_point_counts(nca_parameters)
         semilog_text = concentration_time_semilog_svg(
@@ -429,6 +456,17 @@ def _write_bundle(
         _write_diagnostics_json(destination / diag_path, fits=fits, emax_fits=emax_fits)
         omitted = [item for item in omitted if item.role != "diagnostics"]
 
+    if ivive_predictions is not None:
+        ivive_path = "analysis/ivive_predictions.parquet"
+        paths["ivive_predictions"] = ivive_path
+        _write_ivive_parquet(destination / ivive_path, ivive_predictions)
+        omitted = [item for item in omitted if item.role != "ivive_predictions"]
+    if prediction_audit is not None:
+        audit_path = "analysis/prediction_audit.json"
+        paths["prediction_audit"] = audit_path
+        _write_json(destination / audit_path, json.loads(prediction_audit.model_dump_json()))
+        omitted = [item for item in omitted if item.role != "prediction_audit"]
+
     html = render_validation_report(
         study,
         report,
@@ -446,6 +484,10 @@ def _write_bundle(
         residual_diagnostics_svg=residual_text,
         weighted_residuals_svg=wres_text,
         concentration_effect_svg=effect_svg_text,
+        ivive_rows=_ivive_rows(ivive_predictions),
+        audit_summary_rows=_audit_summary_rows(prediction_audit),
+        audit_entry_rows=_audit_entry_rows(prediction_audit),
+        audit_skipped_rows=_audit_skipped_rows(prediction_audit),
     )
     report_path = destination / _PATHS["validation_report"]
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -490,9 +532,11 @@ def _build_evidence_exchange(
     emax_fits: Sequence[Any] | None,
     adme_records: Sequence[Any] | None,
     tox_endpoints: Sequence[Any] | None,
+    ivive_predictions: Sequence[Any] | None = None,
 ) -> EvidenceExchange:
     has_run_sources = any(
-        item is not None for item in (nca_parameters, fits, emax_fits, adme_records, tox_endpoints)
+        item is not None
+        for item in (nca_parameters, fits, emax_fits, adme_records, tox_endpoints, ivive_predictions)
     )
     if not has_run_sources:
         return EvidenceExchange(records=list(study.external_evidence))
@@ -506,6 +550,7 @@ def _build_evidence_exchange(
         emax_fits=emax_fits,
         adme_records=adme_records,
         tox_endpoints=tox_endpoints,
+        ivive_predictions=ivive_predictions,
     )
     merged: list[EvidenceRecord] = list(study.external_evidence)
     seen = {record.evidence_id for record in merged}
@@ -547,6 +592,8 @@ def _counts(
 
 
 def _study_lloq_mg_l(study: PharmacologyStudy) -> float | None:
+    analytes = {item.analyte_id: item for item in study.analytes}
+    compounds = {item.compound_id: item for item in study.compounds}
     lloqs: list[float] = []
     for assay in study.assays:
         if assay.quantitation is not AssayQuantitation.CONCENTRATION:
@@ -554,8 +601,18 @@ def _study_lloq_mg_l(study: PharmacologyStudy) -> float | None:
         if assay.lloq is None or assay.limit_unit is None:
             continue
         try:
-            if parse_unit(assay.limit_unit).dimensions == CONC_MASS:
+            dims = parse_unit(assay.limit_unit).dimensions
+            if dims == CONC_MASS:
                 lloqs.append(convert(assay.lloq, assay.limit_unit, "mg/L"))
+            elif dims == CONC_AMOUNT:
+                analyte = analytes.get(assay.analyte_id) if assay.analyte_id is not None else None
+                compound = (
+                    compounds.get(analyte.compound_id)
+                    if analyte is not None and analyte.compound_id is not None
+                    else None
+                )
+                if compound is not None and compound.molecular_weight is not None:
+                    lloqs.append(compound.convert_quantity(assay.lloq, assay.limit_unit, "mg/L"))
         except UnitError:
             continue
     return max(lloqs) if lloqs else None
@@ -772,6 +829,71 @@ def _write_tox_parquet(path: Path, endpoints: Sequence[Any]) -> None:
     )
 
 
+def _write_ivive_parquet(path: Path, records: Sequence[Any]) -> None:
+    columns = (
+        "prediction_id",
+        "compound_id",
+        "species",
+        "physiology_profile_id",
+        "source_record_id",
+        "assay_kind",
+        "clint_app_value",
+        "clint_app_unit",
+        "fu_inc",
+        "fu_plasma",
+        "blood_to_plasma_ratio",
+        "fu_blood",
+        "clint_u_vitro_value",
+        "scaling_factor_value",
+        "scaling_factor_unit",
+        "liver_weight_g",
+        "body_weight_kg",
+        "hepatic_blood_flow_l_h",
+        "clint_u_hepatic_l_h",
+        "hepatic_extraction_ratio",
+        "hepatic_blood_clearance_l_h",
+        "hepatic_plasma_clearance_l_h",
+        "hepatic_plasma_clearance_l_h_kg",
+        "model",
+        "clearance_unit",
+        "evidence_grade",
+        "research_use_only",
+        "assumptions",
+        "limitations",
+        "derived_from",
+    )
+    rows: list[dict[str, object]] = []
+    for item in records:
+        payload = item.model_dump(mode="json")
+        payload["assumptions"] = " | ".join(item.assumptions)
+        payload["limitations"] = " | ".join(item.limitations)
+        payload["derived_from"] = " | ".join(item.derived_from)
+        rows.append(payload)
+    _write_typed_parquet(
+        path,
+        columns,
+        floats={
+            "clint_app_value",
+            "fu_inc",
+            "fu_plasma",
+            "blood_to_plasma_ratio",
+            "fu_blood",
+            "clint_u_vitro_value",
+            "scaling_factor_value",
+            "liver_weight_g",
+            "body_weight_kg",
+            "hepatic_blood_flow_l_h",
+            "clint_u_hepatic_l_h",
+            "hepatic_extraction_ratio",
+            "hepatic_blood_clearance_l_h",
+            "hepatic_plasma_clearance_l_h",
+            "hepatic_plasma_clearance_l_h_kg",
+        },
+        bools={"research_use_only"},
+        rows=rows,
+    )
+
+
 def _figure_omitted(item: OmittedArtifact) -> OmittedArtifact:
     if item.role == "goodness_of_fit_figure":
         return OmittedArtifact(
@@ -810,13 +932,19 @@ def _fit_rows(fits: Sequence[Any] | None) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for item in fits:
         by_param = {estimate.parameter: estimate for estimate in item.estimates}
-        cl_est = by_param.get("CL")
-        v_est = by_param.get("V")
+        cl_est = by_param.get("CL") or by_param.get("CL/F")
+        v_est = by_param.get("V") or by_param.get("V/F") or by_param.get("V1")
+        summary_parts = [
+            f"{estimate.parameter} = {_fmt_param_with_unit(estimate)}"
+            for estimate in item.estimates
+        ]
         rows.append(
             {
                 "subject_id": item.subject_id,
+                "model_id": item.fit.model_id,
                 "method": item.fit.estimation_method,
                 "status": item.diagnostic.status.value,
+                "parameters_summary": "; ".join(summary_parts),
                 "clearance": _fmt_fit(None if cl_est is None else cl_est.value),
                 "clearance_ci": _fmt_ci(cl_est),
                 "volume": _fmt_fit(None if v_est is None else v_est.value),
@@ -844,6 +972,76 @@ def _emax_rows(emax_fits: Sequence[Any] | None) -> list[dict[str, str]]:
             }
         )
     return rows
+
+
+def _ivive_rows(predictions: Sequence[Any] | None) -> list[dict[str, str]]:
+    if not predictions:
+        return []
+    rows: list[dict[str, str]] = []
+    for item in predictions:
+        rows.append(
+            {
+                "prediction_id": item.prediction_id,
+                "compound_id": item.compound_id,
+                "species": item.species,
+                "assay_kind": item.assay_kind,
+                "clint_app": f"{item.clint_app_value:.6g} {item.clint_app_unit}",
+                "fu_plasma": f"{item.fu_plasma:.4g}",
+                "fu_inc": f"{item.fu_inc:.4g}",
+                "blood_to_plasma_ratio": f"{item.blood_to_plasma_ratio:.4g}",
+                "cl_plasma_l_h": f"{item.hepatic_plasma_clearance_l_h:.6g}",
+                "cl_plasma_l_h_kg": f"{item.hepatic_plasma_clearance_l_h_kg:.6g}",
+                "extraction_ratio": f"{item.hepatic_extraction_ratio:.4g}",
+            }
+        )
+    return rows
+
+
+def _audit_summary_rows(report: Any | None) -> list[dict[str, str]]:
+    if report is None or not report.summaries:
+        return []
+    return [
+        {
+            "measurement_type": s.measurement_type,
+            "n_comparisons": str(s.n_comparisons),
+            "afe": f"{s.afe:.4g}",
+            "aafe": f"{s.aafe:.4g}",
+            "fraction_within_2_fold": f"{s.fraction_within_2_fold * 100:.1f}%",
+            "fraction_within_3_fold": f"{s.fraction_within_3_fold * 100:.1f}%",
+            "n_outlier_2_fold": str(s.n_outlier_2_fold),
+        }
+        for s in report.summaries
+    ]
+
+
+def _audit_entry_rows(report: Any | None) -> list[dict[str, str]]:
+    if report is None or not report.entries:
+        return []
+    return [
+        {
+            "prior_id": e.prior_evidence_id,
+            "estimate_id": e.estimate_evidence_id,
+            "measurement_type": e.measurement_type,
+            "predicted": f"{e.predicted_value:.6g} {e.unit}",
+            "estimated": f"{e.estimated_value:.6g} {e.unit}",
+            "ratio": f"{e.ratio:.4g}",
+            "fold_error": f"{e.fold_error:.4g}",
+            "bias": e.bias_direction.value,
+        }
+        for e in report.entries
+    ]
+
+
+def _audit_skipped_rows(report: Any | None) -> list[dict[str, str]]:
+    if report is None or not report.skipped:
+        return []
+    return [
+        {
+            "prior_id": s.prior_evidence_id,
+            "reason": s.reason,
+        }
+        for s in report.skipped
+    ]
 
 
 def _fmt_param_with_unit(estimate: Any | None) -> str:

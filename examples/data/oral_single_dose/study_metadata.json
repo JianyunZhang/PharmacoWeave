@@ -1,0 +1,18 @@
+{
+  "study_id": "PW-SYNTH-ORAL-001",
+  "title": "Synthetic single-dose oral plasma PK",
+  "study_type": "pk",
+  "data_class": "synthetic",
+  "species": "Rattus norvegicus",
+  "design_version": "1",
+  "timebases": [
+    {
+      "timebase_id": "STUDY-CLOCK",
+      "description": "Synthetic protocol clock, UTC."
+    }
+  ],
+  "protocol_id": "SYNTH-PROTOCOL-ORAL-001",
+  "ncbi_taxon_id": 10116,
+  "description": "Noise-free synthetic plasma concentrations for a one-compartment first-order oral absorption model (ka = 1.50 1/h, CL/F = 0.25 L/h/kg, V/F = 1.0 L/kg, dose = 2.0 mg/kg). Predose and 24 h samples are below the 0.02 ug/mL LLOQ and stored as BLQ. Research-use synthetic fixture only.",
+  "research_use_only": true
+}

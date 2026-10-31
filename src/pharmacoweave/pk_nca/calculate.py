@@ -1,24 +1,24 @@
-"""Single-dose IV bolus NCA.
+"""Single-dose rich-serial NCA for IV bolus, constant-rate IV infusion, and extravascular routes.
 
 The curve uses quantified concentrations only. BLQ points stay censored.
-AUC is linear-up/log-down. For a profile that does not already contain a
-time-zero concentration, C0 is the log-linear back-extrapolation through the
-first two quantified points, and the interval from 0 to the first sample is
-included in AUC.
+AUC is linear-up/log-down:
+
+- ``iv_bolus``: when no time-zero sample is present and the first two quantified
+  points decline, C0 is back-extrapolated log-linearly and included in AUC;
+  candidate terminal windows use points with ``t >= Tmax``; clearance and
+  terminal volume are reported as ``CL`` and ``Vz``.
+- ``oral``, ``subcutaneous``, ``intramuscular``: integrates from ``(0, 0)``
+  without C0 back-extrapolation; candidate terminal windows use strictly
+  post-peak points (``t > Tmax``); apparent clearance and terminal volume are
+  reported as ``CL_over_F`` and ``Vz_over_F`` because bioavailability ``F`` is
+  unknown in a single-arm extravascular design.
+- ``iv_infusion``: requires positive ``infusion_duration_h``; integrates from
+  ``(0, 0)`` without bolus C0 back-extrapolation; candidate terminal windows
+  use post-infusion points with ``t >= max(Tmax, infusion_duration_h)``;
+  clearance and terminal volume are reported as ``CL`` and ``Vz``.
 
 The terminal slope uses the adjusted R² rule
-``pharmacoweave.lambda_z.adjusted_r2.v1``:
-
-- candidate windows are the last k quantified points at or after Tmax
-- k runs from the configured minimum (at least 3) through all such points
-- each window is an ordinary least-squares fit of ln(concentration) on time
-- the window with the largest adjusted R² is kept, and ties prefer the longer window
-- the phase is qualified only when the slope is negative and adjusted R²
-  meets the configured minimum
-
-Half-life, AUC∞, CL, and Vz are reported only when that phase is qualified.
-An extrapolated AUC fraction above the configured maximum is stored and
-warned about. ``auc_inf_is_reportable`` is the reporting flag for that cutoff.
+``pharmacoweave.lambda_z.adjusted_r2.v1``.
 """
 
 import math
@@ -26,11 +26,12 @@ from dataclasses import dataclass
 
 from pharmacoweave.core.entities import Route
 from pharmacoweave.core.modeling import NcaParameterSet, ParameterSemantic
-from pharmacoweave.core.profiles import ConcentrationProfile
+from pharmacoweave.core.profiles import ConcentrationProfile, QuantifiedPoint
 from pharmacoweave.errors import AnalysisError
 from pharmacoweave.pk_nca.config import NcaConfig
 
 TERMINAL_RULE = "pharmacoweave.lambda_z.adjusted_r2.v1"
+_EXTRAVASCULAR_ROUTES = {Route.ORAL, Route.SUBCUTANEOUS, Route.INTRAMUSCULAR}
 
 
 @dataclass(frozen=True)
@@ -41,11 +42,105 @@ class _TerminalPhase:
     lambda_per_h: float | None
 
 
+def nca_profile(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:
+    """Dispatch single-dose NCA according to ``profile.route``."""
+
+    if profile.route is Route.IV_BOLUS:
+        return nca_iv_bolus(profile, config)
+    if profile.route is Route.IV_INFUSION:
+        return nca_iv_infusion(profile, config)
+    if profile.route in _EXTRAVASCULAR_ROUTES:
+        return nca_extravascular(profile, config)
+    raise AnalysisError(f"NCA is not implemented for route {profile.route.value}.")
+
+
 def nca_iv_bolus(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:
     """Calculate NCA for one IV bolus profile."""
 
     if profile.route is not Route.IV_BOLUS:
         raise AnalysisError("nca_iv_bolus requires route iv_bolus.")
+    warnings = _initial_warnings(profile)
+    if not profile.points:
+        return _empty_nca_result(profile, config, warnings)
+
+    cmax_point = max(profile.points, key=lambda point: (point.concentration_mg_l, -point.time_h))
+    curve, c0_warning = _curve_with_optional_c0(profile.points)
+    if c0_warning:
+        warnings.append(c0_warning)
+    terminal_points = [point for point in profile.points if point.time_h + 1e-12 >= cmax_point.time_h]
+    return _finalize_nca(
+        profile=profile,
+        config=config,
+        curve=curve,
+        cmax_point=cmax_point,
+        terminal_points=terminal_points,
+        clearance_semantic=ParameterSemantic.CL,
+        volume_semantic=ParameterSemantic.VZ,
+        warnings=warnings,
+    )
+
+
+def nca_extravascular(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:
+    """Calculate NCA for one single-dose extravascular profile (oral, SC, or IM)."""
+
+    if profile.route not in _EXTRAVASCULAR_ROUTES:
+        raise AnalysisError("nca_extravascular requires route oral, subcutaneous, or intramuscular.")
+    warnings = _initial_warnings(profile)
+    if not profile.points:
+        return _empty_nca_result(profile, config, warnings)
+
+    cmax_point = max(profile.points, key=lambda point: (point.concentration_mg_l, -point.time_h))
+    curve, zero_note = _curve_from_zero(profile.points)
+    if zero_note:
+        warnings.append(zero_note)
+    terminal_points = [point for point in profile.points if point.time_h > cmax_point.time_h + 1e-12]
+    return _finalize_nca(
+        profile=profile,
+        config=config,
+        curve=curve,
+        cmax_point=cmax_point,
+        terminal_points=terminal_points,
+        clearance_semantic=ParameterSemantic.CL_OVER_F,
+        volume_semantic=ParameterSemantic.VZ_OVER_F,
+        warnings=warnings,
+    )
+
+
+def nca_iv_infusion(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:
+    """Calculate NCA for one single-dose constant-rate IV infusion profile."""
+
+    if profile.route is not Route.IV_INFUSION:
+        raise AnalysisError("nca_iv_infusion requires route iv_infusion.")
+    if profile.infusion_duration_h is None or profile.infusion_duration_h <= 0:
+        raise AnalysisError("nca_iv_infusion requires a positive infusion_duration.")
+    warnings = _initial_warnings(profile)
+    if not profile.points:
+        return _empty_nca_result(profile, config, warnings)
+
+    cmax_point = max(profile.points, key=lambda point: (point.concentration_mg_l, -point.time_h))
+    curve, zero_note = _curve_from_zero(profile.points)
+    if zero_note:
+        warnings.append(zero_note)
+    if profile.points[0].time_h > profile.infusion_duration_h + 1e-12:
+        warnings.append(
+            "First quantified sample occurs after infusion end; "
+            "linear trapezoid from (0, 0) may understate infusion AUC."
+        )
+    cutoff_h = max(cmax_point.time_h, profile.infusion_duration_h)
+    terminal_points = [point for point in profile.points if point.time_h + 1e-12 >= cutoff_h]
+    return _finalize_nca(
+        profile=profile,
+        config=config,
+        curve=curve,
+        cmax_point=cmax_point,
+        terminal_points=terminal_points,
+        clearance_semantic=ParameterSemantic.CL,
+        volume_semantic=ParameterSemantic.VZ,
+        warnings=warnings,
+    )
+
+
+def _initial_warnings(profile: ConcentrationProfile) -> list[str]:
     warnings = [f"Terminal phase rule: {TERMINAL_RULE}."]
     if profile.n_predose_omitted:
         warnings.append(f"Left {profile.n_predose_omitted} predose rows out of the post-dose curve.")
@@ -54,24 +149,38 @@ def nca_iv_bolus(profile: ConcentrationProfile, config: NcaConfig) -> NcaParamet
             f"Omitted {profile.n_blq_omitted} BLQ and {profile.n_above_uloq_omitted} above-ULOQ rows. "
             "Those rows were not replaced with a number."
         )
-    if not profile.points:
-        return NcaParameterSet(
-            subject_id=profile.subject_id,
-            analyte_id=profile.analyte_id,
-            route=profile.route,
-            dose_event_id=profile.dose_event_id,
-            auc_method=config.auc_method,
-            terminal_phase_qualified=False,
-            excluded_reason="No quantified post-dose concentrations.",
-            warnings=warnings,
-        )
+    return warnings
 
-    cmax_point = max(profile.points, key=lambda point: (point.concentration_mg_l, -point.time_h))
-    curve, c0_warning = _curve_with_optional_c0(profile.points)
-    if c0_warning:
-        warnings.append(c0_warning)
+
+def _empty_nca_result(
+    profile: ConcentrationProfile,
+    config: NcaConfig,
+    warnings: list[str],
+) -> NcaParameterSet:
+    return NcaParameterSet(
+        subject_id=profile.subject_id,
+        analyte_id=profile.analyte_id,
+        route=profile.route,
+        dose_event_id=profile.dose_event_id,
+        auc_method=config.auc_method,
+        terminal_phase_qualified=False,
+        excluded_reason="No quantified post-dose concentrations.",
+        warnings=warnings,
+    )
+
+
+def _finalize_nca(
+    *,
+    profile: ConcentrationProfile,
+    config: NcaConfig,
+    curve: list[tuple[float, float]],
+    cmax_point: QuantifiedPoint,
+    terminal_points: list[QuantifiedPoint],
+    clearance_semantic: ParameterSemantic,
+    volume_semantic: ParameterSemantic,
+    warnings: list[str],
+) -> NcaParameterSet:
     auc_last = _auc_linear_up_log_down(curve)
-    terminal_points = [point for point in profile.points if point.time_h + 1e-12 >= cmax_point.time_h]
     terminal = _terminal_phase(
         terminal_points,
         min_points=config.lambda_z_min_points,
@@ -124,17 +233,17 @@ def nca_iv_bolus(profile: ConcentrationProfile, config: NcaConfig) -> NcaParamet
         half_life_unit="h" if half_life is not None else None,
         terminal_phase_n_points=terminal.n_points,
         terminal_phase_adjusted_r2=terminal.adjusted_r2,
-        clearance_semantic=None if clearance is None else ParameterSemantic.CL,
+        clearance_semantic=None if clearance is None else clearance_semantic,
         clearance=clearance,
         clearance_unit=None if clearance is None else "L/h",
-        volume_semantic=None if volume is None else ParameterSemantic.VZ,
+        volume_semantic=None if volume is None else volume_semantic,
         volume=volume,
         volume_unit=None if volume is None else "L",
         warnings=warnings,
     )
 
 
-def _curve_with_optional_c0(points: tuple) -> tuple[list[tuple[float, float]], str | None]:
+def _curve_with_optional_c0(points: tuple[QuantifiedPoint, ...]) -> tuple[list[tuple[float, float]], str | None]:
     series = [(point.time_h, point.concentration_mg_l) for point in points]
     if series[0][0] <= 1e-12:
         return series, None
@@ -146,6 +255,15 @@ def _curve_with_optional_c0(points: tuple) -> tuple[list[tuple[float, float]], s
     c0 = math.exp(math.log(c1) - slope * t1)
     return [(0.0, c0), *series], (
         "C0 was back-extrapolated on the log-linear line through the first two quantified points and included in AUC."
+    )
+
+
+def _curve_from_zero(points: tuple[QuantifiedPoint, ...]) -> tuple[list[tuple[float, float]], str | None]:
+    series = [(point.time_h, point.concentration_mg_l) for point in points]
+    if series[0][0] <= 1e-12:
+        return series, None
+    return [(0.0, 0.0), *series], (
+        "AUC integrates from (0, 0) to the first quantified sample without bolus C0 back-extrapolation."
     )
 
 
@@ -164,7 +282,12 @@ def _auc_linear_up_log_down(series: list[tuple[float, float]]) -> float:
     return total
 
 
-def _terminal_phase(points: list, *, min_points: int, min_adjusted_r2: float) -> _TerminalPhase:
+def _terminal_phase(
+    points: list[QuantifiedPoint],
+    *,
+    min_points: int,
+    min_adjusted_r2: float,
+) -> _TerminalPhase:
     usable = [point for point in points if point.concentration_mg_l > 0]
     if len(usable) < min_points:
         return _TerminalPhase(False, len(usable), None, None)
@@ -186,7 +309,7 @@ def _terminal_phase(points: list, *, min_points: int, min_adjusted_r2: float) ->
     return _TerminalPhase(qualified, k, adjusted, lambda_per_h if qualified else None)
 
 
-def _log_regression(points: list) -> tuple[float, float, float] | None:
+def _log_regression(points: list[QuantifiedPoint]) -> tuple[float, float, float] | None:
     xs = [point.time_h for point in points]
     ys = [math.log(point.concentration_mg_l) for point in points]
     n = len(xs)

@@ -1,0 +1,3 @@
+dose_event_id,subject_id,compound_id,absolute_time,dose_value,dose_unit,route,formulation,infusion_duration,infusion_duration_unit,body_weight_normalized_value,body_weight_normalized_unit
+DOSE-SUBJ-01,SUBJ-01,PW-0001,2024-02-10T08:00:00Z,0.5,mg,oral,oral suspension,,,2,mg/kg
+DOSE-SUBJ-02,SUBJ-02,PW-0001,2024-02-10T08:00:00Z,0.6,mg,oral,oral suspension,,,2,mg/kg

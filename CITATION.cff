@@ -8,6 +8,6 @@ authors:
   - name: JianyunZhang
     email: zhangjianyun1997@gmail.com
 repository-code: https://github.com/JianyunZhang/PharmacoWeave
-version: 0.0.5
+version: 0.1.0
 license: MIT
-date-released: "2026-10-30"
+date-released: "2026-10-31"

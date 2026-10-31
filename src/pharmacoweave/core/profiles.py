@@ -5,6 +5,7 @@ They are not replaced with zero. Predose rows are not part of the series.
 """
 
 import math
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Literal
 
@@ -12,6 +13,7 @@ from pydantic import Field
 
 from pharmacoweave.core.entities import (
     Biosample,
+    Compound,
     FiniteFloat,
     Identifier,
     Observation,
@@ -22,11 +24,30 @@ from pharmacoweave.core.entities import (
     Route,
 )
 from pharmacoweave.core.study import PharmacologyStudy
-from pharmacoweave.core.units import CONC_MASS, DRUG_MASS, convert, parse_unit
-from pharmacoweave.errors import AnalysisError
+from pharmacoweave.core.units import (
+    AMOUNT,
+    CONC_AMOUNT,
+    CONC_MASS,
+    DRUG_MASS,
+    convert,
+    convert_with_molecular_weight,
+    parse_unit,
+)
+from pharmacoweave.errors import AnalysisError, UnitError
 
 ReplicateMethod = Literal["arithmetic_mean", "geometric_mean"]
 ReplicatePolicy = Literal["error", "arithmetic_mean", "geometric_mean"]
+
+EXTRAVASCULAR_ROUTES: tuple[Route, ...] = (
+    Route.ORAL,
+    Route.SUBCUTANEOUS,
+    Route.INTRAMUSCULAR,
+)
+SUPPORTED_SINGLE_DOSE_ROUTES: tuple[Route, ...] = (
+    Route.IV_BOLUS,
+    Route.IV_INFUSION,
+    *EXTRAVASCULAR_ROUTES,
+)
 
 
 @dataclass(frozen=True)
@@ -40,7 +61,7 @@ class QuantifiedPoint:
 
 @dataclass(frozen=True)
 class ConcentrationProfile:
-    """The quantified curve used by single-dose IV bolus NCA and fitting."""
+    """The quantified curve used by single-dose NCA and compartmental fitting."""
 
     subject_id: str
     analyte_id: str
@@ -51,6 +72,7 @@ class ConcentrationProfile:
     n_blq_omitted: int
     n_above_uloq_omitted: int
     n_predose_omitted: int
+    infusion_duration_h: float | None = None
 
 
 class ReplicateSummary(Record):
@@ -87,6 +109,8 @@ def collapse_replicates(
 
     samples = {sample.sample_id: sample for sample in study.biosamples}
     doses = {dose.dose_event_id: dose for dose in study.dose_events}
+    analytes = {analyte.analyte_id: analyte for analyte in study.analytes}
+    compounds = {compound.compound_id: compound for compound in study.compounds}
     existing_ids = {obs.observation_id for obs in study.observations}
 
     quantified_groups: dict[tuple[str, str, str, int], list[Observation]] = {}
@@ -126,6 +150,8 @@ def collapse_replicates(
                 f"Subject {subject_id} has same-time observations with mixed analyte_form values; "
                 "refusing to collapse distinct analyte forms."
             )
+        analyte = analytes.get(analyte_id)
+        compound = compounds.get(analyte.compound_id) if analyte and analyte.compound_id else None
         first = group[0]
         if first.unit is None:
             raise AnalysisError(f"Quantified observation {first.observation_id} has no unit.")
@@ -134,7 +160,10 @@ def collapse_replicates(
         for obs in group:
             if obs.numeric_value is None or obs.unit is None:
                 raise AnalysisError(f"Quantified observation {obs.observation_id} has no value.")
-            val = convert(obs.numeric_value, obs.unit, target_unit)
+            try:
+                val = _convert_with_optional_compound(obs.numeric_value, obs.unit, target_unit, compound)
+            except UnitError as exc:
+                raise AnalysisError(str(exc)) from exc
             if val <= 0:
                 raise AnalysisError(f"Quantified concentration {obs.observation_id} must be positive.")
             values.append(val)
@@ -213,17 +242,19 @@ def collapse_replicates(
     return collapsed_study, summaries
 
 
-def iv_bolus_profiles(
+def single_dose_profiles(
     study: PharmacologyStudy,
     *,
+    allowed_routes: Collection[Route] | None = None,
     replicate_policy: ReplicatePolicy = "error",
 ) -> list[ConcentrationProfile]:
-    """Build one single-dose IV bolus profile per subject and analyte.
+    """Build one single-dose concentration profile per subject and analyte.
 
-    A subject with more than one dose event is rejected. This calculator does
-    not superpose multiple doses. Duplicate same-time quantified concentrations
-    raise an error unless ``replicate_policy`` is explicitly set to
-    ``'arithmetic_mean'`` or ``'geometric_mean'``.
+    A subject with more than one dose event is rejected. Duplicate same-time
+    quantified concentrations raise an error unless ``replicate_policy`` is
+    explicitly set to ``'arithmetic_mean'`` or ``'geometric_mean'``. Molar
+    doses and concentrations are converted to ``mg`` and ``mg/L`` only when
+    the linked ``Compound`` declares an explicit ``molecular_weight``.
     """
 
     if replicate_policy not in {"error", "arithmetic_mean", "geometric_mean"}:
@@ -231,6 +262,7 @@ def iv_bolus_profiles(
     if replicate_policy != "error":
         study, _ = collapse_replicates(study, method=replicate_policy)
 
+    permitted = frozenset(SUPPORTED_SINGLE_DOSE_ROUTES if allowed_routes is None else allowed_routes)
     doses_by_subject: dict[str, list[str]] = {}
     for dose in study.dose_events:
         doses_by_subject.setdefault(dose.subject_id, []).append(dose.dose_event_id)
@@ -240,9 +272,12 @@ def iv_bolus_profiles(
                 f"Subject {subject_id} has {len(dose_ids)} dose events. "
                 "The implemented calculator accepts one single dose per subject."
             )
+
     doses = {dose.dose_event_id: dose for dose in study.dose_events}
     samples = {sample.sample_id: sample for sample in study.biosamples}
     analytes = {analyte.analyte_id: analyte for analyte in study.analytes}
+    compounds = {compound.compound_id: compound for compound in study.compounds}
+
     grouped: dict[tuple[str, str, str], list[tuple[Biosample, Observation]]] = {}
     for observation in study.observations:
         if observation.observation_type is not ObservationType.CONCENTRATION:
@@ -258,20 +293,34 @@ def iv_bolus_profiles(
         grouped.setdefault((sample.subject_id, observation.analyte_id, dose_event.dose_event_id), []).append(
             (sample, observation)
         )
+
     profiles: list[ConcentrationProfile] = []
     for (subject_id, analyte_id, dose_event_id), rows in sorted(grouped.items()):
         dose = doses[dose_event_id]
-        if dose.route is not Route.IV_BOLUS:
+        if dose.route not in permitted:
+            allowed_label = ", ".join(sorted(route.value for route in permitted))
             raise AnalysisError(
-                f"Dose {dose.dose_event_id} uses route {dose.route.value}. This calculator accepts iv_bolus only."
+                f"Dose {dose.dose_event_id} uses route {dose.route.value}. "
+                f"This calculator accepts {allowed_label} only."
             )
-        if parse_unit(dose.dose_unit).dimensions != DRUG_MASS:
-            raise AnalysisError(f"Dose {dose.dose_event_id} must be a drug mass, such as mg.")
         analyte = analytes.get(analyte_id)
         if analyte is not None and analyte.compound_id is not None and analyte.compound_id != dose.compound_id:
             raise AnalysisError(
                 f"Analyte {analyte_id} is linked to {analyte.compound_id}, not dose compound {dose.compound_id}."
             )
+        dose_compound = compounds.get(dose.compound_id)
+        analyte_compound = (
+            compounds.get(analyte.compound_id) if analyte is not None and analyte.compound_id is not None else None
+        )
+        dose_mg = _dose_to_mg(dose.dose_event_id, dose.dose_value, dose.dose_unit, dose_compound)
+        infusion_duration_h: float | None = None
+        if dose.route is Route.IV_INFUSION:
+            if dose.infusion_duration is None or dose.infusion_duration_unit is None:
+                raise AnalysisError(f"IV infusion dose {dose.dose_event_id} requires infusion_duration.")
+            infusion_duration_h = convert(dose.infusion_duration, dose.infusion_duration_unit, "h")
+            if infusion_duration_h <= 0:
+                raise AnalysisError(f"IV infusion dose {dose.dose_event_id} requires a positive infusion_duration.")
+
         points: list[QuantifiedPoint] = []
         n_blq = 0
         n_above = 0
@@ -291,16 +340,17 @@ def iv_bolus_profiles(
                 continue
             if observation.unit is None or observation.numeric_value is None:
                 raise AnalysisError(f"Quantified observation {observation.observation_id} has no value.")
-            if parse_unit(observation.unit).dimensions != CONC_MASS:
-                raise AnalysisError(
-                    f"Observation {observation.observation_id} must be a mass concentration. "
-                    "Molar units need an explicit molecular-weight conversion."
-                )
+            conc_mg_l = _concentration_to_mg_l(
+                observation.observation_id,
+                observation.numeric_value,
+                observation.unit,
+                analyte_compound or dose_compound,
+            )
             points.append(
                 QuantifiedPoint(
                     observation_id=observation.observation_id,
                     time_h=time_h,
-                    concentration_mg_l=convert(observation.numeric_value, observation.unit, "mg/L"),
+                    concentration_mg_l=conc_mg_l,
                 )
             )
         points.sort(key=lambda item: (item.time_h, item.observation_id))
@@ -316,11 +366,108 @@ def iv_bolus_profiles(
                 analyte_id=analyte_id,
                 dose_event_id=dose_event_id,
                 route=dose.route,
-                dose_mg=convert(dose.dose_value, dose.dose_unit, "mg"),
+                dose_mg=dose_mg,
                 points=tuple(points),
                 n_blq_omitted=n_blq,
                 n_above_uloq_omitted=n_above,
                 n_predose_omitted=n_predose,
+                infusion_duration_h=infusion_duration_h,
             )
         )
     return profiles
+
+
+def iv_bolus_profiles(
+    study: PharmacologyStudy,
+    *,
+    replicate_policy: ReplicatePolicy = "error",
+) -> list[ConcentrationProfile]:
+    """Build one single-dose IV bolus profile per subject and analyte."""
+
+    return single_dose_profiles(
+        study,
+        allowed_routes=(Route.IV_BOLUS,),
+        replicate_policy=replicate_policy,
+    )
+
+
+def iv_infusion_profiles(
+    study: PharmacologyStudy,
+    *,
+    replicate_policy: ReplicatePolicy = "error",
+) -> list[ConcentrationProfile]:
+    """Build one single-dose constant-rate IV infusion profile per subject and analyte."""
+
+    return single_dose_profiles(
+        study,
+        allowed_routes=(Route.IV_INFUSION,),
+        replicate_policy=replicate_policy,
+    )
+
+
+def extravascular_profiles(
+    study: PharmacologyStudy,
+    *,
+    replicate_policy: ReplicatePolicy = "error",
+) -> list[ConcentrationProfile]:
+    """Build one single-dose extravascular (oral, subcutaneous, intramuscular) profile per subject and analyte."""
+
+    return single_dose_profiles(
+        study,
+        allowed_routes=EXTRAVASCULAR_ROUTES,
+        replicate_policy=replicate_policy,
+    )
+
+
+def _convert_with_optional_compound(
+    value: float,
+    source: str,
+    target: str,
+    compound: Compound | None,
+) -> float:
+    return convert_with_molecular_weight(
+        value,
+        source,
+        target,
+        molecular_weight=None if compound is None else compound.molecular_weight,
+        molecular_weight_unit=None if compound is None else compound.molecular_weight_unit,
+    )
+
+
+def _dose_to_mg(dose_event_id: str, value: float, unit: str, compound: Compound | None) -> float:
+    dimensions = parse_unit(unit).dimensions
+    if dimensions == DRUG_MASS:
+        return convert(value, unit, "mg")
+    if dimensions == AMOUNT:
+        if compound is None or compound.molecular_weight is None or compound.molecular_weight_unit is None:
+            raise AnalysisError(
+                f"Dose {dose_event_id} uses molar unit {unit!r}. "
+                "Converting molar doses requires Compound.molecular_weight and molecular_weight_unit."
+            )
+        try:
+            return _convert_with_optional_compound(value, unit, "mg", compound)
+        except UnitError as exc:
+            raise AnalysisError(str(exc)) from exc
+    raise AnalysisError(f"Dose {dose_event_id} must be a drug mass or molar amount, such as mg or umol.")
+
+
+def _concentration_to_mg_l(
+    observation_id: str,
+    value: float,
+    unit: str,
+    compound: Compound | None,
+) -> float:
+    dimensions = parse_unit(unit).dimensions
+    if dimensions == CONC_MASS:
+        return convert(value, unit, "mg/L")
+    if dimensions == CONC_AMOUNT:
+        if compound is None or compound.molecular_weight is None or compound.molecular_weight_unit is None:
+            raise AnalysisError(
+                f"Observation {observation_id} uses molar concentration {unit!r}. "
+                "Molar units need an explicit molecular-weight conversion on Compound."
+            )
+        try:
+            return _convert_with_optional_compound(value, unit, "mg/L", compound)
+        except UnitError as exc:
+            raise AnalysisError(str(exc)) from exc
+    raise AnalysisError(f"Observation {observation_id} must be a mass or molar concentration.")

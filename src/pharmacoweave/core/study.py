@@ -83,6 +83,26 @@ class PharmacologyStudy(Record):
                 raise ValidationFailed(report)
         return study
 
+    @classmethod
+    def from_mapping(
+        cls,
+        mapping_path: str | Path,
+        *,
+        base_dir: str | Path | None = None,
+        validate_schema: bool = True,
+        mode: str = "research",
+    ) -> PharmacologyStudy:
+        """Load a study from raw laboratory files using an ingest_mapping.yaml specification."""
+
+        from pharmacoweave.ingestion.mapping import ingest_study_from_mapping
+
+        return ingest_study_from_mapping(
+            mapping_path,
+            base_dir=base_dir,
+            mode=mode,
+            validate_schema=validate_schema,
+        )
+
     def check(self, *, mode: str = "research") -> ValidationReport:
         """Return a validation report for this study.
 
@@ -106,6 +126,8 @@ class PharmacologyStudy(Record):
         adme_records: Sequence[Any] | None = None,
         tox_endpoints: Sequence[Any] | None = None,
         blq_policy: Any | None = None,
+        ivive_predictions: Sequence[Any] | None = None,
+        prediction_audit: Any | None = None,
     ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
@@ -122,10 +144,12 @@ class PharmacologyStudy(Record):
             adme_records=adme_records,
             tox_endpoints=tox_endpoints,
             blq_policy=blq_policy,
+            ivive_predictions=ivive_predictions,
+            prediction_audit=prediction_audit,
         )
 
-    def run_nca(self, config: str | Path) -> list[NcaParameterSet]:
-        """Run single-dose IV bolus NCA. The study must already validate."""
+    def run_nca(self, config: str | Path | Any) -> list[NcaParameterSet]:
+        """Run single-dose rich-serial NCA. The study must already validate."""
 
         from pharmacoweave.pk_nca.runner import run_nca
 
@@ -137,3 +161,21 @@ class PharmacologyStudy(Record):
         from pharmacoweave.integrations.theraweave import attach_candidate_bundle
 
         return attach_candidate_bundle(self, path)
+
+    def bridge_effects(
+        self, *, endpoint_overrides: dict[str, dict[str, Any]] | None = None
+    ) -> list[Any]:
+        """Convert study effect observations into typed EffectObservation records."""
+
+        from pharmacoweave.core.observation_bridge import bridge_study_effect_observations
+
+        return bridge_study_effect_observations(self, endpoint_overrides=endpoint_overrides)
+
+    def bridge_toxicology(
+        self, *, endpoint_overrides: dict[str, dict[str, Any]] | None = None
+    ) -> list[Any]:
+        """Convert study toxicity observations into typed ToxEndpoint records."""
+
+        from pharmacoweave.core.observation_bridge import bridge_study_toxicology_endpoints
+
+        return bridge_study_toxicology_endpoints(self, endpoint_overrides=endpoint_overrides)

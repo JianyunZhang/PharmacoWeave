@@ -1,7 +1,7 @@
 """Weighted nonlinear least squares for a one-compartment IV bolus.
 
 The mean model is C(t) = (Dose / V) * exp(-(CL / V) * t). Weights are
-``1/y`` or ``1/y^2`` on quantified concentrations. The solver is
+``uniform``, ``1/y``, or ``1/y^2`` on quantified concentrations. The solver is
 Levenberg–Marquardt in log(CL) and log(V), so a successful step stays
 positive. It does not call an external optimizer.
 
@@ -20,7 +20,11 @@ from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.errors import AnalysisError
 from pharmacoweave.pk_models.fit_iv import IvBolusFit, ParameterUncertainty, _failed, _succeeded, screen_log_linear
 
-_WEIGHTS = {"1/y": "weighted_nls:1/y", "1/y^2": "weighted_nls:1/y^2"}
+_WEIGHTS = {
+    "uniform": "weighted_nls:uniform",
+    "1/y": "weighted_nls:1/y",
+    "1/y^2": "weighted_nls:1/y^2",
+}
 _CI_LEVEL = 0.95
 _LIMITATIONS = (
     "Weighted nonlinear least squares assumes a one-compartment IV bolus.",
@@ -171,6 +175,8 @@ def _levenberg_marquardt(
     """Return CL, V, weighted SSE, iterations, and inverse diagonal of JᵀWJ."""
 
     def weight_of(observation: float) -> float:
+        if weight == "uniform":
+            return 1.0
         if weight == "1/y":
             return 1.0 / observation
         return 1.0 / (observation * observation)

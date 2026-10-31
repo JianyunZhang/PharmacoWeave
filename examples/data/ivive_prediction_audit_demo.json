@@ -1,0 +1,27 @@
+{
+  "clint_record": {
+    "record_id": "ADME-MIC-DEMO-01",
+    "compound_id": "PW-0001",
+    "assay_kind": "microsomal_clearance",
+    "system": "rat liver microsomes",
+    "status": "measured",
+    "limitations": [
+      "Research use only. Not a dosing recommendation."
+    ],
+    "value": 28.5,
+    "unit": "uL/min/mg_protein"
+  },
+  "physiology": {
+    "profile_id": "PHYS-RAT-WISTAR",
+    "species": "Rattus norvegicus",
+    "body_weight_kg": 0.25,
+    "liver_weight_g": 10.0,
+    "hepatic_blood_flow_l_h": 1.05,
+    "microsomal_protein_mg_per_g_liver": 45.0,
+    "source": "Davies & Morris (1993), Pharmaceutical Research 10(7):1093-1095"
+  },
+  "fu_plasma": 0.12,
+  "fu_inc": 0.85,
+  "blood_to_plasma_ratio": 1.1,
+  "prediction_id": "IVIVE-PW0001-RAT"
+}

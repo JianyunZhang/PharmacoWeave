@@ -6,12 +6,14 @@ collapse to a number. The atom ``kg`` means body mass. Drug amounts use
 
 Canonical scale factors are: hour, milligram of drug, kilogram of body
 weight, litre, and mole. Conversions inside one dimension are linear.
-Molar and mass concentrations are not converted into each other, because
-that requires a molecular weight and has to be an explicit step.
+``convert`` keeps molar and mass concentrations separate; converting between
+them requires ``convert_with_molecular_weight`` with an explicit molecular
+weight.
 
 ``percent`` and ``pct`` are a dimensionless effect scale (50 percent = 0.5).
 ``fold`` is a dimensionless factor of 1, the same dimension as ``1``.
-Neither is a concentration.
+``fraction`` and ``ratio`` (used for unbound fractions and blood-to-plasma
+ratios) are also dimensionless factors of 1. None of them is a concentration.
 """
 
 import math
@@ -41,6 +43,18 @@ DIMENSIONLESS: Dimensions = (0, 0, 0, 0, 0)
 
 _NAMES = ("time", "drug_mass", "body_mass", "volume", "amount")
 
+_MASS_TO_MOLAR_PAIRS: frozenset[tuple[Dimensions, Dimensions]] = frozenset(
+    {
+        (CONC_MASS, CONC_AMOUNT),
+        (DRUG_MASS, AMOUNT),
+        (AUC_MASS, AUC_AMOUNT),
+        (DOSE_PER_BODY_MASS, AMOUNT_PER_BODY_MASS),
+    }
+)
+_MOLAR_TO_MASS_PAIRS: frozenset[tuple[Dimensions, Dimensions]] = frozenset(
+    {(right, left) for left, right in _MASS_TO_MOLAR_PAIRS}
+)
+
 # factor converts one atom into the canonical unit of its dimension.
 _ATOMS: dict[str, tuple[Dimensions, float]] = {
     "s": (TIME, 1.0 / 3600.0),
@@ -68,17 +82,29 @@ _ATOMS: dict[str, tuple[Dimensions, float]] = {
     "kg": (BODY_MASS, 1.0),
     "uL": (VOLUME, 1e-6),
     "mL": (VOLUME, 1e-3),
+    "dL": (VOLUME, 1e-1),
     "L": (VOLUME, 1.0),
     "liter": (VOLUME, 1.0),
     "litre": (VOLUME, 1.0),
     "liters": (VOLUME, 1.0),
     "litres": (VOLUME, 1.0),
+    "fmol": (AMOUNT, 1e-15),
     "pmol": (AMOUNT, 1e-12),
     "nmol": (AMOUNT, 1e-9),
     "umol": (AMOUNT, 1e-6),
     "mmol": (AMOUNT, 1e-3),
     "mol": (AMOUNT, 1.0),
+    "fM": (CONC_AMOUNT, 1e-15),
+    "pM": (CONC_AMOUNT, 1e-12),
+    "nM": (CONC_AMOUNT, 1e-9),
+    "uM": (CONC_AMOUNT, 1e-6),
+    "mM": (CONC_AMOUNT, 1e-3),
+    "M": (CONC_AMOUNT, 1.0),
+    "Da": (MASS_PER_AMOUNT, 1e3),
+    "kDa": (MASS_PER_AMOUNT, 1e6),
     "1": (DIMENSIONLESS, 1.0),
+    "fraction": (DIMENSIONLESS, 1.0),
+    "ratio": (DIMENSIONLESS, 1.0),
     "fold": (DIMENSIONLESS, 1.0),
     "percent": (DIMENSIONLESS, 0.01),
     "pct": (DIMENSIONLESS, 0.01),
@@ -101,7 +127,14 @@ def parse_unit(expression: str) -> Unit:
 
     if not isinstance(expression, str) or not expression.strip():
         raise UnitError("A unit expression is required.")
-    text = expression.strip().replace("µ", "u").replace("μ", "u").replace("·", "*").replace(" ", "")
+    text = (
+        expression.strip()
+        .replace("µ", "u")
+        .replace("μ", "u")
+        .replace("·", "*")
+        .replace(" ", "")
+        .replace("%", "percent")
+    )
     tokens = _tokenize(text, expression)
     dimensions = [0, 0, 0, 0, 0]
     factor = 1.0
@@ -147,6 +180,62 @@ def convert(value: float, source: str, target: str) -> float:
             f"to {target} ({describe(parsed_target.dimensions)})."
         )
     return value * parsed_source.factor / parsed_target.factor
+
+
+def convert_with_molecular_weight(
+    value: float,
+    source: str,
+    target: str,
+    *,
+    molecular_weight: float | None,
+    molecular_weight_unit: str | None = "g/mol",
+) -> float:
+    """Convert ``value`` between ``source`` and ``target`` with explicit molecular weight.
+
+    Same-dimension conversions remain linear. Mass-to-molar and molar-to-mass
+    conversions are permitted only when ``molecular_weight`` is finite and
+    positive and ``molecular_weight_unit`` has ``drug_mass/amount`` dimensions
+    (such as ``g/mol`` or ``Da``).
+    """
+
+    if isinstance(value, bool) or not math.isfinite(value):
+        raise UnitError("Cannot convert a non-finite value.")
+    parsed_source = parse_unit(source)
+    parsed_target = parse_unit(target)
+
+    mw_canonical: float | None = None
+    if molecular_weight is not None:
+        if isinstance(molecular_weight, bool) or not math.isfinite(molecular_weight) or molecular_weight <= 0:
+            raise UnitError("molecular_weight must be finite and positive.")
+        if molecular_weight_unit is None:
+            raise UnitError("molecular_weight_unit is required when molecular_weight is provided.")
+        parsed_mw = parse_unit(molecular_weight_unit)
+        if parsed_mw.dimensions != MASS_PER_AMOUNT:
+            raise UnitError(
+                f"molecular_weight_unit {molecular_weight_unit!r} must have drug_mass/amount dimensions such as g/mol."
+            )
+        mw_canonical = molecular_weight * parsed_mw.factor
+
+    if parsed_source.dimensions == parsed_target.dimensions:
+        return value * parsed_source.factor / parsed_target.factor
+
+    pair = (parsed_source.dimensions, parsed_target.dimensions)
+    if pair not in _MASS_TO_MOLAR_PAIRS and pair not in _MOLAR_TO_MASS_PAIRS:
+        raise UnitError(
+            f"Cannot convert {source} ({describe(parsed_source.dimensions)}) "
+            f"to {target} ({describe(parsed_target.dimensions)})."
+        )
+    if mw_canonical is None:
+        raise UnitError(
+            f"Cannot convert {source} to {target} without an explicit positive "
+            "molecular_weight and molecular_weight_unit."
+        )
+    canonical_source = value * parsed_source.factor
+    if pair in _MASS_TO_MOLAR_PAIRS:
+        canonical_target = canonical_source / mw_canonical
+    else:
+        canonical_target = canonical_source * mw_canonical
+    return canonical_target / parsed_target.factor
 
 
 def describe(dimensions: Dimensions) -> str:

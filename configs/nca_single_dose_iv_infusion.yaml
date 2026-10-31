@@ -1,0 +1,15 @@
+schema_version: "0.1.0"
+analysis: nca
+design_route: iv_infusion
+dosing: single_dose
+sampling: rich_serial
+auc_method: linear_up_log_down
+lambda_z_min_points: 3
+lambda_z_min_adjusted_r2: 0.90
+auc_inf_max_extrapolated_fraction: 0.20
+blq_rule: keep_as_censored
+note: >
+  Configuration for single-dose constant-rate IV infusion rich-sampling NCA.
+  Requires explicit infusion_duration on each dose event, integrates from
+  (0, 0) without bolus C0 back-extrapolation, and restricts terminal phase
+  windows to samples collected at or after the end of infusion and Tmax.

@@ -1,6 +1,6 @@
 # PharmacoWeave
 
-定量药理学研究用 Python 工具包。当前版本 **0.0.5** 提供单次静脉推注 NCA、带渐近标准误与 95% 置信区间的一室 CL/V 加权非线性拟合、原始效应尺度的直接与 Sigmoid Emax 暴露–效应拟合、可审计 BLQ 派生与平行样聚合、体外 ADME 与研究用毒理记录落盘，以及自动经证据守卫核验的 `PharmacologyEvidence` 与原生诊断 SVG。预测与实测严格分层。它不计算超出已声明契约的试验设计，不做体内外推，也不给出临床给药建议。
+定量药理学研究用 Python 工具包。当前版本 **0.1.0**（Phase 3 闭环）提供单次静脉推注、静脉恒速输注与血管外给药 NCA，带渐近标准误与 95% 置信区间的一室静脉推注、一室血管外吸收（`ka`、`CL/F`、`V/F`）与二室静脉推注（`CL`、`V1`、`Q`、`V2`）加权非线性拟合，显式分子量支撑的质量–摩尔单位换算，原始效应尺度的直接与 Sigmoid Emax 拟合，可审计 BLQ 派生与平行样聚合，体外 ADME 结合记录（`fu_plasma`、`fu_mic`、`blood_to_plasma_ratio`），显式生理假设探索性 Well-Stirred 肝清除率 IVIVE，先验预测与后验体内估算双向折叠误差校准审计（$P/O$、$\max(P/O, O/P)$、AFE、AAFE 与 2/3 倍阈值诊断），研究表观测向药效（`EffectObservation`）与毒理（`ToxEndpoint`）的显式桥接，跨尺度电生理与组学终点对齐（强制 `identity_map` 审核通过、显式时间基准与 `sync_error_ms` 时钟抖动阈值，严守代谢通量绝非浓度），声明式异构实验室表格映射（`ingest_mapping.yaml`，保留原始文件 SHA-256 哈希），以及离线结果包哈希核验（`verify-bundle`）与结果包差异对比（`diff`）。预测与实测、静脉参数与表观参数严格分层。它不计算超出已声明契约的试验设计，不做体内外推，也不给出临床给药建议。
 
 **Research use only.** 本软件不是医疗器械，不构成监管申报、GxP 或临床决策工具。参考 ICH M10 / M15 的记录结构，并不表示本软件满足该指南。
 
@@ -31,25 +31,26 @@ study.export_bundle("results/iv-bolus-validation", run_id="iv-bolus-validation")
 pharmacoweave capabilities
 ```
 
-`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 只接受 `configs/nca_single_dose_iv.yaml` 里的设计。`pk_models` 提供一室静脉推注的对数线性拟合，以及带渐近标准误和 95% 置信区间的 `1/y`、`1/y^2` 加权非线性最小二乘。`pd_models` 在原始效应尺度估计固定基线的直接效应 Emax 和可选 Sigmoid Hill 系数。`pkpd` 只把直接效应连到显式浓度。`dmpk` 校验并持久化通透性、微粒体和肝细胞清除率记录。`toxicology` 记录研究用终点。`population_pk`、`pbpk`、`qsp` 和 `simulation` 仍是 `reserved`，导入不会运行分析。
+`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 接受单次静脉推注（`configs/nca_single_dose_iv.yaml`）、单次静脉恒速输注（`configs/nca_single_dose_iv_infusion.yaml`）以及单次血管外给药（`configs/nca_single_dose_oral.yaml`，含 `oral`、`subcutaneous`、`intramuscular`）设计。`pk_models` 提供一室静脉推注的对数线性拟合，以及带渐近标准误和 95% 置信区间的一室静脉推注、一室血管外吸收（`ka`、`CL/F`、`V/F`）和二室静脉推注（`CL`、`V1`、`Q`、`V2`）加权非线性最小二乘。`pd_models` 在原始效应尺度估计固定基线的直接效应 Emax 和可选 Sigmoid Hill 系数。`pkpd` 只把直接效应连到显式浓度。`dmpk` 校验并持久化通透性、微粒体和肝细胞清除率记录。`toxicology` 记录研究用终点。`population_pk`、`pbpk`、`qsp` 和 `simulation` 仍是 `reserved`，导入不会运行分析。
 
-纯 NCA 结果包（含线性与半对数浓度–时间图、派生观测表和自动生成的 NCA 证据；如需同时运行对数线性一室拟合可加 `--with-fit`）：
+纯 NCA 结果包（含线性与半对数浓度–时间图、派生观测表和自动生成的 NCA 证据；静脉推注或血管外设计如需同时附加一室拟合可加 `--with-fit`）：
 
 ```bash
-pharmacoweave nca examples/data/iv_bolus_single_dose \
-  --config configs/nca_single_dose_iv.yaml \
-  --bundle results/iv-bolus-nca \
-  --run-id iv-bolus-nca
+pharmacoweave nca examples/data/oral_single_dose \
+  --config configs/nca_single_dose_oral.yaml \
+  --bundle results/oral-nca \
+  --run-id oral-nca
 ```
 
-加权非线性一室静脉拟合（写入参数标准误与 95% CI、观测–预测图、残差图与加权相对残差图）：
+加权非线性房室拟合（支持 `one_compartment_iv_bolus`、`one_compartment_extravascular`、`two_compartment_iv_bolus`，写入参数标准误与 95% CI、观测–预测图、残差图与加权相对残差图）：
 
 ```bash
-pharmacoweave fit examples/data/iv_bolus_noisy \
+pharmacoweave fit examples/data/two_compartment_iv_bolus \
+  --model two_compartment_iv_bolus \
   --method weighted_nls \
   --weight 1/y^2 \
-  --bundle results/iv-bolus-fit \
-  --run-id iv-bolus-fit
+  --bundle results/two-comp-fit \
+  --run-id two-comp-fit
 ```
 
 原始尺度直接效应或 Sigmoid Emax 拟合及结果包导出：
@@ -59,6 +60,47 @@ pharmacoweave emax examples/data/direct_effect_emax.json \
   --study examples/data/iv_bolus_single_dose \
   --bundle results/direct-emax \
   --run-id direct-emax
+```
+
+显式生理假设探索性 Well-Stirred IVIVE（输出锁定 `predicted` 等级，无隐式物种默认表）：
+
+```bash
+pharmacoweave ivive examples/data/ivive_prediction_audit_demo.json \
+  --study examples/data/iv_bolus_single_dose \
+  --bundle results/ivive-bundle \
+  --run-id ivive-bundle
+```
+
+先验预测与体内估算双向折叠误差校准审计（对比 TheraWeave CADD 先验与体内估算）：
+
+```bash
+pharmacoweave audit-predictions examples/data/iv_bolus_single_dose \
+  --priors examples/cross_project_demo/theraweave_quantitative_priors.json \
+  --nca-config configs/nca_single_dose_iv.yaml \
+  --bundle results/audit-bundle \
+  --run-id audit-bundle
+```
+
+声明式原始表格映射（支持 CSV/TSV/Parquet，自动计算并保留原始文件 SHA-256 摘要）：
+
+```bash
+pharmacoweave ingest \
+  --mapping examples/data/ingest_mapping_demo/ingest_mapping.yaml \
+  --output-dir results/mapped_study \
+  --bundle results/mapped_bundle \
+  --run-id mapped-study-01
+```
+
+结果包离线哈希与 Schema 验证（`verify-bundle`）：
+
+```bash
+pharmacoweave verify-bundle results/iv-bolus-validation
+```
+
+两次运行结果包差异对比（`diff`，对比元数据、文件树增删改及 Parquet 参数数值相对误差）：
+
+```bash
+pharmacoweave diff results/bundle_run1 results/bundle_run2
 ```
 
 ## 文档
@@ -81,4 +123,8 @@ pharmacoweave emax examples/data/direct_effect_emax.json \
 
 `examples/data/iv_bolus_noisy/` 是带乘性噪声的一室静脉推注。加权拟合在 10% 相对误差内回收 CL = 0.40 L/h 和 V = 2.0 L，并给出对数尺度渐近 95% 置信区间。24 h 仍然是 BLQ。
 
+`examples/data/oral_single_dose/`、`examples/data/iv_infusion_single_dose/` 与 `examples/data/two_compartment_iv_bolus/` 分别是无噪声单次口服给药（输出表观 `CL/F` 与 `Vz/F`，含显式分子量）、0.5 h 恒速静脉输注与二室静脉推注双指数合成基准。
+
 `examples/direct_effect_and_evidence.py` 与 `examples/noisy_emax_case.py` 分别是无噪声和带噪直接效应/Sigmoid Emax 基准，附带体外 ADME 和研究用毒理记录。这不是动物实验，也不是给药方案。
+
+`examples/ivive_and_prediction_audit.py` 演示完整的体外结合测定、显式生理假设探索性 Well-Stirred IVIVE 计算，以及先验预测（TheraWeave CADD 与 IVIVE）对后验体内实测 NCA 参数的双向折叠误差（Fold Error、AFE、AAFE）校准审计全流程。不是给药方案，也不推导人体起始剂量。

@@ -13,7 +13,9 @@ from pharmacoweave.core.evidence import EvidenceExchange
 from pharmacoweave.core.modeling import AnalysisRecords
 from pharmacoweave.core.provenance import ResultBundleManifest
 from pharmacoweave.core.study import PharmacologyStudy
+from pharmacoweave.diagnostics.prediction_audit import PredictionAuditReport
 from pharmacoweave.dmpk.records import InVitroAdmeSet
+from pharmacoweave.ingestion.mapping import IngestMappingConfig
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.toxicology.records import ToxEndpointSet
@@ -27,6 +29,8 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "pd_records.schema.json": PdAnalysisRecords,
     "dmpk_records.schema.json": InVitroAdmeSet,
     "toxicology_records.schema.json": ToxEndpointSet,
+    "prediction_audit.schema.json": PredictionAuditReport,
+    "ingest_mapping.schema.json": IngestMappingConfig,
 }
 
 

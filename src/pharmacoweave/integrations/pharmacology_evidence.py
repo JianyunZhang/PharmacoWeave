@@ -1,8 +1,11 @@
 """PharmacologyEvidence built from exposure and analysis records.
 
 Estimated NCA parameters, PK compartment fits, direct/sigmoid Emax parameters,
-in vitro ADME rows, and toxicology endpoints keep their evidence grade. Model
-effect predictions stay predicted. Nothing in this module imports TheraWeave.
+in vitro ADME rows, toxicology endpoints, and exploratory IVIVE predictions
+keep their evidence grade. Model effect predictions and IVIVE clearances stay
+predicted. Extravascular apparent parameters (CL/F,
+V/F, Vz/F) remain distinct from absolute IV clearance and volume. Nothing in
+this module imports TheraWeave.
 """
 
 from collections.abc import Sequence
@@ -22,11 +25,16 @@ from pharmacoweave.core.modeling import (
     ParameterSemantic,
     auc_inf_is_reportable,
 )
+from pharmacoweave.dmpk.physiology import IviveClearancePrediction
 from pharmacoweave.dmpk.records import AdmeStatus, InVitroAdmeRecord
 from pharmacoweave.integrations.guards import screen_exchange
 from pharmacoweave.pd_models.emax import DirectEmaxFit
+from pharmacoweave.pk_models.fit_extravascular import ExtravascularFit
 from pharmacoweave.pk_models.fit_iv import IvBolusFit
+from pharmacoweave.pk_models.fit_two_compartment import TwoCompartmentFit
 from pharmacoweave.toxicology.records import ToxEndpoint
+
+PkFitResult = IvBolusFit | ExtravascularFit | TwoCompartmentFit
 
 _NCA_MEASUREMENT = {
     "auc_last": "auc",
@@ -36,15 +44,18 @@ _NCA_MEASUREMENT = {
     "lambda_z": "lambda_z",
     "half_life": "half_life",
     "clearance": "clearance",
+    "CL_over_F": "apparent_clearance",
     "volume": "volume",
+    "Vz_over_F": "apparent_volume",
+    "V_over_F": "apparent_volume",
 }
 _PK_FIT_MEASUREMENT = {
     ParameterSemantic.CL: "clearance",
-    ParameterSemantic.CL_OVER_F: "clearance",
+    ParameterSemantic.CL_OVER_F: "apparent_clearance",
     ParameterSemantic.V: "volume",
-    ParameterSemantic.V_OVER_F: "volume",
+    ParameterSemantic.V_OVER_F: "apparent_volume",
     ParameterSemantic.VZ: "volume",
-    ParameterSemantic.VZ_OVER_F: "volume",
+    ParameterSemantic.VZ_OVER_F: "apparent_volume",
     ParameterSemantic.V1: "volume",
     ParameterSemantic.V2: "volume",
     ParameterSemantic.Q: "clearance",
@@ -60,16 +71,14 @@ _EMAX_MEASUREMENT = {
     "EC50": "ec50",
     "hill": "hill",
 }
-_NCA_NOTE = (
-    "Estimated from single-dose IV bolus NCA. Not an observed concentration and not a dosing recommendation."
-)
 
 
 def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[EvidenceRecord]:
     """Estimated exposure parameters that are allowed to be reported.
 
     AUC∞ is omitted when ``auc_inf_is_reportable`` is false, even if the
-    number is stored on the NCA record.
+    number is stored on the NCA record. Extravascular routes emit
+    ``CL_over_F`` and ``Vz_over_F`` instead of ``clearance`` and ``volume``.
     """
 
     if not run_id.strip():
@@ -82,13 +91,27 @@ def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[Evide
     _append(claims, "tmax", parameters.tmax, parameters.tmax_unit)
     _append(claims, "lambda_z", parameters.lambda_z, parameters.lambda_z_unit)
     _append(claims, "half_life", parameters.half_life, parameters.half_life_unit)
-    _append(claims, "clearance", parameters.clearance, parameters.clearance_unit)
-    _append(claims, "volume", parameters.volume, parameters.volume_unit)
+    cl_claim = (
+        "CL_over_F"
+        if parameters.clearance_semantic is ParameterSemantic.CL_OVER_F
+        else "clearance"
+    )
+    vol_claim = (
+        parameters.volume_semantic.value
+        if parameters.volume_semantic in {ParameterSemantic.VZ_OVER_F, ParameterSemantic.V_OVER_F}
+        else "volume"
+    )
+    _append(claims, cl_claim, parameters.clearance, parameters.clearance_unit)
+    _append(claims, vol_claim, parameters.volume, parameters.volume_unit)
     derived = [
         f"dose_event:{parameters.dose_event_id}",
         f"analyte:{parameters.analyte_id}",
         f"subject:{parameters.subject_id}",
     ]
+    nca_note = (
+        f"Estimated from single-dose {parameters.route.value} NCA. "
+        "Not an observed concentration and not a dosing recommendation."
+    )
     records: list[EvidenceRecord] = []
     for claim, value, unit in claims:
         records.append(
@@ -103,7 +126,7 @@ def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[Evide
                 claim_type=claim,
                 unit=unit,
                 numeric_value=value,
-                limitations=[RESEARCH_USE_LIMITATION, _NCA_NOTE],
+                limitations=[RESEARCH_USE_LIMITATION, nca_note],
                 derived_from=[*derived, f"nca:{parameters.subject_id}:{parameters.analyte_id}:{claim}"],
                 applicability="Research-use exposure estimate.",
             )
@@ -111,24 +134,28 @@ def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[Evide
     return records
 
 
-def evidence_from_pk_fit(result: IvBolusFit, *, run_id: str) -> list[EvidenceRecord]:
+def evidence_from_pk_fit(result: PkFitResult, *, run_id: str) -> list[EvidenceRecord]:
     """Estimated compartmental PK parameters with explicit ``derived_from`` provenance."""
 
     if not run_id.strip():
         raise ValueError("run_id is required.")
+    entity_type = type(result).__name__
     derived = [f"fit:{result.fit.fit_id}", f"subject:{result.subject_id}"]
     derived.extend(f"observation:{obs_id}" for obs_id in result.observation_ids)
     limitations = list(result.diagnostic.limitations)
     if RESEARCH_USE_LIMITATION not in limitations:
         limitations.insert(0, RESEARCH_USE_LIMITATION)
     if result.diagnostic.status is DiagnosticStatus.FAIL or not result.estimates:
+        failed_measurement = (
+            "apparent_clearance" if isinstance(result, ExtravascularFit) else "clearance"
+        )
         return [
             _record(
                 evidence_id=f"pkfit-{run_id}-{result.fit.fit_id}-not-identifiable",
                 run_id=run_id,
-                entity_type="IvBolusFit",
+                entity_type=entity_type,
                 entity_id=result.fit.fit_id,
-                measurement_type="clearance",
+                measurement_type=failed_measurement,
                 evidence_type=EvidenceType.ESTIMATED,
                 qc_status=EvidenceQc.NOT_REVIEWED,
                 claim_type="pk_fit_not_identifiable",
@@ -142,9 +169,9 @@ def evidence_from_pk_fit(result: IvBolusFit, *, run_id: str) -> list[EvidenceRec
         ]
     return [
         _record(
-            evidence_id=f"pkfit-{run_id}-{result.fit.fit_id}-{estimate.parameter}",
+            evidence_id=f"pkfit-{run_id}-{result.fit.fit_id}-{estimate.semantic.value}",
             run_id=run_id,
-            entity_type="IvBolusFit",
+            entity_type=entity_type,
             entity_id=result.fit.fit_id,
             measurement_type=_PK_FIT_MEASUREMENT[estimate.semantic],
             evidence_type=EvidenceType.ESTIMATED,
@@ -298,14 +325,47 @@ def evidence_from_tox(record: ToxEndpoint, *, run_id: str) -> EvidenceRecord:
     )
 
 
+def evidence_from_ivive(prediction: IviveClearancePrediction, *, run_id: str) -> EvidenceRecord:
+    """Predicted hepatic plasma clearance from an exploratory IVIVE.
+
+    The record is ``predicted`` with ``qc_status=not_applicable``. It cites
+    the CLint, binding, and physiology inputs in ``derived_from`` and is never
+    labeled observed or estimated.
+    """
+
+    if not run_id.strip():
+        raise ValueError("run_id is required.")
+    limitations = list(prediction.limitations)
+    limitations.extend(f"Assumption: {item}" for item in prediction.assumptions)
+    return _record(
+        evidence_id=f"ivive-{run_id}-{prediction.prediction_id}",
+        run_id=run_id,
+        entity_type="CandidateCompound",
+        entity_id=prediction.compound_id,
+        measurement_type="clearance",
+        evidence_type=EvidenceType.PREDICTED,
+        qc_status=EvidenceQc.NOT_APPLICABLE,
+        claim_type="ivive_hepatic_plasma_clearance",
+        unit=prediction.clearance_unit,
+        numeric_value=prediction.hepatic_plasma_clearance_l_h,
+        limitations=limitations,
+        derived_from=[f"ivive:{prediction.prediction_id}", *prediction.derived_from],
+        applicability=(
+            f"Exploratory {prediction.model.value} hepatic IVIVE for {prediction.species}. "
+            "Prior for calibration audit only; not a dosing recommendation."
+        ),
+    )
+
+
 def collect_run_evidence(
     *,
     run_id: str,
     nca_parameters: Sequence[NcaParameterSet] | None = None,
-    pk_fits: Sequence[IvBolusFit] | None = None,
+    pk_fits: Sequence[PkFitResult] | None = None,
     emax_fits: Sequence[DirectEmaxFit] | None = None,
     adme_records: Sequence[InVitroAdmeRecord] | None = None,
     tox_endpoints: Sequence[ToxEndpoint] | None = None,
+    ivive_predictions: Sequence[IviveClearancePrediction] | None = None,
 ) -> list[EvidenceRecord]:
     """Build and screen PharmacologyEvidence records across all run outputs."""
 
@@ -322,6 +382,8 @@ def collect_run_evidence(
             records.append(built)
     for tox in tox_endpoints or ():
         records.append(evidence_from_tox(tox, run_id=run_id))
+    for prediction in ivive_predictions or ():
+        records.append(evidence_from_ivive(prediction, run_id=run_id))
     if records:
         screen_exchange(EvidenceExchange(records=records))
     return records

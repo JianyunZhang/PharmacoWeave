@@ -1,0 +1,14 @@
+schema_version: "0.1.0"
+analysis: nca
+design_route: oral
+dosing: single_dose
+sampling: rich_serial
+auc_method: linear_up_log_down
+lambda_z_min_points: 3
+lambda_z_min_adjusted_r2: 0.90
+auc_inf_max_extrapolated_fraction: 0.20
+blq_rule: keep_as_censored
+note: >
+  Configuration for single-dose oral rich-sampling NCA. AUC integrates from
+  (0, 0) without C0 back-extrapolation and reports apparent clearance CL/F and
+  apparent terminal volume Vz/F when bioavailability F is unknown.

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from pathlib import Path
 
 import pyarrow.parquet as pq
 import pytest
@@ -117,10 +118,35 @@ def test_nca_config_rejects_designs_outside_the_locked_scope(tmp_path, repo_root
     loaded = load_nca_config(repo_root / "configs" / "nca_single_dose_iv.yaml")
     assert loaded.design_route == "iv_bolus"
     assert loaded.blq_rule == "keep_as_censored"
-    path = tmp_path / "oral.yaml"
-    path.write_text("schema_version: '0.1.0'\nanalysis: nca\ndesign_route: oral\n", encoding="utf-8")
+    oral_cfg = load_nca_config(repo_root / "configs" / "nca_single_dose_oral.yaml")
+    assert oral_cfg.design_route == "oral"
+    inf_cfg = load_nca_config(repo_root / "configs" / "nca_single_dose_iv_infusion.yaml")
+    assert inf_cfg.design_route == "iv_infusion"
+
+    incomplete = tmp_path / "incomplete.yaml"
+    incomplete.write_text("schema_version: '0.1.0'\nanalysis: nca\ndesign_route: oral\n", encoding="utf-8")
     with pytest.raises(IngestError, match="implemented NCA design"):
-        load_nca_config(path)
+        load_nca_config(incomplete)
+
+    multi_dose = tmp_path / "multiple_dose.yaml"
+    multi_dose.write_text(
+        (repo_root / "configs" / "nca_single_dose_oral.yaml")
+        .read_text(encoding="utf-8")
+        .replace("dosing: single_dose", "dosing: multiple_dose"),
+        encoding="utf-8",
+    )
+    with pytest.raises(IngestError, match="implemented NCA design"):
+        load_nca_config(multi_dose)
+
+    sparse = tmp_path / "sparse.yaml"
+    sparse.write_text(
+        (repo_root / "configs" / "nca_single_dose_oral.yaml")
+        .read_text(encoding="utf-8")
+        .replace("sampling: rich_serial", "sampling: sparse"),
+        encoding="utf-8",
+    )
+    with pytest.raises(IngestError, match="implemented NCA design"):
+        load_nca_config(sparse)
 
 
 def test_cli_validates_decouples_nca_fits_wnls_and_runs_emax(tmp_path, repo_root, capsys) -> None:
@@ -234,3 +260,290 @@ def test_cli_validates_decouples_nca_fits_wnls_and_runs_emax(tmp_path, repo_root
     assert evidence_out.is_file()
     assert (emax_bundle / "analysis" / "emax_parameters.parquet").is_file()
     assert (emax_bundle / "figures" / "concentration_effect.svg").is_file()
+
+    oral_dir = repo_root / "examples" / "data" / "oral_single_dose"
+    oral_bundle = tmp_path / "cli-oral-bundle"
+    assert (
+        main(
+            [
+                "nca",
+                str(oral_dir),
+                "--config",
+                str(repo_root / "configs" / "nca_single_dose_oral.yaml"),
+                "--with-fit",
+                "--bundle",
+                str(oral_bundle),
+                "--run-id",
+                "cli-oral",
+            ]
+        )
+        == 0
+    )
+    captured_oral = capsys.readouterr().out
+    assert "CL/F=" in captured_oral and "Vz/F=" in captured_oral
+    assert (oral_bundle / "analysis" / "nca_parameters.parquet").is_file()
+    assert (oral_bundle / "analysis" / "model_parameters.parquet").is_file()
+    oral_html = (oral_bundle / "reports" / "validation_report.html").read_text(encoding="utf-8")
+    assert "CL/F=" in oral_html and "one_compartment_extravascular" in oral_html
+
+    two_comp_dir = repo_root / "examples" / "data" / "two_compartment_iv_bolus"
+    two_comp_bundle = tmp_path / "cli-2c-bundle"
+    assert (
+        main(
+            [
+                "fit",
+                str(two_comp_dir),
+                "--model",
+                "two_compartment_iv_bolus",
+                "--bundle",
+                str(two_comp_bundle),
+                "--run-id",
+                "cli-2c",
+            ]
+        )
+        == 0
+    )
+    captured_2c = capsys.readouterr().out
+    assert "V1=" in captured_2c and "Q=" in captured_2c and "V2=" in captured_2c
+    assert (two_comp_bundle / "analysis" / "model_parameters.parquet").is_file()
+
+
+def test_bundle_persists_ivive_and_prediction_audit(tmp_path, repo_root) -> None:
+    from pharmacoweave.diagnostics.prediction_audit import audit_study_predictions
+    from pharmacoweave.dmpk import (
+        AdmeAssayKind,
+        AdmeStatus,
+        InVitroAdmeRecord,
+        PhysiologicalScalingParams,
+        predict_hepatic_clearance_well_stirred,
+    )
+    from pharmacoweave.integrations.pharmacology_evidence import collect_run_evidence
+
+    study = build_study()
+    nca = study.run_nca(repo_root / "configs" / "nca_single_dose_iv.yaml")
+    clint_rec = InVitroAdmeRecord(
+        record_id="ADME-MIC-CLI",
+        compound_id="PW-0001",
+        assay_kind=AdmeAssayKind.MICROSOMAL_CLEARANCE,
+        system="rat liver microsomes",
+        status=AdmeStatus.MEASURED,
+        limitations=["Research use only. Not a dosing recommendation."],
+        value=30.0,
+        unit="uL/min/mg_protein",
+    )
+    phys = PhysiologicalScalingParams(
+        profile_id="PHYS-RAT",
+        species="Rattus norvegicus",
+        body_weight_kg=0.25,
+        liver_weight_g=10.0,
+        hepatic_blood_flow_l_h=1.0,
+        microsomal_protein_mg_per_g_liver=45.0,
+        source="Synthetic test fixture",
+    )
+    ivive_pred = predict_hepatic_clearance_well_stirred(
+        clint_rec,
+        physiology=phys,
+        fu_plasma=0.1,
+        fu_inc=1.0,
+        blood_to_plasma_ratio=1.0,
+    )
+
+    estimates = collect_run_evidence(run_id="run-nca", nca_parameters=nca)
+    audit_rep = audit_study_predictions(
+        study,
+        estimates,
+        priors=[
+            from_ivive
+            for from_ivive in collect_run_evidence(run_id="run-ivive", ivive_predictions=[ivive_pred])
+            if from_ivive.evidence_type.value == "predicted"
+        ],
+        audit_id="AUDIT-TEST",
+    )
+
+    destination = tmp_path / "ivive-audit-bundle"
+    manifest = study.export_bundle(
+        destination,
+        run_id="ivive-audit-run",
+        nca_parameters=nca,
+        ivive_predictions=[ivive_pred],
+        prediction_audit=audit_rep,
+    )
+    assert manifest.analysis_executed is True
+    assert manifest.data["ivive_predictions"] == "analysis/ivive_predictions.parquet"
+    assert manifest.data["prediction_audit"] == "analysis/prediction_audit.json"
+
+    ivive_table = pq.read_table(destination / "analysis" / "ivive_predictions.parquet")
+    assert ivive_table.num_rows == 1
+    assert ivive_table.column("species").to_pylist() == ["Rattus norvegicus"]
+    assert ivive_table.column("evidence_grade").to_pylist() == ["predicted"]
+
+    audit_payload = json.loads((destination / "analysis" / "prediction_audit.json").read_text(encoding="utf-8"))
+    assert audit_payload["audit_id"] == "AUDIT-TEST"
+    assert len(audit_payload["entries"]) == 2
+
+    html = (destination / "reports" / "validation_report.html").read_text(encoding="utf-8")
+    assert "Exploratory IVIVE (Well-Stirred)" in html
+    assert "Prior vs. Posterior Prediction Audit" in html
+    assert "RAT" in html
+
+    exchange = EvidenceExchange.model_validate_json(
+        (destination / "evidence" / "pharmacology_evidence.json").read_text(encoding="utf-8")
+    )
+    assert any(
+        rec.claim_type == "ivive_hepatic_plasma_clearance" and rec.evidence_type.value == "predicted"
+        for rec in exchange.records
+    )
+
+
+def test_cli_ivive_and_audit_predictions(tmp_path, repo_root, capsys) -> None:
+    ivive_json = tmp_path / "ivive_input.json"
+    ivive_json.write_text(
+        json.dumps(
+            {
+                "clint_record": {
+                    "record_id": "ADME-MIC-CLI",
+                    "compound_id": "PW-0001",
+                    "assay_kind": "microsomal_clearance",
+                    "system": "rat liver microsomes",
+                    "status": "measured",
+                    "limitations": ["Research use only. Not a dosing recommendation."],
+                    "value": 30.0,
+                    "unit": "uL/min/mg_protein",
+                },
+                "physiology": {
+                    "profile_id": "PHYS-RAT-CLI",
+                    "species": "Rattus norvegicus",
+                    "body_weight_kg": 0.25,
+                    "liver_weight_g": 10.0,
+                    "hepatic_blood_flow_l_h": 1.0,
+                    "microsomal_protein_mg_per_g_liver": 45.0,
+                    "source": "CLI test fixture",
+                },
+                "fu_plasma": 0.1,
+                "fu_inc": 1.0,
+                "blood_to_plasma_ratio": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence_out = tmp_path / "ivive_evidence.json"
+    ivive_bundle = tmp_path / "ivive_cli_bundle"
+
+    assert (
+        main(
+            [
+                "ivive",
+                str(ivive_json),
+                "--evidence-out",
+                str(evidence_out),
+                "--study",
+                str(EXAMPLE_DIR),
+                "--bundle",
+                str(ivive_bundle),
+                "--run-id",
+                "cli-ivive",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr().out
+    assert "CLH_plasma=" in captured
+    assert evidence_out.is_file()
+    assert (ivive_bundle / "analysis" / "ivive_predictions.parquet").is_file()
+
+    # CLI audit-predictions
+    audit_out = tmp_path / "audit_report.json"
+    audit_bundle = tmp_path / "audit_cli_bundle"
+    assert (
+        main(
+            [
+                "audit-predictions",
+                str(EXAMPLE_DIR),
+                "--priors",
+                str(evidence_out),
+                "--nca-config",
+                str(repo_root / "configs" / "nca_single_dose_iv.yaml"),
+                "--output",
+                str(audit_out),
+                "--bundle",
+                str(audit_bundle),
+                "--run-id",
+                "cli-audit",
+            ]
+        )
+        == 0
+    )
+    captured_audit = capsys.readouterr().out
+    assert "clearance" in captured_audit
+    assert audit_out.is_file()
+    assert (audit_bundle / "analysis" / "prediction_audit.json").is_file()
+
+
+def test_cli_verify_bundle_and_diff(tmp_path: Path, repo_root: Path, capsys) -> None:
+    import shutil
+
+    study = build_study()
+    bundle_a = tmp_path / "cli_bundle_a"
+    bundle_b = tmp_path / "cli_bundle_b"
+
+    study.export_bundle(bundle_a, run_id="run_a")
+    shutil.copytree(bundle_a, bundle_b)
+
+    # 1. verify-bundle command
+    assert main(["verify-bundle", str(bundle_a)]) == 0
+    captured = capsys.readouterr().out
+    assert "Status: PASSED" in captured
+
+    # 2. diff command identical
+    assert main(["diff", str(bundle_a), str(bundle_b)]) == 0
+    captured_diff = capsys.readouterr().out
+    assert "Result: IDENTICAL" in captured_diff
+
+    # 3. verify-bundle with JSON flag
+    assert main(["verify-bundle", str(bundle_a), "--json"]) == 0
+    json_out = capsys.readouterr().out
+    assert '"is_valid": true' in json_out
+
+    # 4. Tamper bundle_b: verify fails and diff detects differences
+    (bundle_b / "study" / "compounds.parquet").unlink()
+    assert main(["verify-bundle", str(bundle_b)]) == 1
+    captured_fail = capsys.readouterr().out
+    assert "Status: FAILED" in captured_fail
+
+    assert main(["diff", str(bundle_a), str(bundle_b)]) == 1
+    captured_diff_fail = capsys.readouterr().out
+    assert "Result: DIFFERENT" in captured_diff_fail
+
+
+def test_cli_ingest_mapping(tmp_path: Path, capsys) -> None:
+    from tests.unit.test_ingest_mapping import _setup_raw_data
+
+    mapping_path = _setup_raw_data(tmp_path)
+    output_dir = tmp_path / "ingested_study"
+    bundle_dir = tmp_path / "ingested_bundle"
+
+    assert (
+        main(
+            [
+                "ingest",
+                "--mapping",
+                str(mapping_path),
+                "--output-dir",
+                str(output_dir),
+                "--bundle",
+                str(bundle_dir),
+                "--run-id",
+                "run-ingest-cli",
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr().out
+    assert "Wrote canonical study directory" in captured
+    assert "Wrote result bundle" in captured
+
+    assert (output_dir / "study_metadata.json").is_file()
+    assert (output_dir / "subjects.csv").is_file()
+    assert (bundle_dir / "manifest.json").is_file()
+
+
