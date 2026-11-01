@@ -1,0 +1,364 @@
+{
+  "$defs": {
+    "DeclaredParameter": {
+      "additionalProperties": false,
+      "description": "One declared input, kept under its pharmacokinetic role.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "dose",
+            "clearance",
+            "apparent_clearance",
+            "volume",
+            "apparent_volume",
+            "central_volume",
+            "peripheral_volume",
+            "intercompartmental_clearance",
+            "absorption_rate",
+            "infusion_duration"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "role"
+      ],
+      "title": "DeclaredParameter",
+      "type": "object"
+    },
+    "SimulatedConcentration": {
+      "additionalProperties": false,
+      "description": "Predicted concentration at one time. Percentiles are optional.",
+      "properties": {
+        "time_h": {
+          "title": "Time H",
+          "type": "number"
+        },
+        "concentration": {
+          "title": "Concentration",
+          "type": "number"
+        },
+        "p05": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P05"
+        },
+        "p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P50"
+        },
+        "p95": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "P95"
+        }
+      },
+      "required": [
+        "time_h",
+        "concentration"
+      ],
+      "title": "SimulatedConcentration",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Predicted exposure summary. ``evidence_type`` stays predicted.",
+  "properties": {
+    "schema_name": {
+      "const": "pharmacoweave-exposure-simulation",
+      "default": "pharmacoweave-exposure-simulation",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.2.0",
+      "default": "0.2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "simulation_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "title": "Simulation Id",
+      "type": "string"
+    },
+    "model_id": {
+      "enum": [
+        "one_compartment_iv_bolus",
+        "one_compartment_iv_infusion",
+        "one_compartment_extravascular",
+        "two_compartment_iv_bolus"
+      ],
+      "title": "Model Id",
+      "type": "string"
+    },
+    "context_of_use": {
+      "title": "Context Of Use",
+      "type": "string"
+    },
+    "evidence_type": {
+      "const": "predicted",
+      "default": "predicted",
+      "title": "Evidence Type",
+      "type": "string"
+    },
+    "constitutes_dosing_recommendation": {
+      "const": false,
+      "default": false,
+      "title": "Constitutes Dosing Recommendation",
+      "type": "boolean"
+    },
+    "concentration_unit": {
+      "title": "Concentration Unit",
+      "type": "string"
+    },
+    "auc_unit": {
+      "title": "Auc Unit",
+      "type": "string"
+    },
+    "parameters": {
+      "items": {
+        "$ref": "#/$defs/DeclaredParameter"
+      },
+      "title": "Parameters",
+      "type": "array"
+    },
+    "curve": {
+      "items": {
+        "$ref": "#/$defs/SimulatedConcentration"
+      },
+      "title": "Curve",
+      "type": "array"
+    },
+    "cmax": {
+      "title": "Cmax",
+      "type": "number"
+    },
+    "cmax_p05": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cmax P05"
+    },
+    "cmax_p50": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cmax P50"
+    },
+    "cmax_p95": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cmax P95"
+    },
+    "tmax_h": {
+      "title": "Tmax H",
+      "type": "number"
+    },
+    "auc_inf": {
+      "title": "Auc Inf",
+      "type": "number"
+    },
+    "auc_inf_p05": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Auc Inf P05"
+    },
+    "auc_inf_p50": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Auc Inf P50"
+    },
+    "auc_inf_p95": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Auc Inf P95"
+    },
+    "auc_last": {
+      "title": "Auc Last",
+      "type": "number"
+    },
+    "half_life_h": {
+      "title": "Half Life H",
+      "type": "number"
+    },
+    "terminal_rate_name": {
+      "enum": [
+        "kel",
+        "ka",
+        "ka_equals_kel",
+        "beta"
+      ],
+      "title": "Terminal Rate Name",
+      "type": "string"
+    },
+    "time_above_threshold_h": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Time Above Threshold H"
+    },
+    "threshold_concentration": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Threshold Concentration"
+    },
+    "threshold_unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Threshold Unit"
+    },
+    "n_draws": {
+      "default": 0,
+      "title": "N Draws",
+      "type": "integer"
+    },
+    "seed": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Seed"
+    },
+    "interval_meaning": {
+      "default": "When present, p05, p50, and p95 are empirical percentiles of concentration, Cmax, or AUC_inf under independent lognormal parameter perturbations around the declared point values. They are not a confidence interval, not a prediction interval for a new subject, and not a therapeutic window.",
+      "title": "Interval Meaning",
+      "type": "string"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "simulation_id",
+    "model_id",
+    "context_of_use",
+    "concentration_unit",
+    "auc_unit",
+    "parameters",
+    "curve",
+    "cmax",
+    "tmax_h",
+    "auc_inf",
+    "auc_last",
+    "half_life_h",
+    "terminal_rate_name",
+    "assumptions",
+    "limitations"
+  ],
+  "title": "ExposureSimulationResult",
+  "type": "object"
+}

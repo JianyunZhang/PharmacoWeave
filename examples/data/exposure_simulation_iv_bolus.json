@@ -1,0 +1,20 @@
+{
+  "schema_name": "pharmacoweave-exposure-simulation-request",
+  "schema_version": "0.2.0",
+  "simulation_id": "SIM-IV-BOLUS-QUIET",
+  "context_of_use": "Research comparison of a declared one-compartment IV bolus curve against Dose/V and Dose/CL.",
+  "model_id": "one_compartment_iv_bolus",
+  "dose": 0.25,
+  "dose_unit": "mg",
+  "clearance": 0.05,
+  "clearance_unit": "L/h",
+  "volume": 0.05,
+  "volume_unit": "L",
+  "times_h": [0, 1, 2, 4, 8],
+  "concentration_unit": "mg/L",
+  "auc_unit": "mg*h/L",
+  "threshold_concentration": 1.0,
+  "threshold_unit": "mg/L",
+  "n_doses": 1,
+  "steady_state": false
+}

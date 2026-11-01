@@ -54,9 +54,9 @@ def test_ephys_endpoint_requires_sync_and_does_not_align_clocks(repo_root) -> No
     assert [item.sample_id for item in attached.biosamples] == [item.sample_id for item in study.biosamples]
 
 
-def test_no_external_engine_is_registered() -> None:
+def test_analytical_engine_is_registered_and_copyleft_engines_are_refused() -> None:
     from pharmacoweave.errors import PlannedCapabilityError
 
-    assert supported_backends() == []
+    assert supported_backends() == ["pharmacoweave-analytical"]
     with pytest.raises(PlannedCapabilityError):
         run_backend("nlmixr2")

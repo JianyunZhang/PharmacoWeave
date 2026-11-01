@@ -1,8 +1,23 @@
-"""Population PK is not implemented.
+"""Population PK is not calculated in this package.
 
-Use an external NLME engine later, out of process. Importing this module does not run an analysis.
+nlmixr2 is copyleft and is not imported. The executable out-of-process backend
+is only the MIT analytical reference engine in ``integrations.external_backends``.
 """
 
 from pharmacoweave.core.roadmap import status
+from pharmacoweave.errors import PlannedCapabilityError
 
 STATUS = status("population_pk")
+
+
+def run_in_process(*_args: object, **_kwargs: object) -> None:
+    """Refuse an in-process population model."""
+
+    raise PlannedCapabilityError(
+        module="population_pk",
+        phase="P4",
+        detail=(
+            "In-process NLME is not implemented. nlmixr2 is copyleft and is not imported or launched. "
+            "describe_engine('nlmixr2') records the license; supported_backends() does not include it."
+        ),
+    )

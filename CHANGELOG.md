@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-11-01
+
+- **探索性单次给药暴露区间（`simulation/exposure.py`）**：在已经验收的解析解上模拟一室静脉推注、一室恒速输注、一室血管外吸收和二室静脉推注。输出保持 `evidence_type="predicted"`，`constitutes_dosing_recommendation` 固定为 false。血管外给药只报告 `CL/F` 与 `V/F`。`ka < kel` 时终末半衰期记在 `ka` 上；`ka = kel` 时使用 Bateman 极限形式。可选的独立对数正态参数扰动给出 5/50/95 分位，并写明这不是置信区间、预测区间或治疗窗。重复给药、稳态、群体、PBPK 和 QSP 继续拒绝。`dosing_recommendation` 与 `human_starting_dose_from_simulation` 直接拒绝。
+- **进程外参考引擎（`integrations/external_backends.py`）**：唯一可执行后端是 `pharmacoweave-analytical`（MIT）。它通过子进程读写 JSON，记录引擎名、版本、许可证和请求 SHA-256。`nlmixr2`（GPL-2.0-or-later）和 `pk-sim`（GPL-2.0-only）只进入目录，不导入、不启动。`population_pk`、`pbpk` 和 `qsp` 的进程内计算仍然拒绝。
+- **契约与命令**：新增 `pharmacoweave simulate` 与 `pharmacoweave engine-run`。结果包可写入 `analysis/exposure_simulation.json`。导出 `schemas/exposure_simulation.schema.json` 与 `schemas/engine_exchange.schema.json`（契约版本 `0.2.0`）。既有研究与结果包契约保持 `0.1.0`。
+
 ## 0.1.0 — 2026-10-31
 
 - **研究目录观测向药效与毒理终点的显式桥接（`core/observation_bridge.py`）**：打通研究表 `observations`（`observation_type='effect'` 与 `'toxicity'`）向强类型 `EffectObservation` 与 `ToxEndpoint` 的显式桥接转换（`PharmacologyStudy.bridge_effects` 与 `bridge_toxicology`）；自适应解析关联 `Biosample`、`DoseEvent`、`Assay` 及给药时间差与生物基质，智能推导量纲（如 `%` / `percent` → `PERCENT`、`ratio` / `fraction` → `FRACTION`、浓度与速率量纲等），自动附加强制性 `RESEARCH_USE_LIMITATION` 与 `TOX_RESEARCH_LIMITATION`，并支持调用方细粒度参数重载（`endpoint_overrides`）。

@@ -128,6 +128,7 @@ class PharmacologyStudy(Record):
         blq_policy: Any | None = None,
         ivive_predictions: Sequence[Any] | None = None,
         prediction_audit: Any | None = None,
+        exposure_simulation: Any | None = None,
     ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
@@ -146,6 +147,7 @@ class PharmacologyStudy(Record):
             blq_policy=blq_policy,
             ivive_predictions=ivive_predictions,
             prediction_audit=prediction_audit,
+            exposure_simulation=exposure_simulation,
         )
 
     def run_nca(self, config: str | Path | Any) -> list[NcaParameterSet]:

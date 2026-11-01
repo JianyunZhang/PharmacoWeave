@@ -1,6 +1,6 @@
 # 架构
 
-PharmacoWeave 0.1.0 是一个研究用的定量药理学数据、统计估计与证据工具包。计算模块依赖 `core`；`core` 在模块顶层不依赖任何分析业务包。集成模块导出证据、校准跨尺度时序并做文件级守卫，不导入其他 Weave 项目或外部 GPL/专有求解器。
+PharmacoWeave 0.2.0 是一个研究用的定量药理学数据、统计估计与证据工具包。计算模块依赖 `core`；`core` 在模块顶层不依赖任何分析业务包。集成模块导出证据、校准跨尺度时序并做文件级守卫，不导入其他 Weave 项目或外部 GPL/专有求解器。可执行的外部后端只有本包自己的 MIT 解析参考引擎，通过子进程交换文件。
 
 ```mermaid
 flowchart TB
@@ -19,8 +19,9 @@ flowchart TB
         tox[toxicology 研究用终点]
         diagnostics[diagnostics SVG 诊断与先验预测审计]
         reporting[reporting HTML + 5 类原生 SVG]
+        simulation[simulation 单次给药解析暴露区间]
     end
-    reserved[population_pk / pbpk / qsp / simulation]
+    reserved[population_pk / pbpk / qsp]
 
     ingestion --> core
     bioanalysis --> core
@@ -32,6 +33,7 @@ flowchart TB
     tox --> core
     diagnostics --> core
     reporting --> core
+    simulation --> core
     integrations --> core
     reserved -.-> core
 ```
@@ -43,9 +45,9 @@ flowchart TB
 3. `study.check` 执行跨记录规则：外键、时钟、LLOQ（支持显式分子量下的摩尔/质量限值转换）、基质、身份链接和外部证据。
 4. `study.bridge_effects` 与 `study.bridge_toxicology` 将研究表原始观测（`effect` / `toxicity`）桥接为强类型领域记录（`EffectObservation` 与 `ToxEndpoint`）。
 5. `collapse_replicates` 可选对同一给药后时间点的定量浓度平行样执行算术或几何均值聚合，记录 CV% 与溯源 ID，绝不把 BLQ 纳入均值或改为 0。
-6. `run_nca`、`fit_iv_bolus` / `fit_one_compartment_extravascular` / `fit_two_compartment_iv_bolus`、`fit_linked_direct_emax` / `fit_sigmoid_emax`、`predict_hepatic_clearance_well_stirred`（探索性 Well-Stirred IVIVE，需显式生理与结合参数，输出锁定 `predicted` 等级）、`audit_study_predictions`（先验预测对体内实测折叠误差审计）以及 `align_cross_project_endpoint`（跨尺度电生理/组学对齐）在各自契约边界内执行计算。
-7. `export_bundle` 在校验通过后写出新的不可变结果目录，自动物化 `analysis/derived_observations.parquet`、可选 `analysis/ivive_predictions.parquet` 与 `analysis/prediction_audit.json`，汇集并核验 `evidence/pharmacology_evidence.json`。目录已存在时拒绝覆盖。
-8. `verify_bundle` 与 `diff_bundles` 提供离线结果包密码学哈希/Schema 完整性复核与跨次运行结果包深度对比。
+6. `run_nca`、`fit_iv_bolus` / `fit_one_compartment_extravascular` / `fit_two_compartment_iv_bolus`、`fit_linked_direct_emax` / `fit_sigmoid_emax`、`predict_hepatic_clearance_well_stirred`（探索性 Well-Stirred IVIVE，需显式生理与结合参数，输出锁定 `predicted` 等级）、`audit_study_predictions`（先验预测对体内实测折叠误差审计）、`align_cross_project_endpoint`（跨尺度电生理/组学对齐）以及 `simulate_exposure`（显式参数下的单次给药解析暴露区间，输出锁定 `predicted`）在各自契约边界内执行计算。
+7. `export_bundle` 在校验通过后写出新的不可变结果目录，自动物化 `analysis/derived_observations.parquet`、可选 `analysis/ivive_predictions.parquet`、`analysis/prediction_audit.json` 与 `analysis/exposure_simulation.json`，汇集并核验 `evidence/pharmacology_evidence.json`。目录已存在时拒绝覆盖。
+8. `verify_bundle` 与 `diff_bundles` 提供离线结果包密码学哈希/Schema 完整性复核与跨次运行结果包深度对比。`run_backend("pharmacoweave-analytical")` 在独立子进程中重复第 6 步的解析模拟；`nlmixr2` 与 PK-Sim 只被登记为 copyleft，不被启动。
 
 ## 记录规则
 
@@ -78,6 +80,6 @@ flowchart TB
 
 ## 依赖方向
 
-允许：`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`pd_models`、`dmpk`、`toxicology`、`diagnostics`、`reporting` 依赖 `core`。`pkpd` 依赖 `pd_models`。`integrations` 依赖 `core` 和这些记录的公开类型，用来写出证据。
+允许：`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`pd_models`、`dmpk`、`toxicology`、`diagnostics`、`reporting` 依赖 `core`。`pkpd` 依赖 `pd_models`。`simulation` 依赖 `pk_models` 里已经验收的解析解。`integrations` 依赖 `core` 和这些记录的公开类型，用来写出证据，并通过子进程调用 `pharmacoweave-analytical`。
 
 不允许：`core` 在模块顶层依赖上述业务包；任何模块导入 OmicsWeave、TheraWeave、EphysWeave、PKNCA、nlmixr2、PK-Sim 或 NONMEM。

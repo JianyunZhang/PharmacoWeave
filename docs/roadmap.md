@@ -61,17 +61,23 @@
 - **离线结果包核验与差异对比工具链（`verify-bundle` & `diff`）**：CLI 新增 `verify-bundle` 与 `diff` 命令；`verify-bundle` 离线校验 `manifest.json` 与 `schemas/result_bundle.schema.json` 契约，重新逐一哈希全量落盘文件比对 SHA-256，排查文件篡改、文件丢失与未列盘多余文件；`diff` 命令对比两次分析运行结果包的元数据差异、文件增删改状态、Parquet 分析参数表数值变化（自动计算最大绝对/相对偏差并标注显著差异参数）与 JSON 诊断指标变动，支持 `--json` 格式化机器可读输出。
 - **10 份落盘 JSON Schema**：在 `schemas/` 中导出并冻结第 10 份数据契约 `ingest_mapping.schema.json`。
 
-## 当前基线（0.1.0）模块状态与边界
+## 已完成：Phase 4 高可行性切片（0.2.0）
+
+- **探索性单次给药暴露区间**：用已经验收的一室静脉推注、恒速输注、血管外吸收和二室静脉推注解析解，在显式 `context_of_use` 下输出预测曲线、Cmax、Tmax、AUC∞、终末半衰期和可选的阈值以上时间。证据等级固定为 `predicted`。血管外参数保持 `CL/F` 与 `V/F`。独立对数正态扰动只产生分位带，并声明它不是置信区间或治疗窗。
+- **进程外参考引擎**：`pharmacoweave-analytical` 以子进程和 JSON 交换运行同一模拟器，记录版本、MIT 许可证和请求哈希。`nlmixr2` 与 PK-Sim 只登记 copyleft 许可证，不导入、不启动。
+- 仍未实现：把 nlmixr2 或 PK-Sim 作为真正的外部求解器跑起来，以及任何给药方案建议。
+
+## 当前基线（0.2.0）模块状态与边界
 
 - `available`：`core`、`ingestion`、`bioanalysis`、`pk_nca`、`integrations`。
-- `partial`：`pk_models`（一室静脉推注、一室血管外吸收、二室静脉推注）、`diagnostics`（SVG 图形与先验预测校准审计）、`reporting`、`pd_models`（原始尺度直接与 Sigmoid Emax、研究观测桥接）、`pkpd`、`dmpk`（体外记录、蛋白结合与显式假设 IVIVE）、`toxicology`（毒理终点记录与研究观测桥接）。
-- `reserved`：`population_pk`、`pbpk`、`qsp`、`simulation`。
-- 当前仍显式拒绝：稀疏/破坏性采样、多次给药叠加、稳态给药、尿药排泄、间接反应、效应滞后、隐式物种生理查找表、非显式假设体内外推、SEND 导出和临床给药建议。
+- `partial`：`pk_models`（一室静脉推注、一室血管外吸收、二室静脉推注）、`diagnostics`（SVG 图形与先验预测校准审计）、`reporting`、`pd_models`（原始尺度直接与 Sigmoid Emax、研究观测桥接）、`pkpd`、`dmpk`（体外记录、蛋白结合与显式假设 IVIVE）、`toxicology`（毒理终点记录与研究观测桥接）、`simulation`（单次给药解析暴露区间，不是给药方案）。
+- `reserved`：`population_pk`、`pbpk`、`qsp`。进程内群体模型、PBPK 和 QSP 仍拒绝。
+- 当前仍显式拒绝：稀疏/破坏性采样、多次给药叠加、稳态给药、尿药排泄、间接反应、效应滞后、隐式物种生理查找表、非显式假设体内外推、SEND 导出、临床给药建议，以及在本进程内启动 nlmixr2 或 PK-Sim。
 
-## 计划：Phase 4 外部 PopPK、PBPK、QSP 与研究设计模拟
+## 计划：Phase 4 剩余项
 
-- **进程外引擎适配器**：通过独立子进程与文件交换协议接入经过选择的外部引擎（如 `nlmixr2`、`Open Systems Pharmacology / PK-Sim & MoBi`），不把 copyleft 引擎引进 `pharmacoweave` 的运行时 `import` 图。
-- **科学验收与模拟边界**：验收包含适配器契约测试、数值交叉验证、外部引擎名称/版本/许可证溯源记录，以及强制写明的 `context_of_use` 和 `limitations`。本项目不实现第二套 PK-Sim 或 NONMEM；研究设计模拟（`simulation`）仅输出显式模型假设下的探索性暴露区间，不构成临床给药方案。
+- **真正的外部 NLME / PBPK 执行**：只有在调用方单独提供可审计的引擎可执行文件，并且许可证边界仍然留在进程外时，才考虑启动 nlmixr2 或 PK-Sim。本项目不实现第二套 PK-Sim 或 NONMEM。
+- **研究设计模拟的下一步**：重复给药、稳态和协变参数的群体模拟不在 0.2.0。它们需要新的失败用例和冻结参考之后才能进入公开函数。
 
 ## 持续约束
 

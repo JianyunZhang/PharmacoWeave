@@ -11,6 +11,8 @@ from pharmacoweave.ingestion.mapping import IngestMappingConfig
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.schema_export import CONTRACTS, json_schema
+from pharmacoweave.simulation.engine_protocol import EngineResponse
+from pharmacoweave.simulation.exposure import ExposureSimulationResult
 from pharmacoweave.toxicology.records import ToxEndpointSet
 from pharmacoweave.version import SCHEMA_VERSION
 
@@ -23,6 +25,8 @@ def test_schema_version_defaults_match_the_package_constant() -> None:
     assert ToxEndpointSet.model_fields["schema_version"].default == SCHEMA_VERSION
     assert PredictionAuditReport.model_fields["schema_version"].default == SCHEMA_VERSION
     assert IngestMappingConfig.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert ExposureSimulationResult.model_fields["schema_version"].default == "0.2.0"
+    assert EngineResponse.model_fields["schema_version"].default == "0.2.0"
 
 
 def test_committed_schemas_match_the_models(repo_root) -> None:

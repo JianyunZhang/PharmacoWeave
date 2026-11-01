@@ -1,6 +1,6 @@
 # PharmacoWeave
 
-定量药理学研究用 Python 工具包。当前版本 **0.1.0**（Phase 3 闭环）提供单次静脉推注、静脉恒速输注与血管外给药 NCA，带渐近标准误与 95% 置信区间的一室静脉推注、一室血管外吸收（`ka`、`CL/F`、`V/F`）与二室静脉推注（`CL`、`V1`、`Q`、`V2`）加权非线性拟合，显式分子量支撑的质量–摩尔单位换算，原始效应尺度的直接与 Sigmoid Emax 拟合，可审计 BLQ 派生与平行样聚合，体外 ADME 结合记录（`fu_plasma`、`fu_mic`、`blood_to_plasma_ratio`），显式生理假设探索性 Well-Stirred 肝清除率 IVIVE，先验预测与后验体内估算双向折叠误差校准审计（$P/O$、$\max(P/O, O/P)$、AFE、AAFE 与 2/3 倍阈值诊断），研究表观测向药效（`EffectObservation`）与毒理（`ToxEndpoint`）的显式桥接，跨尺度电生理与组学终点对齐（强制 `identity_map` 审核通过、显式时间基准与 `sync_error_ms` 时钟抖动阈值，严守代谢通量绝非浓度），声明式异构实验室表格映射（`ingest_mapping.yaml`，保留原始文件 SHA-256 哈希），以及离线结果包哈希核验（`verify-bundle`）与结果包差异对比（`diff`）。预测与实测、静脉参数与表观参数严格分层。它不计算超出已声明契约的试验设计，不做体内外推，也不给出临床给药建议。
+定量药理学研究用 Python 工具包。当前版本 **0.2.0**。它保留 0.1.0 的 NCA、房室拟合、Emax、IVIVE、预测审计、跨尺度对齐、声明式映射和结果包核验，并增加显式假设下的单次给药解析暴露区间，以及一个 MIT 许可的进程外参考引擎。预测与实测、静脉参数与表观参数严格分层。它不计算超出已声明契约的试验设计，不做隐式体内外推，也不给出临床给药建议。nlmixr2 和 PK-Sim 不被导入、不被启动。
 
 **Research use only.** 本软件不是医疗器械，不构成监管申报、GxP 或临床决策工具。参考 ICH M10 / M15 的记录结构，并不表示本软件满足该指南。
 
@@ -31,7 +31,7 @@ study.export_bundle("results/iv-bolus-validation", run_id="iv-bolus-validation")
 pharmacoweave capabilities
 ```
 
-`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 接受单次静脉推注（`configs/nca_single_dose_iv.yaml`）、单次静脉恒速输注（`configs/nca_single_dose_iv_infusion.yaml`）以及单次血管外给药（`configs/nca_single_dose_oral.yaml`，含 `oral`、`subcutaneous`、`intramuscular`）设计。`pk_models` 提供一室静脉推注的对数线性拟合，以及带渐近标准误和 95% 置信区间的一室静脉推注、一室血管外吸收（`ka`、`CL/F`、`V/F`）和二室静脉推注（`CL`、`V1`、`Q`、`V2`）加权非线性最小二乘。`pd_models` 在原始效应尺度估计固定基线的直接效应 Emax 和可选 Sigmoid Hill 系数。`pkpd` 只把直接效应连到显式浓度。`dmpk` 校验并持久化通透性、微粒体和肝细胞清除率记录。`toxicology` 记录研究用终点。`population_pk`、`pbpk`、`qsp` 和 `simulation` 仍是 `reserved`，导入不会运行分析。
+`core`、`ingestion`、`bioanalysis` 和 `pk_nca` 可以执行。`pk_nca` 接受单次静脉推注（`configs/nca_single_dose_iv.yaml`）、单次静脉恒速输注（`configs/nca_single_dose_iv_infusion.yaml`）以及单次血管外给药（`configs/nca_single_dose_oral.yaml`，含 `oral`、`subcutaneous`、`intramuscular`）设计。`pk_models` 提供一室静脉推注的对数线性拟合，以及带渐近标准误和 95% 置信区间的一室静脉推注、一室血管外吸收（`ka`、`CL/F`、`V/F`）和二室静脉推注（`CL`、`V1`、`Q`、`V2`）加权非线性最小二乘。`pd_models` 在原始效应尺度估计固定基线的直接效应 Emax 和可选 Sigmoid Hill 系数。`pkpd` 只把直接效应连到显式浓度。`dmpk` 校验并持久化通透性、微粒体和肝细胞清除率记录。`toxicology` 记录研究用终点。`simulation` 可以在显式 `context_of_use` 下计算单次给药解析暴露区间，输出保持 `predicted`。`population_pk`、`pbpk` 和 `qsp` 仍是 `reserved`，进程内计算会拒绝。可执行的外部后端只有 `pharmacoweave-analytical`。
 
 纯 NCA 结果包（含线性与半对数浓度–时间图、派生观测表和自动生成的 NCA 证据；静脉推注或血管外设计如需同时附加一室拟合可加 `--with-fit`）：
 
@@ -101,6 +101,14 @@ pharmacoweave verify-bundle results/iv-bolus-validation
 
 ```bash
 pharmacoweave diff results/bundle_run1 results/bundle_run2
+```
+
+探索性单次给药暴露区间（预测等级，不是给药方案）：
+
+```bash
+pharmacoweave simulate examples/data/exposure_simulation_iv_bolus.json
+pharmacoweave engine-run examples/data/exposure_simulation_iv_bolus.json \
+  --engine pharmacoweave-analytical
 ```
 
 ## 文档

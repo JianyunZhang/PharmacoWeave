@@ -149,6 +149,10 @@ _OMITTED = (
         reason="analysis/prediction_audit.json is absent because no prior-vs-estimate audit was run.",
     ),
     OmittedArtifact(
+        role="exposure_simulation",
+        reason="analysis/exposure_simulation.json is absent because no exploratory exposure simulation was run.",
+    ),
+    OmittedArtifact(
         role="analysis_report",
         reason=(
             "reports/analysis_report.html is absent. reports/validation_report.html is the data-validation inventory."
@@ -177,6 +181,7 @@ def export_bundle(
     blq_policy: Any | None = None,
     ivive_predictions: Sequence[Any] | None = None,
     prediction_audit: Any | None = None,
+    exposure_simulation: Any | None = None,
 ) -> ResultBundleManifest:
     """Validate ``study`` and write a new bundle directory.
 
@@ -186,7 +191,9 @@ def export_bundle(
     ``tox_endpoints`` to persist structured DMPK and toxicology records and
     screened ``PharmacologyEvidence``. Pass ``ivive_predictions`` (exploratory,
     predicted grade) and ``prediction_audit`` (a ``PredictionAuditReport``) to
-    persist the IVIVE table and the prior-vs-estimate fold-error audit.
+    persist the IVIVE table and the prior-vs-estimate fold-error audit. Pass
+    ``exposure_simulation`` (an ``ExposureSimulationResult``) to persist an
+    exploratory single-dose curve. That curve stays predicted and is not a dose.
     """
 
     report = validate_study(study, mode=mode)
@@ -210,6 +217,7 @@ def export_bundle(
             blq_policy=blq_policy,
             ivive_predictions=ivive_predictions,
             prediction_audit=prediction_audit,
+            exposure_simulation=exposure_simulation,
         )
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
@@ -230,6 +238,7 @@ def _write_bundle(
     blq_policy: Any | None,
     ivive_predictions: Sequence[Any] | None = None,
     prediction_audit: Any | None = None,
+    exposure_simulation: Any | None = None,
 ) -> ResultBundleManifest:
     created_at = datetime.now(UTC)
     counts = _counts(study, report, adme_records=adme_records, tox_endpoints=tox_endpoints)
@@ -238,6 +247,8 @@ def _write_bundle(
     if prediction_audit is not None:
         counts["n_prediction_audit_entries"] = len(prediction_audit.entries)
         counts["n_prediction_audit_skipped"] = len(prediction_audit.skipped)
+    if exposure_simulation is not None:
+        counts["n_simulated_times"] = len(exposure_simulation.curve)
     _write_json(destination / _PATHS["study_metadata"], json.loads(study.metadata.model_dump_json()))
     write_named_table(destination / _PATHS["subjects"], "subjects", [subject_row(item) for item in study.subjects])
     write_named_table(destination / _PATHS["compounds"], "compounds", [compound_row(item) for item in study.compounds])
@@ -287,7 +298,15 @@ def _write_bundle(
     )
     analysis_executed = any(
         item is not None
-        for item in (nca_parameters, fits, emax_fits, blq_policy, ivive_predictions, prediction_audit)
+        for item in (
+            nca_parameters,
+            fits,
+            emax_fits,
+            blq_policy,
+            ivive_predictions,
+            prediction_audit,
+            exposure_simulation,
+        )
     )
     notes: list[str] = []
     if nca_parameters is not None:
@@ -300,6 +319,11 @@ def _write_bundle(
         notes.append("Exploratory explicit-assumption well-stirred IVIVE was run; outputs stay predicted.")
     if prediction_audit is not None:
         notes.append("Prior predictions were audited against in vivo estimates with fold-error metrics.")
+    if exposure_simulation is not None:
+        notes.append(
+            "Exploratory single-dose exposure simulation was run from declared parameters. "
+            "The curve stays predicted and is not a dosing recommendation."
+        )
     if blq_policy is not None and not notes:
         notes.append("Derived observations were materialized under an explicit BLQ policy.")
 
@@ -466,6 +490,11 @@ def _write_bundle(
         paths["prediction_audit"] = audit_path
         _write_json(destination / audit_path, json.loads(prediction_audit.model_dump_json()))
         omitted = [item for item in omitted if item.role != "prediction_audit"]
+    if exposure_simulation is not None:
+        simulation_path = "analysis/exposure_simulation.json"
+        paths["exposure_simulation"] = simulation_path
+        _write_json(destination / simulation_path, json.loads(exposure_simulation.model_dump_json()))
+        omitted = [item for item in omitted if item.role != "exposure_simulation"]
 
     html = render_validation_report(
         study,
@@ -488,6 +517,7 @@ def _write_bundle(
         audit_summary_rows=_audit_summary_rows(prediction_audit),
         audit_entry_rows=_audit_entry_rows(prediction_audit),
         audit_skipped_rows=_audit_skipped_rows(prediction_audit),
+        simulation_rows=_simulation_rows(exposure_simulation),
     )
     report_path = destination / _PATHS["validation_report"]
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -972,6 +1002,27 @@ def _emax_rows(emax_fits: Sequence[Any] | None) -> list[dict[str, str]]:
             }
         )
     return rows
+
+
+def _simulation_rows(result: Any | None) -> list[dict[str, str]]:
+    if result is None:
+        return []
+    threshold = "not requested"
+    if result.time_above_threshold_h is not None:
+        threshold = f"{result.time_above_threshold_h:.6g} h"
+    return [
+        {
+            "simulation_id": result.simulation_id,
+            "model_id": result.model_id,
+            "cmax": f"{result.cmax:.6g} {result.concentration_unit}",
+            "tmax_h": f"{result.tmax_h:.6g}",
+            "auc_inf": f"{result.auc_inf:.6g} {result.auc_unit}",
+            "half_life_h": f"{result.half_life_h:.6g}",
+            "time_above": threshold,
+            "evidence_type": result.evidence_type,
+            "dosing_recommendation": "false",
+        }
+    ]
 
 
 def _ivive_rows(predictions: Sequence[Any] | None) -> list[dict[str, str]]:

@@ -32,6 +32,7 @@ def render_validation_report(
     audit_summary_rows: list[dict[str, str]] | None = None,
     audit_entry_rows: list[dict[str, str]] | None = None,
     audit_skipped_rows: list[dict[str, str]] | None = None,
+    simulation_rows: list[dict[str, str]] | None = None,
 ) -> str:
     """Render the validation inventory, plus NCA, PK fit, Emax, IVIVE, or Audit sections when run."""
 
@@ -80,6 +81,7 @@ def render_validation_report(
         audit_summary_rows=audit_summary_rows or [],
         audit_entry_rows=audit_entry_rows or [],
         audit_skipped_rows=audit_skipped_rows or [],
+        simulation_rows=simulation_rows or [],
     )
 
 

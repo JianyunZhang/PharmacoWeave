@@ -53,7 +53,7 @@ Pint 能解析任意单位字符串，也会接受与 PK 无关的单位。核�
 
 ### 目录里的后期模块保持为预留包
 
-`population_pk`、`pbpk`、`qsp`、`simulation` 可以导入，并带有阶段标记。导入不提供 NLME、PBPK 或 QSP 计算。0.0.4 把 `pd_models`、`pkpd`、`dmpk`、`toxicology` 从 reserved 改成 partial：只有有测试的直接效应 Emax、体外记录和毒理记录可以调用。间接反应、体内外推和临床建议仍然不存在。
+`population_pk`、`pbpk`、`qsp` 可以导入，并带有阶段标记。导入不提供 NLME、PBPK 或 QSP 计算，对应的 `run_in_process` 会拒绝。0.0.4 把 `pd_models`、`pkpd`、`dmpk`、`toxicology` 从 reserved 改成 partial：只有有测试的直接效应 Emax、体外记录和毒理记录可以调用。间接反应、体内外推和临床建议仍然不存在。0.2.0 把 `simulation` 从 reserved 改成 partial：只有带显式 `context_of_use` 的单次给药解析暴露区间可以调用。重复给药和稳态仍然不存在。
 
 ### 报告在分析运行之前只做数据清单
 
@@ -82,7 +82,7 @@ Pydantic 模型导出 JSON Schema，CI 比对 `schemas/` 中的文件。手写�
 
 工作名采用 **PharmacoWeave**。PharmaFoundry 不作为包名，以免和治疗发现平台的边界叠在一起。商标、域名和注册类别仍需法务审查；PyPI 名称当时空闲，不能代替这项审查。
 
-外部群体模型和 PBPK 引擎的适配器目前返回空列表。将来的适配器记录引擎名称、版本、许可和输出文件，并通过进程边界交换文件。
+外部群体模型和 PBPK 引擎不进入 import 图。0.2.0 只执行 MIT 许可的 `pharmacoweave-analytical` 子进程，用来交换已经验收的单次给药解析曲线。`nlmixr2` 与 PK-Sim 出现在引擎目录里，许可证被记录，调用被拒绝。进程内群体模型、PBPK 和 QSP 仍然不计算。
 
 ## 科学验证现状
 

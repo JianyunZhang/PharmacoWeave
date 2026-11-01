@@ -45,4 +45,4 @@ study.attach_candidates("examples/cross_project_demo/theraweave_predicted_admet.
 
 ## 其他引擎
 
-`supported_backends()` 返回空列表。`run_backend("nlmixr2")` 会说明没有注册适配器。将来若适配 nlmixr2 或 PK-Sim / MoBi，调用发生在本进程之外，并把引擎版本、许可和输出文件写入该次运行的结果包。
+`supported_backends()` 返回 `pharmacoweave-analytical`。该后端是本包解析模拟器的 MIT 子进程，交换 JSON 并记录引擎版本、许可证和请求 SHA-256。`describe_engine("nlmixr2")` 与 `describe_engine("pk-sim")` 记录 copyleft 许可证。`run_backend("nlmixr2")` 和 `run_backend("pk-sim")` 拒绝执行，并且不会导入或启动这两个引擎。

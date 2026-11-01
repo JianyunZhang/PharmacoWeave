@@ -105,6 +105,14 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 - **声明式原始异构表映射基准**：`tests/unit/test_ingest_mapping.py` 校验由 `animals.csv`、`dosing.csv`、`pk_concentrations.csv` 与 `ingest_mapping.yaml` 构建的完整研究，严格核验原始实验文件 SHA-256 哈希完整保存在 `study.source_files`（`role="raw_<table_name>"`），且转换后的规范数据通过 `study.check()` 校验。
 - **结果包离线哈希核验与差异对比基准**：`tests/unit/test_bundle_verify_and_diff.py` 校验 `verify_bundle` 对健康包返回 `is_valid=True`、对单字节篡改文件或丢失文件精准返回 `is_valid=False` 并指明破坏文件；核验 `diff_bundles` 对相同包返回 `identical=True`，对参数被修改 50% 的分析表返回 `identical=False` 并计算出精确相对误差（0.3333）。
 
+## 0.2.0 探索性暴露区间与进程外参考引擎
+
+- **闭式解析基准**：`tests/numerical_benchmarks/test_exposure_simulation.py` 锁定剂量 0.25 mg、CL = 0.05 L/h、V = 0.05 L 的一室静脉推注：Cmax = 5 mg/L，AUC∞ = 5 mg·h/L，t½ = ln(2) h，1 mg/L 以上时间为 ln(5) h。输注峰浓度对照 `iv_infusion_concentration`，相对误差不超过 **1e-12**。血管外曲线的 Cmax 对照 Bateman 函数，同样不超过 **1e-12**，并且参数名只有 `CL_over_F` 与 `V_over_F`。
+- **终末相命名**：`ka < kel` 时 `terminal_rate_name="ka"`；`ka = kel` 时使用极限形式并记为 `ka_equals_kel`。
+- **不确定度语义**：只扰动 V 时 AUC∞ 的 5/50/95 分位与点估计相同；只扰动 CL 时 Cmax 分位与点估计相同。分位带的说明文字写明它不是置信区间或治疗窗。
+- **引擎边界**：`tests/unit/test_engine_adapter.py` 要求 `supported_backends()` 只有 `pharmacoweave-analytical`，子进程结果与进程内结果相对误差不超过 **1e-12**，并且 `nlmixr2` / `pk-sim` 在启动子进程之前被拒绝。源码不导入这些引擎。
+- **给药建议**：`dosing_recommendation` 与 `human_starting_dose_from_simulation` 抛出 `ContractViolation`。
+
 ## 明确不做的符合性声明
 
 字段设计参考 ICH M10 的定量限和 QC 概念，以及 ICH M15 的 question of interest 与 context of use。测试通过不等于生物分析方法学验证，也不等于 MIDD 证据已经被监管机构接受。CDISC SEND 导出、21 CFR Part 11 审计追踪和人类受试者访问控制不在本版本。

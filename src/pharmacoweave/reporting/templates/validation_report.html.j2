@@ -20,12 +20,13 @@
   <div class="banner">
     <strong>Research use only.</strong>
     This is a research-use report for run <code>{{ run_id }}</code>.
-    {% if nca_rows or fit_rows or emax_rows or ivive_rows or audit_summary_rows %}
+    {% if nca_rows or fit_rows or emax_rows or ivive_rows or audit_summary_rows or simulation_rows %}
     {% if nca_rows %}Single-dose NCA was run.{% endif %}
     {% if fit_rows %}{{ fit_banner }}{% endif %}
     {% if emax_rows %}Direct/sigmoid Emax exposure-response fitting was run.{% endif %}
     {% if ivive_rows %}Exploratory well-stirred IVIVE was run (predicted grade).{% endif %}
     {% if audit_summary_rows %}Prior prediction fold-error audit was run.{% endif %}
+    {% if simulation_rows %}Exploratory single-dose exposure simulation was run from declared parameters.{% endif %}
     It is not a dosing recommendation.
     {% else %}
     NCA, model fitting, and dosing recommendations were not run.
@@ -175,6 +176,32 @@
         <td>{{ row.cl_plasma_l_h }}</td>
         <td>{{ row.cl_plasma_l_h_kg }}</td>
         <td>{{ row.extraction_ratio }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if simulation_rows %}
+  <h2>Exploratory exposure simulation</h2>
+  <p>Predicted single-dose curve from declared parameters. This is not an estimate from the study observations and not a dosing recommendation.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Simulation</th><th>Model</th><th>Cmax</th><th>Tmax (h)</th><th>AUC∞</th><th>Terminal t½ (h)</th><th>Time above threshold</th><th>Evidence</th><th>Dosing recommendation</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in simulation_rows %}
+      <tr>
+        <td><code>{{ row.simulation_id }}</code></td>
+        <td><code>{{ row.model_id }}</code></td>
+        <td>{{ row.cmax }}</td>
+        <td>{{ row.tmax_h }}</td>
+        <td>{{ row.auc_inf }}</td>
+        <td>{{ row.half_life_h }}</td>
+        <td>{{ row.time_above }}</td>
+        <td>{{ row.evidence_type }}</td>
+        <td>{{ row.dosing_recommendation }}</td>
       </tr>
       {% endfor %}
     </tbody>

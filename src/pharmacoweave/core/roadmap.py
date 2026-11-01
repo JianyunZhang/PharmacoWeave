@@ -99,25 +99,25 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "population_pk",
         "P2",
         "reserved",
-        "Population PK through an external NLME engine, not an in-house NONMEM replacement.",
+        "In-process NLME is refused. nlmixr2 is catalogued as copyleft and is not imported or launched.",
     ),
     ModuleStatus(
         "pbpk",
         "P2",
         "reserved",
-        "PBPK through an external engine adapter.",
+        "In-process PBPK is refused. PK-Sim is catalogued as copyleft and is not imported or launched.",
     ),
     ModuleStatus(
         "qsp",
         "P3",
         "reserved",
-        "Quantitative systems pharmacology models.",
+        "Quantitative systems pharmacology models are not simulated.",
     ),
     ModuleStatus(
         "simulation",
-        "P2",
-        "reserved",
-        "Study-design simulation under an explicit context of use.",
+        "P4",
+        "partial",
+        "Single-dose analytical exposure intervals with an explicit context of use. Not a dosing regimen.",
     ),
 )
 

@@ -128,6 +128,32 @@ def main(argv: list[str] | None = None) -> int:
     ingest.add_argument("--bundle", type=Path, help="Also export a ResultBundle to this directory")
     ingest.add_argument("--run-id", help="Run identifier if exporting a bundle")
 
+    simulate = commands.add_parser(
+        "simulate",
+        help="Simulate a single-dose analytical exposure interval from declared parameters",
+    )
+    simulate.add_argument("input_json", type=Path, help="JSON file conforming to ExposureSimulationRequest")
+    simulate.add_argument("--output", type=Path, help="Write the ExposureSimulationResult JSON to this path")
+    simulate.add_argument("--study", type=Path, help="Study directory used when exporting a result bundle")
+    simulate.add_argument(
+        "--bundle",
+        type=Path,
+        help="Write a result bundle including the simulation (requires --study)",
+    )
+    simulate.add_argument("--run-id")
+
+    engine = commands.add_parser(
+        "engine-run",
+        help="Run the MIT analytical reference engine out of process, or refuse a copyleft engine",
+    )
+    engine.add_argument("input_json", type=Path, help="JSON file conforming to ExposureSimulationRequest")
+    engine.add_argument(
+        "--engine",
+        default="pharmacoweave-analytical",
+        help="Engine name. nlmixr2 and pk-sim are catalogued and refused.",
+    )
+    engine.add_argument("--output", type=Path, help="Write the EngineResponse JSON to this path")
+
     commands.add_parser("capabilities", help="Show which modules can execute")
     export = commands.add_parser("export-schemas", help="Write JSON Schema files from the data contracts")
     export.add_argument("--directory", type=Path, default=Path("schemas"))
@@ -195,6 +221,16 @@ def main(argv: list[str] | None = None) -> int:
                 bundle=args.bundle,
                 run_id=args.run_id,
             )
+        if args.command == "simulate":
+            return _simulate(
+                args.input_json,
+                output=args.output,
+                study_dir=args.study,
+                bundle=args.bundle,
+                run_id=args.run_id,
+            )
+        if args.command == "engine-run":
+            return _engine_run(args.input_json, engine=args.engine, output=args.output)
         if args.command == "capabilities":
             return _capabilities()
         if args.command == "export-schemas":
@@ -573,6 +609,75 @@ def _ingest(
         selected_run = run_id or f"{study.metadata.study_id}-ingest"
         study.export_bundle(bundle, run_id=selected_run, mode=mode)
         print(f"Wrote result bundle to {bundle}")
+    return 0
+
+
+def _load_simulation_request(input_json: Path):
+    import json
+
+    from pydantic import ValidationError
+
+    from pharmacoweave.simulation.exposure import ExposureSimulationRequest
+
+    try:
+        raw = json.loads(input_json.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise IngestError(f"{input_json} is not valid JSON: {exc}") from exc
+    try:
+        return ExposureSimulationRequest.model_validate(raw)
+    except ValidationError as exc:
+        raise IngestError(f"{input_json} is not an exposure simulation request: {exc}") from exc
+
+
+def _simulate(
+    input_json: Path,
+    *,
+    output: Path | None,
+    study_dir: Path | None,
+    bundle: Path | None,
+    run_id: str | None,
+) -> int:
+    from pharmacoweave.simulation.exposure import simulate_exposure
+
+    request = _load_simulation_request(input_json)
+    result = simulate_exposure(request)
+    print(
+        f"{result.simulation_id}\tmodel={result.model_id}\t"
+        f"Cmax={result.cmax:.6g} {result.concentration_unit}\t"
+        f"AUC_inf={result.auc_inf:.6g} {result.auc_unit}\t"
+        f"evidence={result.evidence_type}\tdosing_recommendation=false"
+    )
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        print(f"Wrote exposure simulation to {output}")
+    if bundle is not None and study_dir is not None:
+        from pharmacoweave.core.study import PharmacologyStudy
+
+        study = PharmacologyStudy.from_files(study_dir)
+        selected_run = run_id or f"{request.simulation_id}-simulation"
+        study.export_bundle(bundle, run_id=selected_run, exposure_simulation=result)
+        print(f"Wrote simulation bundle to {bundle}")
+    elif bundle is not None:
+        raise IngestError("simulate --bundle requires --study.")
+    return 0
+
+
+def _engine_run(input_json: Path, *, engine: str, output: Path | None) -> int:
+    from pharmacoweave.integrations.external_backends import run_backend
+
+    request = _load_simulation_request(input_json)
+    response = run_backend(engine, request)
+    result = response.result
+    print(
+        f"{response.engine_name}\t{response.license_spdx}\tcopyleft={str(response.copyleft).lower()}\t"
+        f"Cmax={result.cmax:.6g} {result.concentration_unit}\t"
+        f"AUC_inf={result.auc_inf:.6g} {result.auc_unit}\tdosing_recommendation=false"
+    )
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(response.model_dump_json(indent=2), encoding="utf-8")
+        print(f"Wrote engine response to {output}")
     return 0
 
 
