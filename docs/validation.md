@@ -113,6 +113,14 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 - **引擎边界**：`tests/unit/test_engine_adapter.py` 要求 `supported_backends()` 只有 `pharmacoweave-analytical`，子进程结果与进程内结果相对误差不超过 **1e-12**，并且 `nlmixr2` / `pk-sim` 在启动子进程之前被拒绝。源码不导入这些引擎。
 - **给药建议**：`dosing_recommendation` 与 `human_starting_dose_from_simulation` 抛出 `ContractViolation`。
 
+## 0.2.1 重复给药与稳态
+
+- **重复静脉推注**：两剂、间隔 1 h、CL = 0.05 L/h、V = 0.05 L、剂量 0.25 mg 时，第二次给药瞬间浓度等于 `5 (1 + e^{-1})` mg/L，AUC∞ = 10 mg·h/L。阈值 3 mg/L 以上的时间等于两段 `ln(Cpeak / 3)` 之和。
+- **稳态静脉推注**：间隔 2 h 时，`auc_tau` = 5 mg·h/L，AUC∞ 为空，Cmax = `5 / (1 - e^{-2})` mg/L，蓄积比等于 `1 / (1 - e^{-2})`。
+- **稳态输注与二室**：峰浓度对照闭式解，相对误差不超过 **1e-12**。`auc_tau` 分别为 Dose/CL。
+- **稳态血管外**：`auc_tau` = Dose/(CL/F)。t = 1 h 的浓度与 40 次单剂量 Bateman 叠加的相对误差不超过 **1e-8**。参数名保持 `CL_over_F`，不出现 `CL`。
+- **拒绝**：缺少给药间隔、稳态同时声明有限次数、输注时长不短于给药间隔、稳态时间超出一个给药间隔，都会失败。
+
 ## 明确不做的符合性声明
 
 字段设计参考 ICH M10 的定量限和 QC 概念，以及 ICH M15 的 question of interest 与 context of use。测试通过不等于生物分析方法学验证，也不等于 MIDD 证据已经被监管机构接受。CDISC SEND 导出、21 CFR Part 11 审计追踪和人类受试者访问控制不在本版本。

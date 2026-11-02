@@ -5,8 +5,8 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from pharmacoweave.errors import ContractViolation, PlannedCapabilityError
-from pharmacoweave.pk_models.analytical import bateman_mg_l, iv_infusion_concentration
+from pharmacoweave.errors import AnalysisError, ContractViolation, PlannedCapabilityError
+from pharmacoweave.pk_models.analytical import bateman_mg_l, iv_infusion_concentration, two_compartment_macro_constants
 from pharmacoweave.simulation.exposure import (
     ExposureSimulationRequest,
     dosing_recommendation,
@@ -278,3 +278,218 @@ def test_bundle_persists_the_predicted_curve(tmp_path, repo_root) -> None:
     report = (destination / "reports" / "validation_report.html").read_text(encoding="utf-8")
     assert "Exploratory single-dose exposure simulation" in report
     assert "not a dosing recommendation" in report
+
+
+def test_repeated_iv_bolus_superposition_and_total_auc() -> None:
+    result = simulate_exposure(
+        _iv_request(
+            n_doses=2,
+            dosing_interval=1.0,
+            dosing_interval_unit="h",
+            times_h=[0, 1, 2],
+            threshold_concentration=3.0,
+            threshold_unit="mg/L",
+        )
+    )
+    kel = 1.0
+    dose_over_volume = 5.0
+    cmax = dose_over_volume * (1.0 + math.exp(-kel))
+    assert result.regimen == "repeated_dose"
+    assert result.tmax_h == pytest.approx(1.0)
+    assert result.cmax == pytest.approx(cmax)
+    assert result.curve[1].concentration == pytest.approx(cmax)
+    assert result.auc_inf == pytest.approx(10.0)
+    assert result.auc_tau is None
+    assert result.accumulation_ratio == pytest.approx(1.0 + math.exp(-1.0))
+    cpeak_second = dose_over_volume * (1.0 - math.exp(-2.0 * kel)) / (1.0 - math.exp(-kel))
+    expected_time = math.log(dose_over_volume / 3.0) + math.log(cpeak_second / 3.0)
+    assert result.time_above_threshold_h == pytest.approx(expected_time)
+    assert {item.name for item in result.parameters} >= {"CL", "V", "tau"}
+
+
+def test_steady_state_iv_bolus_interval_exposure() -> None:
+    tau = 2.0
+    kel = 1.0
+    result = simulate_exposure(
+        _iv_request(
+            steady_state=True,
+            dosing_interval=tau,
+            dosing_interval_unit="h",
+            times_h=[0, tau],
+            threshold_concentration=None,
+            threshold_unit=None,
+        )
+    )
+    cmax = 5.0 / (1.0 - math.exp(-kel * tau))
+    assert result.regimen == "steady_state"
+    assert result.auc_inf is None
+    assert result.auc_tau == pytest.approx(5.0)
+    assert result.cmax == pytest.approx(cmax)
+    assert result.cmin == pytest.approx(cmax * math.exp(-kel * tau))
+    assert result.accumulation_ratio == pytest.approx(1.0 / (1.0 - math.exp(-kel * tau)))
+    assert result.curve[1].concentration == pytest.approx(result.cmin)
+    assert result.constitutes_dosing_recommendation is False
+
+
+def test_steady_state_infusion_matches_the_closed_form() -> None:
+    tau = 8.0
+    duration = 0.5
+    kel = 0.2
+    rate = 2.0
+    clearance = 0.2
+    cmax = (rate / clearance) * (1.0 - math.exp(-kel * duration)) / (1.0 - math.exp(-kel * tau))
+    result = simulate_exposure(
+        ExposureSimulationRequest.model_validate(
+            {
+                "simulation_id": "SIM-INF-SS",
+                "context_of_use": "Research check of a steady-state constant-rate infusion interval.",
+                "model_id": "one_compartment_iv_infusion",
+                "dose": 1.0,
+                "dose_unit": "mg",
+                "clearance": clearance,
+                "clearance_unit": "L/h",
+                "volume": 1.0,
+                "volume_unit": "L",
+                "infusion_duration": duration,
+                "infusion_duration_unit": "h",
+                "dosing_interval": tau,
+                "dosing_interval_unit": "h",
+                "steady_state": True,
+                "times_h": [0, duration, tau],
+            }
+        )
+    )
+    assert result.cmax == pytest.approx(cmax, rel=1e-12)
+    assert result.tmax_h == pytest.approx(duration)
+    assert result.cmin == pytest.approx(cmax * math.exp(-kel * (tau - duration)), rel=1e-12)
+    assert result.auc_tau == pytest.approx(5.0)
+    assert result.auc_inf is None
+    assert result.curve[0].concentration == pytest.approx(result.cmin)
+
+
+def test_steady_state_oral_auc_and_superposition() -> None:
+    tau = 12.0
+    ka = 1.2
+    kel = 0.2
+    dose = 10.0
+    volume = 10.0
+    result = simulate_exposure(
+        ExposureSimulationRequest.model_validate(
+            {
+                "simulation_id": "SIM-EV-SS",
+                "context_of_use": "Research check of steady-state extravascular exposure with unknown F.",
+                "model_id": "one_compartment_extravascular",
+                "dose": dose,
+                "dose_unit": "mg",
+                "ka": ka,
+                "ka_unit": "1/h",
+                "apparent_clearance": 2.0,
+                "apparent_clearance_unit": "L/h",
+                "apparent_volume": volume,
+                "apparent_volume_unit": "L",
+                "dosing_interval": tau,
+                "dosing_interval_unit": "h",
+                "steady_state": True,
+                "times_h": [0, 1, tau],
+            }
+        )
+    )
+    stacked = sum(
+        bateman_mg_l(dose_mg=dose, ka_h=ka, clf_l_h=2.0, vf_l=volume, time_h=1.0 + index * tau) for index in range(40)
+    )
+    names = {item.name for item in result.parameters}
+    assert "CL" not in names
+    assert "CL_over_F" in names
+    assert result.auc_tau == pytest.approx(5.0)
+    assert result.auc_inf is None
+    assert result.curve[1].concentration == pytest.approx(stacked, rel=1e-8)
+    assert result.curve[0].concentration == pytest.approx(result.curve[2].concentration, rel=1e-12)
+    numerator = ka / (1.0 - math.exp(-ka * tau))
+    denominator = kel / (1.0 - math.exp(-kel * tau))
+    assert result.tmax_h == pytest.approx(math.log(numerator / denominator) / (ka - kel), rel=1e-12)
+
+
+def test_steady_state_two_compartment_auc_and_peak() -> None:
+    tau = 6.0
+    dose = 1.0
+    cl = 0.25
+    v1 = 0.5
+    q = 0.5
+    v2 = 1.0
+    coefficient_a, alpha, coefficient_b, beta = two_compartment_macro_constants(
+        dose_mg=dose,
+        cl_l_h=cl,
+        v1_l=v1,
+        q_l_h=q,
+        v2_l=v2,
+    )
+    cmax = coefficient_a / (1.0 - math.exp(-alpha * tau)) + coefficient_b / (1.0 - math.exp(-beta * tau))
+    result = simulate_exposure(
+        ExposureSimulationRequest.model_validate(
+            {
+                "simulation_id": "SIM-2C-SS",
+                "context_of_use": "Research check of a steady-state two-compartment IV bolus interval.",
+                "model_id": "two_compartment_iv_bolus",
+                "dose": dose,
+                "dose_unit": "mg",
+                "clearance": cl,
+                "clearance_unit": "L/h",
+                "central_volume": v1,
+                "central_volume_unit": "L",
+                "intercompartmental_clearance": q,
+                "intercompartmental_clearance_unit": "L/h",
+                "peripheral_volume": v2,
+                "peripheral_volume_unit": "L",
+                "dosing_interval": tau,
+                "dosing_interval_unit": "h",
+                "steady_state": True,
+                "times_h": [0, tau],
+            }
+        )
+    )
+    assert result.cmax == pytest.approx(cmax, rel=1e-12)
+    assert result.auc_tau == pytest.approx(dose / cl)
+    assert result.auc_inf is None
+    assert result.tmax_h == 0.0
+
+
+def test_regimen_scope_failures() -> None:
+    with pytest.raises(ValidationError, match="dosing_interval"):
+        _iv_request(n_doses=2)
+    with pytest.raises(ValidationError, match="dosing_interval"):
+        _iv_request(steady_state=True)
+    with pytest.raises(ValidationError, match="n_doses must stay 1"):
+        _iv_request(steady_state=True, n_doses=3, dosing_interval=8.0, dosing_interval_unit="h")
+    with pytest.raises(AnalysisError, match="shorter than the dosing interval"):
+        simulate_exposure(
+            ExposureSimulationRequest.model_validate(
+                {
+                    "simulation_id": "SIM-OVERLAP",
+                    "context_of_use": "Research request whose infusion lasts longer than the dosing interval.",
+                    "model_id": "one_compartment_iv_infusion",
+                    "dose": 1.0,
+                    "dose_unit": "mg",
+                    "clearance": 0.2,
+                    "clearance_unit": "L/h",
+                    "volume": 1.0,
+                    "volume_unit": "L",
+                    "infusion_duration": 2.0,
+                    "infusion_duration_unit": "h",
+                    "dosing_interval": 1.0,
+                    "dosing_interval_unit": "h",
+                    "n_doses": 2,
+                    "times_h": [0, 1],
+                }
+            )
+        )
+    with pytest.raises(AnalysisError, match="one dosing interval"):
+        simulate_exposure(
+            _iv_request(
+                steady_state=True,
+                dosing_interval=2.0,
+                dosing_interval_unit="h",
+                times_h=[0, 3],
+                threshold_concentration=None,
+                threshold_unit=None,
+            )
+        )

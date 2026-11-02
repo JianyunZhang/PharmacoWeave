@@ -25,8 +25,8 @@ def test_schema_version_defaults_match_the_package_constant() -> None:
     assert ToxEndpointSet.model_fields["schema_version"].default == SCHEMA_VERSION
     assert PredictionAuditReport.model_fields["schema_version"].default == SCHEMA_VERSION
     assert IngestMappingConfig.model_fields["schema_version"].default == SCHEMA_VERSION
-    assert ExposureSimulationResult.model_fields["schema_version"].default == "0.2.0"
-    assert EngineResponse.model_fields["schema_version"].default == "0.2.0"
+    assert ExposureSimulationResult.model_fields["schema_version"].default == "0.2.1"
+    assert EngineResponse.model_fields["schema_version"].default == "0.2.1"
 
 
 def test_committed_schemas_match_the_models(repo_root) -> None:

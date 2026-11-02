@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-11-02
+
+- **重复给药与稳态解析暴露（`simulation/exposure.py`）**：在 0.2.0 的单次给药解析解上，用线性叠加实现等剂量、等间隔的重复给药，并用闭式解实现稳态区间。覆盖一室静脉推注、恒速输注、血管外吸收和二室静脉推注。有限次数的 AUC∞ 等于次数乘以单次 AUC；稳态不报告 AUC∞，而报告一个给药间隔的 `auc_tau`（静脉为 Dose/CL，血管外为 Dose/(CL/F)）。稳态时间必须落在一个给药间隔内。输注时长大于或等于给药间隔时拒绝。输出仍是 `predicted`，不构成给药方案。个体间协方差、PBPK 和 QSP 继续拒绝。
+- **契约**：暴露模拟与引擎交换 Schema 升到 `0.2.1`。既有研究与结果包契约仍是 `0.1.0`。
+
 ## 0.2.0 — 2026-11-01
 
 - **探索性单次给药暴露区间（`simulation/exposure.py`）**：在已经验收的解析解上模拟一室静脉推注、一室恒速输注、一室血管外吸收和二室静脉推注。输出保持 `evidence_type="predicted"`，`constitutes_dosing_recommendation` 固定为 false。血管外给药只报告 `CL/F` 与 `V/F`。`ka < kel` 时终末半衰期记在 `ka` 上；`ka = kel` 时使用 Bateman 极限形式。可选的独立对数正态参数扰动给出 5/50/95 分位，并写明这不是置信区间、预测区间或治疗窗。重复给药、稳态、群体、PBPK 和 QSP 继续拒绝。`dosing_recommendation` 与 `human_starting_dose_from_simulation` 直接拒绝。

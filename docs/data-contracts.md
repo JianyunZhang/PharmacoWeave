@@ -1,6 +1,6 @@
 # 数据契约
 
-Schema 版本：研究、结果包和既有分析契约仍是 `0.1.0`。0.2.0 新增的暴露模拟与引擎交换契约是 `0.2.0`。Pydantic 模型是唯一真源，`schemas/` 是导出的 12 份 JSON Schema。重新生成：
+Schema 版本：研究、结果包和既有分析契约仍是 `0.1.0`。0.2.1 的暴露模拟与引擎交换契约是 `0.2.1`。Pydantic 模型是唯一真源，`schemas/` 是导出的 12 份 JSON Schema。重新生成：
 
 ```bash
 python -m pharmacoweave.schema_export
@@ -18,8 +18,8 @@ python -m pharmacoweave.schema_export
 - `schemas/toxicology_records.schema.json`（`ToxEndpointSet`）
 - `schemas/prediction_audit.schema.json`（`PredictionAuditReport`）
 - `schemas/ingest_mapping.schema.json`（`IngestMappingConfig`，声明式异构实验室表格映射契约）
-- `schemas/exposure_simulation.schema.json`（`ExposureSimulationResult`，探索性单次给药暴露模拟，契约 `0.2.0`）
-- `schemas/engine_exchange.schema.json`（`EngineResponse`，进程外参考引擎交换，契约 `0.2.0`）
+- `schemas/exposure_simulation.schema.json`（`ExposureSimulationResult`，单次、重复和稳态解析暴露，契约 `0.2.1`）
+- `schemas/engine_exchange.schema.json`（`EngineResponse`，进程外参考引擎交换，契约 `0.2.1`）
 
 ## 研究目录
 

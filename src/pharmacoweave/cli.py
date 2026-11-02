@@ -641,10 +641,15 @@ def _simulate(
 
     request = _load_simulation_request(input_json)
     result = simulate_exposure(request)
+    exposure = (
+        f"AUC_inf={result.auc_inf:.6g} {result.auc_unit}"
+        if result.auc_inf is not None
+        else f"AUC_tau={result.auc_tau:.6g} {result.auc_unit}"
+    )
     print(
-        f"{result.simulation_id}\tmodel={result.model_id}\t"
+        f"{result.simulation_id}\tmodel={result.model_id}\tregimen={result.regimen}\t"
         f"Cmax={result.cmax:.6g} {result.concentration_unit}\t"
-        f"AUC_inf={result.auc_inf:.6g} {result.auc_unit}\t"
+        f"{exposure}\t"
         f"evidence={result.evidence_type}\tdosing_recommendation=false"
     )
     if output is not None:
@@ -669,10 +674,15 @@ def _engine_run(input_json: Path, *, engine: str, output: Path | None) -> int:
     request = _load_simulation_request(input_json)
     response = run_backend(engine, request)
     result = response.result
+    exposure = (
+        f"AUC_inf={result.auc_inf:.6g} {result.auc_unit}"
+        if result.auc_inf is not None
+        else f"AUC_tau={result.auc_tau:.6g} {result.auc_unit}"
+    )
     print(
         f"{response.engine_name}\t{response.license_spdx}\tcopyleft={str(response.copyleft).lower()}\t"
         f"Cmax={result.cmax:.6g} {result.concentration_unit}\t"
-        f"AUC_inf={result.auc_inf:.6g} {result.auc_unit}\tdosing_recommendation=false"
+        f"{exposure}\tdosing_recommendation=false"
     )
     if output is not None:
         output.parent.mkdir(parents=True, exist_ok=True)

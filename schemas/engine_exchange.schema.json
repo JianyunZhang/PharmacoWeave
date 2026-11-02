@@ -27,7 +27,8 @@
             "peripheral_volume",
             "intercompartmental_clearance",
             "absorption_rate",
-            "infusion_duration"
+            "infusion_duration",
+            "dosing_interval"
           ],
           "title": "Role",
           "type": "string"
@@ -53,8 +54,8 @@
           "type": "string"
         },
         "schema_version": {
-          "const": "0.2.0",
-          "default": "0.2.0",
+          "const": "0.2.1",
+          "default": "0.2.1",
           "title": "Schema Version",
           "type": "string"
         },
@@ -156,8 +157,16 @@
           "type": "number"
         },
         "auc_inf": {
-          "title": "Auc Inf",
-          "type": "number"
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Inf"
         },
         "auc_inf_p05": {
           "anyOf": [
@@ -198,6 +207,105 @@
         "auc_last": {
           "title": "Auc Last",
           "type": "number"
+        },
+        "regimen": {
+          "default": "single_dose",
+          "enum": [
+            "single_dose",
+            "repeated_dose",
+            "steady_state"
+          ],
+          "title": "Regimen",
+          "type": "string"
+        },
+        "n_doses": {
+          "default": 1,
+          "title": "N Doses",
+          "type": "integer"
+        },
+        "dosing_interval_h": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dosing Interval H"
+        },
+        "auc_tau": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Tau"
+        },
+        "auc_tau_p05": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Tau P05"
+        },
+        "auc_tau_p50": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Tau P50"
+        },
+        "auc_tau_p95": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Tau P95"
+        },
+        "cmin": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cmin"
+        },
+        "accumulation_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accumulation Ratio"
         },
         "half_life_h": {
           "title": "Half Life H",
@@ -296,7 +404,6 @@
         "curve",
         "cmax",
         "tmax_h",
-        "auc_inf",
         "auc_last",
         "half_life_h",
         "terminal_rate_name",
@@ -373,8 +480,8 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "0.2.0",
-      "default": "0.2.0",
+      "const": "0.2.1",
+      "default": "0.2.1",
       "title": "Schema Version",
       "type": "string"
     },

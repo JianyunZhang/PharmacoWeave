@@ -1,6 +1,6 @@
 {
   "schema_name": "pharmacoweave-exposure-simulation-request",
-  "schema_version": "0.2.0",
+  "schema_version": "0.2.1",
   "simulation_id": "SIM-IV-BOLUS-QUIET",
   "context_of_use": "Research comparison of a declared one-compartment IV bolus curve against Dose/V and Dose/CL.",
   "model_id": "one_compartment_iv_bolus",

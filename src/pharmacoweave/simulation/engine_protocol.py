@@ -30,7 +30,7 @@ class EngineRequest(Record):
     """JSON file handed to the reference-engine subprocess."""
 
     schema_name: Literal["pharmacoweave-engine-request"] = "pharmacoweave-engine-request"
-    schema_version: Literal["0.2.0"] = "0.2.0"
+    schema_version: Literal["0.2.1"] = "0.2.1"
     engine: Literal["pharmacoweave-analytical"] = ANALYTICAL_ENGINE
     simulation: ExposureSimulationRequest
 
@@ -39,7 +39,7 @@ class EngineResponse(Record):
     """JSON file returned by the reference-engine subprocess."""
 
     schema_name: Literal["pharmacoweave-engine-exchange"] = "pharmacoweave-engine-exchange"
-    schema_version: Literal["0.2.0"] = "0.2.0"
+    schema_version: Literal["0.2.1"] = "0.2.1"
     engine_name: Literal["pharmacoweave-analytical"] = ANALYTICAL_ENGINE
     engine_version: str
     license_spdx: Literal["MIT"] = "MIT"

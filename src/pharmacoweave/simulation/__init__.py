@@ -1,4 +1,4 @@
-"""Exploratory single-dose exposure simulation.
+"""Exploratory single-dose, repeated-dose, and steady-state exposure simulation.
 
 Importing this module does not run an analysis and does not start an external engine.
 """

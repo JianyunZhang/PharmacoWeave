@@ -117,7 +117,7 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "simulation",
         "P4",
         "partial",
-        "Single-dose analytical exposure intervals with an explicit context of use. Not a dosing regimen.",
+        "Single-dose, repeated-dose, and steady-state analytical exposure intervals. Not a dosing regimen.",
     ),
 )
 
