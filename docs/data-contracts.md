@@ -1,6 +1,6 @@
 # 数据契约
 
-Schema 版本：研究、结果包和既有分析契约仍是 `0.1.0`。0.2.1 的暴露模拟与引擎交换契约是 `0.2.1`。Pydantic 模型是唯一真源，`schemas/` 是导出的 12 份 JSON Schema。重新生成：
+Schema 版本：研究、结果包和既有分析契约仍是 `0.1.0`。暴露模拟与引擎交换契约是 `0.2.2`，并仍接受 `0.2.1`。Pydantic 模型是唯一真源，`schemas/` 是导出的 19 份 JSON Schema。重新生成：
 
 ```bash
 python -m pharmacoweave.schema_export
@@ -13,14 +13,20 @@ python -m pharmacoweave.schema_export
 - `schemas/pharmacology_study.schema.json`（`PharmacologyStudy`）
 - `schemas/analysis_records.schema.json`（`AnalysisRecords`，含 PK 参数渐近标准误与置信区间字段）
 - `schemas/nca_config.schema.json`（`NcaConfig`，支持 `iv_bolus`、`iv_infusion`、`oral`、`subcutaneous`、`intramuscular` 单次连续采血设计）
+- `schemas/urine_nca_config.schema.json`（`UrineNcaConfig`，尿药排泄配置，契约 `0.1.0`）
 - `schemas/pd_records.schema.json`（`PdAnalysisRecords`，含 `EffectObservation`、`DirectEffectPair`、`EffectParameter`、`PredictedEffectRecord`）
 - `schemas/dmpk_records.schema.json`（`InVitroAdmeSet`，含 `PhysiologicalScalingParams` 与 `IviveClearancePrediction`）
 - `schemas/toxicology_records.schema.json`（`ToxEndpointSet`）
 - `schemas/prediction_audit.schema.json`（`PredictionAuditReport`）
 - `schemas/ingest_mapping.schema.json`（`IngestMappingConfig`，声明式异构实验室表格映射契约）
-- `schemas/exposure_simulation.schema.json`（`ExposureSimulationResult`，单次、重复和稳态解析暴露，契约 `0.2.1`）
-- `schemas/engine_exchange.schema.json`（`EngineResponse`，进程外参考引擎交换，契约 `0.2.1`）
+- `schemas/exposure_simulation.schema.json`（`ExposureSimulationResult`，单次、重复和稳态解析暴露，契约 `0.2.2`）
+- `schemas/engine_exchange.schema.json`（`EngineResponse`，进程外参考引擎交换，契约 `0.2.2`）
 - `schemas/caller_engine_run.schema.json`（`CallerEngineRun`，调用方进程外引擎槽的运行记录，契约 `0.1.0`）
+- `schemas/log_parameter_summary.schema.json`（`LogParameterSummary`，两阶段对数参数汇总，契约 `0.1.0`）
+- `schemas/physiology_table_check.schema.json`（`PhysiologyTableCheck`，通过的生理表校验，契约 `0.1.0`）
+- `schemas/turnover_simulation.schema.json`（`TurnoverSimulation`，线性周转闭式解，契约 `0.1.0`）
+- `schemas/steady_state_pbpk.schema.json`（`SteadyStatePbpk`，肝加一个组织的代数稳态，契约 `0.1.0`）
+- `schemas/population_result_table.schema.json`（`PopulationResultTable`，调用方群体结果表，契约 `0.1.0`）
 
 ## 研究目录
 

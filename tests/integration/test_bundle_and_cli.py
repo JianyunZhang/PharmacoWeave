@@ -159,7 +159,7 @@ def test_cli_validates_decouples_nca_fits_wnls_and_runs_emax(tmp_path, repo_root
     assert main(["capabilities"]) == 0
     text = capsys.readouterr().out
     assert "pk_nca" in text and "partial" in text
-    assert "pbpk" in text and "reserved" in text
+    assert "pbpk" in text and "partial" in text
     for name in ("pd_models", "pkpd", "dmpk", "toxicology"):
         line = next(item for item in text.splitlines() if item.startswith(name))
         assert "partial" in line

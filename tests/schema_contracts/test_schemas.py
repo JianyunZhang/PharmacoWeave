@@ -8,8 +8,13 @@ from pharmacoweave.core.provenance import ResultBundleManifest
 from pharmacoweave.diagnostics.prediction_audit import PredictionAuditReport
 from pharmacoweave.dmpk.records import InVitroAdmeSet
 from pharmacoweave.ingestion.mapping import IngestMappingConfig
+from pharmacoweave.pbpk.physiology_table import PhysiologyTableCheck
+from pharmacoweave.pbpk.steady_state import SteadyStatePbpk
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
+from pharmacoweave.population_pk.results import PopulationResultTable
+from pharmacoweave.population_pk.two_stage import LogParameterSummary
+from pharmacoweave.qsp.turnover import TurnoverSimulation
 from pharmacoweave.schema_export import CONTRACTS, json_schema
 from pharmacoweave.simulation.engine_protocol import EngineResponse
 from pharmacoweave.simulation.exposure import ExposureSimulationResult
@@ -27,6 +32,11 @@ def test_schema_version_defaults_match_the_package_constant() -> None:
     assert IngestMappingConfig.model_fields["schema_version"].default == SCHEMA_VERSION
     assert ExposureSimulationResult.model_fields["schema_version"].default == "0.2.2"
     assert EngineResponse.model_fields["schema_version"].default == "0.2.2"
+    assert LogParameterSummary.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert PhysiologyTableCheck.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert TurnoverSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert SteadyStatePbpk.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert PopulationResultTable.model_fields["schema_version"].default == SCHEMA_VERSION
 
 
 def test_committed_schemas_match_the_models(repo_root) -> None:

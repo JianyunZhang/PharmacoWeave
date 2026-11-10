@@ -1,0 +1,78 @@
+{
+  "additionalProperties": false,
+  "description": "Predicted steady-state concentrations. Physiological numbers remain assumptions.",
+  "properties": {
+    "evidence_grade": {
+      "const": "predicted",
+      "default": "predicted",
+      "title": "Evidence Grade",
+      "type": "string"
+    },
+    "clearance_name": {
+      "enum": [
+        "CL",
+        "CL/F"
+      ],
+      "title": "Clearance Name",
+      "type": "string"
+    },
+    "hepatic_clearance_l_h": {
+      "title": "Hepatic Clearance L H",
+      "type": "number"
+    },
+    "arterial_concentration_mg_l": {
+      "title": "Arterial Concentration Mg L",
+      "type": "number"
+    },
+    "liver_concentration_mg_l": {
+      "title": "Liver Concentration Mg L",
+      "type": "number"
+    },
+    "tissue_name": {
+      "title": "Tissue Name",
+      "type": "string"
+    },
+    "tissue_concentration_mg_l": {
+      "title": "Tissue Concentration Mg L",
+      "type": "number"
+    },
+    "assumption_sources": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumption Sources",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "constitutes_dosing_recommendation": {
+      "const": false,
+      "default": false,
+      "title": "Constitutes Dosing Recommendation",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "clearance_name",
+    "hepatic_clearance_l_h",
+    "arterial_concentration_mg_l",
+    "liver_concentration_mg_l",
+    "tissue_name",
+    "tissue_concentration_mg_l",
+    "assumption_sources",
+    "limitations"
+  ],
+  "title": "SteadyStatePbpk",
+  "type": "object"
+}

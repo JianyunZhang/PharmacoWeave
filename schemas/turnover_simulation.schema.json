@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "TurnoverPoint": {
+      "additionalProperties": false,
+      "description": "One predicted response.",
+      "properties": {
+        "time_h": {
+          "title": "Time H",
+          "type": "number"
+        },
+        "response": {
+          "title": "Response",
+          "type": "number"
+        }
+      },
+      "required": [
+        "time_h",
+        "response"
+      ],
+      "title": "TurnoverPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A predicted turnover curve and its steady state kin/kout.",
+  "properties": {
+    "context_of_use": {
+      "minLength": 1,
+      "title": "Context Of Use",
+      "type": "string"
+    },
+    "evidence_grade": {
+      "const": "predicted",
+      "default": "predicted",
+      "title": "Evidence Grade",
+      "type": "string"
+    },
+    "kin": {
+      "title": "Kin",
+      "type": "number"
+    },
+    "kout": {
+      "title": "Kout",
+      "type": "number"
+    },
+    "r0": {
+      "title": "R0",
+      "type": "number"
+    },
+    "steady_state": {
+      "title": "Steady State",
+      "type": "number"
+    },
+    "curve": {
+      "items": {
+        "$ref": "#/$defs/TurnoverPoint"
+      },
+      "title": "Curve",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "constitutes_dosing_recommendation": {
+      "const": false,
+      "default": false,
+      "title": "Constitutes Dosing Recommendation",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "context_of_use",
+    "kin",
+    "kout",
+    "r0",
+    "steady_state",
+    "curve",
+    "limitations"
+  ],
+  "title": "TurnoverSimulation",
+  "type": "object"
+}

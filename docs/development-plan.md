@@ -2,7 +2,7 @@
 
 > **文档类型**：项目立项与技术架构设计（Markdown）  
 > **版本**：v0.1 — 2026-10-30；完成状态注记更新于 2026-11-10  
-> **项目状态**：仓库已建立。包名采用 PharmacoWeave。立项 Phase 0–3 已可运行。Phase 4 原文中的 PopPK、PBPK 与 QSP 未实现；收窄后的 Phase 4 切片完成至 0.2.5。对照表见 `docs/project-evaluation.md` 与 `docs/roadmap.md`。  
+> **项目状态**：仓库已建立。包名采用 PharmacoWeave。立项 Phase 0–3 已可运行。Phase 4 原文中的重型 PopPK、PBPK 与 QSP 未实现；收窄后的切片完成至 0.2.5，五项有限函数完成于 0.2.6。对照表见 `docs/project-evaluation.md` 与 `docs/roadmap.md`。  
 > **候选项目名**：**PharmacoWeave**（已采用的包名）或 **PharmaFoundry**（未采用）  
 > **建议定位**：*A Python Toolkit for Quantitative Pharmacology, DMPK, PK/PD Modeling and Translational Evidence*
 
@@ -536,7 +536,7 @@ pip install "pharmacoweave[reporting]"
 
 **原文验收**：形成引擎适配测试、数值交叉验证、版本兼容测试及明确的模型适用范围。
 
-**0.2.5 对照**：原文里的群体后验、PBPK 和 QSP 没有实现，`run_in_process` 继续拒绝。收窄后实际完成的是解析暴露模拟、等剂量等间隔重复给药与稳态、等剂量间隔 NCA、调用方给出的对数参数相关、一室恒速输注拟合、尿药排泄 NCA，以及调用方进程外引擎槽。nlmixr2 与 PK-Sim 只登记许可证，不作为内置后端启动。数值交叉验证只覆盖本包自己的解析解和已有冻结参考，不覆盖 NONMEM 或 PK-Sim。后续分期见 `docs/phase4-population-pbpk-qsp.md`。
+**0.2.6 对照**：原文里的群体后验、全身动态 PBPK 和 QSP 网络没有实现，`run_in_process` 继续拒绝。收窄后实际完成的是解析暴露模拟、等剂量等间隔重复给药与稳态、等剂量间隔 NCA、调用方给出的对数参数相关、一室恒速输注拟合、尿药排泄 NCA，以及调用方进程外引擎槽。0.2.6 另外完成两阶段对数参数汇总、显式生理表、线性周转闭式解、肝加一个组织的代数稳态，以及调用方群体结果表。nlmixr2 与 PK-Sim 只登记许可证，不作为内置后端启动。数值交叉验证只覆盖本包自己的解析解和已有冻结参考，不覆盖 NONMEM 或 PK-Sim。仍拒绝的算法见 `docs/phase4-population-pbpk-qsp.md` 第 6 节。
 
 ### 11.1 第一批 Issues / Milestones
 
@@ -554,9 +554,9 @@ pip install "pharmacoweave[reporting]"
 
 ### 11.2 仍拒绝的范围
 
-0.2.5 之前排定、并且写进路线图的功能已经完成，包括一室恒速输注拟合、尿药排泄 NCA 和调用方进程外引擎槽。新算法仍然先有失败用例和独立数值参考，再进入公开函数。
+0.2.6 之前排定、并且写进路线图的功能已经完成，包括一室恒速输注拟合、尿药排泄 NCA、调用方进程外引擎槽，以及五项有限函数。新算法仍然先有失败用例和独立数值参考，再进入公开函数。
 
-继续拒绝，直到 `docs/phase4-population-pbpk-qsp.md` 里对应一项的失败用例和数值参考写进测试：群体后验、全身动态 PBPK、QSP 网络、效应滞后和间接反应拟合。临床给药建议、隐式物种生理表、稀疏与破坏性采样、不等剂量或不等间隔，以及 SEND 或 21 CFR Part 11 符合性声明，仍不排进该计划。nlmixr2 与 PK-Sim 不写入依赖。
+继续拒绝，直到各自的失败用例和数值参考写进测试：群体后验、全身动态 PBPK、QSP 网络、效应滞后和间接反应拟合。临床给药建议、隐式物种生理表、稀疏与破坏性采样、不等剂量或不等间隔，以及 SEND 或 21 CFR Part 11 符合性声明，仍不排进该计划。nlmixr2 与 PK-Sim 不写入依赖。
 
 ---
 

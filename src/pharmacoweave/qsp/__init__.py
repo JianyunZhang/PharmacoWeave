@@ -1,12 +1,21 @@
-"""Quantitative systems pharmacology models are not implemented.
+"""One linear turnover equation. Networks are not simulated.
 
-Importing this module does not run an analysis.
+``run_in_process`` still refuses a QSP network. ``simulate_linear_turnover``
+evaluates one supplied closed form and does not estimate parameters.
 """
 
 from pharmacoweave.core.roadmap import status
 from pharmacoweave.errors import PlannedCapabilityError
+from pharmacoweave.qsp.turnover import TurnoverSimulation, simulate_linear_turnover
 
 STATUS = status("qsp")
+
+__all__ = [
+    "STATUS",
+    "TurnoverSimulation",
+    "run_in_process",
+    "simulate_linear_turnover",
+]
 
 
 def run_in_process(*_args: object, **_kwargs: object) -> None:
@@ -15,5 +24,8 @@ def run_in_process(*_args: object, **_kwargs: object) -> None:
     raise PlannedCapabilityError(
         module="qsp",
         phase="P4",
-        detail="QSP simulation is not implemented. The executable simulator covers analytical single-dose PK only.",
+        detail=(
+            "QSP networks are not implemented. simulate_linear_turnover evaluates one supplied "
+            "linear turnover equation and does not estimate its parameters."
+        ),
     )

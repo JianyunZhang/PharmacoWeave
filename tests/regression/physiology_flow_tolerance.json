@@ -1,0 +1,6 @@
+{
+  "reference_id": "physiology_flow_tolerance_v1",
+  "computed_with": "Balance holds when abs(flow sum - cardiac output) is at most max(1e-6 * max(abs(flow sum), abs(cardiac output)), 1e-9), after conversion to L/h. This file was not produced by importing PharmacoWeave.",
+  "relative_tolerance": 1e-6,
+  "absolute_tolerance": 1e-9
+}

@@ -1,6 +1,6 @@
 # 架构
 
-PharmacoWeave 0.2.5 是一个研究用的定量药理学数据、统计估计与证据工具包。计算模块依赖 `core`；`core` 在模块顶层不依赖任何分析业务包。集成模块导出证据、校准跨尺度时序并做文件级守卫，不导入其他 Weave 项目或外部 GPL/专有求解器。内置可执行后端只有本包自己的 MIT 解析参考引擎。调用方另给可执行文件、版本和许可证文本时，可以单独启动该文件并记录哈希。
+PharmacoWeave 0.2.6 是一个研究用的定量药理学数据、统计估计与证据工具包。计算模块依赖 `core`；`core` 在模块顶层不依赖任何分析业务包。集成模块导出证据、校准跨尺度时序并做文件级守卫，不导入其他 Weave 项目或外部 GPL/专有求解器。内置可执行后端只有本包自己的 MIT 解析参考引擎。调用方另给可执行文件、版本和许可证文本时，可以单独启动该文件并记录哈希。
 
 ```mermaid
 flowchart TB
@@ -20,8 +20,10 @@ flowchart TB
         diagnostics[diagnostics SVG 诊断与先验预测审计]
         reporting[reporting HTML + 5 类原生 SVG]
         simulation[simulation 单次、重复与稳态解析暴露]
+        population[population_pk 两阶段汇总与结果表]
+        pbpk[pbpk 生理表与单组织稳态]
+        qsp[qsp 线性周转闭式解]
     end
-    reserved[population_pk / pbpk / qsp]
 
     ingestion --> core
     bioanalysis --> core
@@ -34,8 +36,10 @@ flowchart TB
     diagnostics --> core
     reporting --> core
     simulation --> core
+    population --> core
+    pbpk --> core
+    qsp --> core
     integrations --> core
-    reserved -.-> core
 ```
 
 ## 运行路径
@@ -80,6 +84,6 @@ flowchart TB
 
 ## 依赖方向
 
-允许：`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`pd_models`、`dmpk`、`toxicology`、`diagnostics`、`reporting` 依赖 `core`。`pkpd` 依赖 `pd_models`。`simulation` 依赖 `pk_models` 里已经验收的解析解。`integrations` 依赖 `core` 和这些记录的公开类型，用来写出证据，并通过子进程调用 `pharmacoweave-analytical`。
+允许：`ingestion`、`bioanalysis`、`pk_nca`、`pk_models`、`pd_models`、`dmpk`、`toxicology`、`diagnostics`、`reporting`、`population_pk`、`pbpk`、`qsp` 依赖 `core`。`pkpd` 依赖 `pd_models`。`simulation` 依赖 `pk_models` 里已经验收的解析解。`integrations` 依赖 `core` 和这些记录的公开类型，用来写出证据，并通过子进程调用 `pharmacoweave-analytical`。`population_pk.run_in_process`、`pbpk.run_in_process` 和 `qsp.run_in_process` 仍拒绝 NLME、全身动态 PBPK 和 QSP 网络。
 
 不允许：`core` 在模块顶层依赖上述业务包；任何模块导入 OmicsWeave、TheraWeave、EphysWeave、PKNCA、nlmixr2、PK-Sim 或 NONMEM。

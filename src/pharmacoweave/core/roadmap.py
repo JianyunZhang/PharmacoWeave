@@ -102,20 +102,22 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
     ModuleStatus(
         "population_pk",
         "P2",
-        "reserved",
-        "In-process NLME is refused. nlmixr2 is catalogued as copyleft and is not imported or launched.",
+        "partial",
+        "Two-stage geometric means of finished individual estimates, plus a reader for caller-supplied "
+        "population tables. In-process NLME is refused. nlmixr2 is not imported or launched.",
     ),
     ModuleStatus(
         "pbpk",
         "P2",
-        "reserved",
-        "In-process PBPK is refused. PK-Sim is catalogued as copyleft and is not imported or launched.",
+        "partial",
+        "Caller-supplied physiology checks and algebraic steady state for liver plus one tissue. "
+        "Dynamic whole-body PBPK is refused. PK-Sim is not imported or launched.",
     ),
     ModuleStatus(
         "qsp",
         "P3",
-        "reserved",
-        "Quantitative systems pharmacology models are not simulated.",
+        "partial",
+        "Closed form for one linear turnover equation, evidence grade predicted. QSP networks are not simulated.",
     ),
     ModuleStatus(
         "simulation",

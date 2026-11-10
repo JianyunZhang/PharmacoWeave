@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "PopulationResultRow": {
+      "additionalProperties": false,
+      "description": "One row kept at the evidence grade the caller declared.",
+      "properties": {
+        "subject_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "parameter_name": {
+          "enum": [
+            "CL",
+            "V",
+            "CL/F",
+            "V/F"
+          ],
+          "title": "Parameter Name",
+          "type": "string"
+        },
+        "estimate": {
+          "title": "Estimate",
+          "type": "number"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "estimation_method": {
+          "minLength": 1,
+          "title": "Estimation Method",
+          "type": "string"
+        },
+        "evidence_grade": {
+          "enum": [
+            "estimated",
+            "predicted"
+          ],
+          "title": "Evidence Grade",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_id",
+        "parameter_name",
+        "estimate",
+        "unit",
+        "estimation_method",
+        "evidence_grade"
+      ],
+      "title": "PopulationResultRow",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A checked table. Reading it does not launch an external engine.",
+  "properties": {
+    "rows": {
+      "items": {
+        "$ref": "#/$defs/PopulationResultRow"
+      },
+      "title": "Rows",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "rows",
+    "limitations"
+  ],
+  "title": "PopulationResultTable",
+  "type": "object"
+}

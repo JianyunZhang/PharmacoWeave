@@ -1,0 +1,8 @@
+{
+  "reference_id": "two_stage_log_parameters_v1",
+  "computed_with": "Hand formula: geometric mean is exp(mean of ln estimates). Log variance uses the sample divisor n-1. This file was not produced by importing PharmacoWeave.",
+  "parameter_name": "CL",
+  "estimates_l_h": [0.05, 0.20],
+  "geometric_mean_l_h": 0.10,
+  "log_variance_expression": "[(ln 0.05 - ln 0.10)^2 + (ln 0.20 - ln 0.10)^2] / 1"
+}

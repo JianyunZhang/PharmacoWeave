@@ -148,6 +148,16 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 - **完整凭证才记录**：可执行文件、版本和许可证文本都存在时，结果保存这三项，以及可执行文件、请求和响应的 SHA-256。响应文本与子进程写出的字节一致，不解释成 PharmacoWeave 的估计。`constitutes_dosing_recommendation` 为 false。子进程退出码非 0 时不保存这条运行。
 - **内置后端不变**：同一测试要求 `supported_backends()` 仍是 `pharmacoweave-analytical`。`run_backend("nlmixr2")` 与 `run_backend("pk-sim")` 在启动子进程之前拒绝。既有 MIT 参考引擎对照见上文 0.2.0。
 
+## 0.2.6 群体汇总、生理表、周转模型和单组织稳态
+
+- **两阶段汇总**：`tests/regression/two_stage_log_parameters.json` 给出 0.05 与 0.20 L/h。几何均值是 0.10 L/h。对数方差按 `[(ln 0.05 − ln 0.10)^2 + (ln 0.20 − ln 0.10)^2] / 1` 手算。`summarize_log_parameters` 与该手算的相对误差不超过 **1e-12**。混合 `CL` 与 `CL/F`、混合 `V` 与 `V/F`、少于两名受试者、同一参数内受试者重复、非正估计、缺估计或错误量纲时拒绝。其中一组失败时，整次调用不返回任何均值。标准误可以随行保存；1e-6 与 50 的标准误不改变几何均值或对数方差。
+- **单位**：`tests/regression/two_stage_canonical_units.json` 把 1 与 4 mL/min 写成 0.06 与 0.24 L/h，几何均值 0.12 L/h；把 500 与 2000 mL 写成 0.5 与 2 L，几何均值 1 L。对数方差是 `2·(ln 2)^2`。相对误差不超过 **1e-12**。
+- **生理表**：流量总和不等于心输出量时拒绝。体积为 0、分配系数缺失，或来源说明短于 3 个字符时，记录无法建成。通过的 `PhysiologyTableCheck` 没有浓度、AUC 或清除率字段。重复组织名拒绝。`tests/regression/physiology_flow_tolerance.json` 把平衡容差定为相对 1e-6、绝对 1e-9：落在容差内的流量通过，超出容差的流量拒绝。相对容差用心输出量 2 L/h 检查，绝对容差用心输出量 1e-6 L/h 检查。
+- **周转模型**：`tests/regression/linear_turnover.json` 取 kin = 2、kout = 1、R0 = 0。稳态是 2。`R(0) = 0`。`R(1)` 对照 `(kin/kout)·(1−e^{−kout})`，相对误差不超过 **1e-12**。非正速率、负的 R0、时间不递增，或 `estimate_parameters=True` 时拒绝。
+- **单组织稳态**：`tests/regression/steady_state_one_tissue.json` 取肝血流 1 L/h、另一组织血流 1 L/h、心输出量 2 L/h、CLint = 1 L/h、输入速率 1 mg/h、Kp_liver = 1、Kp_tissue = 2。肝清除率 0.5 L/h，动脉 2 mg/L，肝 1 mg/L，另一组织 4 mg/L。相对误差不超过 **1e-12**。`time_course=True`、组织不是正好两个，或没有名为 `liver` 的组织时拒绝。
+- **群体结果表**：缺列、把 `CL/F` 标成 `CL`、证据等级为 `observed`、把 `predicted` 改标成 `estimated`，或出现 `dosing_recommendation` / `constitutes_dosing_recommendation` 时拒绝。读取过程把 `subprocess.run` 换成会失败的探针，探针不被调用。
+- **重型算法仍拒绝**：`population_pk`、`pbpk`、`qsp` 的 `run_in_process` 仍抛出 `PlannedCapabilityError`。这三个包的源码不导入 nlmixr2、rpy2、PK-Sim、NONMEM 或 MoBi。
+
 ## 明确不做的符合性声明
 
 字段设计参考 ICH M10 的定量限和 QC 概念，以及 ICH M15 的 question of interest 与 context of use。测试通过不等于生物分析方法学验证，也不等于 MIDD 证据已经被监管机构接受。CDISC SEND 导出、21 CFR Part 11 审计追踪和人类受试者访问控制不在本版本。

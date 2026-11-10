@@ -1,0 +1,10 @@
+{
+  "reference_id": "linear_turnover_v1",
+  "computed_with": "Hand formula for dR/dt = kin - kout*R with R0=0: R(t)=(kin/kout)*(1-exp(-kout*t)). Steady state is kin/kout. This file was not produced by importing PharmacoWeave.",
+  "kin": 2,
+  "kout": 1,
+  "r0": 0,
+  "times_h": [0, 1],
+  "steady_state": 2,
+  "response_at_0": 0
+}

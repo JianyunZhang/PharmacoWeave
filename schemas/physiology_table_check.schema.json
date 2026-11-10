@@ -1,0 +1,142 @@
+{
+  "$defs": {
+    "PhysiologyTable": {
+      "additionalProperties": false,
+      "description": "Explicit physiology for one request. No species default is applied.",
+      "properties": {
+        "body_weight_kg": {
+          "exclusiveMinimum": 0,
+          "title": "Body Weight Kg",
+          "type": "number"
+        },
+        "body_weight_source": {
+          "minLength": 3,
+          "title": "Body Weight Source",
+          "type": "string"
+        },
+        "cardiac_output": {
+          "exclusiveMinimum": 0,
+          "title": "Cardiac Output",
+          "type": "number"
+        },
+        "cardiac_output_unit": {
+          "minLength": 1,
+          "title": "Cardiac Output Unit",
+          "type": "string"
+        },
+        "cardiac_output_source": {
+          "minLength": 3,
+          "title": "Cardiac Output Source",
+          "type": "string"
+        },
+        "tissues": {
+          "items": {
+            "$ref": "#/$defs/TissuePhysiology"
+          },
+          "minItems": 1,
+          "title": "Tissues",
+          "type": "array"
+        }
+      },
+      "required": [
+        "body_weight_kg",
+        "body_weight_source",
+        "cardiac_output",
+        "cardiac_output_unit",
+        "cardiac_output_source",
+        "tissues"
+      ],
+      "title": "PhysiologyTable",
+      "type": "object"
+    },
+    "TissuePhysiology": {
+      "additionalProperties": false,
+      "description": "One tissue. Unlisted tissues are omitted rather than filled with zero.",
+      "properties": {
+        "tissue_name": {
+          "minLength": 1,
+          "title": "Tissue Name",
+          "type": "string"
+        },
+        "volume": {
+          "exclusiveMinimum": 0,
+          "title": "Volume",
+          "type": "number"
+        },
+        "volume_unit": {
+          "minLength": 1,
+          "title": "Volume Unit",
+          "type": "string"
+        },
+        "blood_flow": {
+          "exclusiveMinimum": 0,
+          "title": "Blood Flow",
+          "type": "number"
+        },
+        "blood_flow_unit": {
+          "minLength": 1,
+          "title": "Blood Flow Unit",
+          "type": "string"
+        },
+        "partition_coefficient": {
+          "exclusiveMinimum": 0,
+          "title": "Partition Coefficient",
+          "type": "number"
+        },
+        "partition_unit": {
+          "minLength": 1,
+          "title": "Partition Unit",
+          "type": "string"
+        },
+        "source": {
+          "minLength": 3,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tissue_name",
+        "volume",
+        "volume_unit",
+        "blood_flow",
+        "blood_flow_unit",
+        "partition_coefficient",
+        "partition_unit",
+        "source"
+      ],
+      "title": "TissuePhysiology",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A passed physiology check. This record has no concentration, AUC, or clearance.",
+  "properties": {
+    "table": {
+      "$ref": "#/$defs/PhysiologyTable"
+    },
+    "passed": {
+      "default": true,
+      "title": "Passed",
+      "type": "boolean"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "table",
+    "limitations"
+  ],
+  "title": "PhysiologyTableCheck",
+  "type": "object"
+}

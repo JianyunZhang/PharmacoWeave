@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.6 — 2026-11-10
+
+- **两阶段对数参数汇总（`summarize_log_parameters`）**：对调用方已经给出的个体 `CL` 与 `V`，或 `CL/F` 与 `V/F`，计算几何均值和对数尺度样本方差（分母 n−1）。标准误只保存，不作为权重。混合绝对参数与表观参数、少于两名受试者、同一参数内受试者重复、非正估计或量纲不符时，整次调用不给出均值。这不是 NLME 后验，也不是给药建议。
+- **显式生理表（`validate_physiology_table`）**：体重、心输出量、组织体积、血流量、分配系数和每项来源说明都由调用方给出。流量换算到 L/h 后必须与心输出量一致。通过校验的记录没有浓度、AUC 或清除率。不查物种表，未列出的组织不补零。
+- **线性周转闭式解（`simulate_linear_turnover`）**：`dR/dt = kin − kout·R`。证据等级是 `predicted`。`estimate_parameters=True`、非正速率或时间不严格递增时拒绝。曲线不连到临床终点。
+- **肝加一个组织的稳态代数解（`steady_state_one_tissue`）**：`fu = 1`。`CL = Q_liver · CLint / (Q_liver + CLint)`。请求时间过程、组织不是正好两个、或没有名为 `liver` 的组织时拒绝。清除率名称保持调用方声明的 `CL` 或 `CL/F`。
+- **调用方群体结果表（`load_population_result_table`）**：核对受试者、参数名、估计、单位、估计方法和证据等级。证据等级只保留 `estimated` 或 `predicted`。`source_parameter_name` 或 `source_evidence_grade` 与声明字段不一致时拒绝整张表。读入不创建子进程。
+- **验收补齐**：混合 `V` 与 `V/F`、一组失败则整次无均值、标准误不改变几何均值、`mL/min` 与 `mL` 换到约定单位、流量相对容差 1e-6 与绝对容差 1e-9、缺少名为 `liver` 的组织、证据等级被改标、出现 `constitutes_dosing_recommendation`，以及负的 `R0`，都有失败用例或手算参考。
+- **仍然拒绝**：`population_pk`、`pbpk`、`qsp` 的 `run_in_process` 继续拒绝进程内 FOCE、SAEM、MCMC、全身动态 PBPK 和 QSP 网络。这三个模块的执行状态改为 `partial`。nlmixr2 与 PK-Sim 仍不导入、不按名字启动。暴露模拟与引擎交换契约保持 `0.2.2`。新增五份结果契约，`schemas/` 共 19 份，研究契约仍是 `0.1.0`。
+
 ## 0.2.5 — 2026-11-10
 
 - **调用方进程外引擎槽（`run_caller_engine`）**：可执行文件、版本字符串和许可证文本三者都在时，才启动子进程。结果记录这三项、可执行文件 SHA-256、请求 SHA-256 和响应 SHA-256。缺任何一项则不创建子进程。子进程输出按原样保存，不解释成 PharmacoWeave 的估计。命令是 `pharmacoweave engine-slot`。

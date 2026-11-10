@@ -1,0 +1,13 @@
+{
+  "reference_id": "two_stage_canonical_units_v1",
+  "computed_with": "Hand conversion. 1 mL = 0.001 L and 1 min = 1/60 h, so 1 mL/min = 0.06 L/h. 1000 mL = 1 L. Geometric mean is exp(mean of ln). Log variance uses divisor n-1. This file was not produced by importing PharmacoWeave.",
+  "clearance_estimates": [1, 4],
+  "clearance_unit": "mL/min",
+  "clearance_canonical_l_h": [0.06, 0.24],
+  "clearance_geometric_mean_l_h": 0.12,
+  "volume_estimates": [500, 2000],
+  "volume_unit": "mL",
+  "volume_canonical_l": [0.5, 2.0],
+  "volume_geometric_mean_l": 1.0,
+  "log_variance_expression": "2 * (ln 2)^2"
+}

@@ -1,0 +1,56 @@
+{
+  "additionalProperties": false,
+  "description": "Geometric mean and log-scale sample variance for one parameter name.",
+  "properties": {
+    "parameter_name": {
+      "enum": [
+        "CL",
+        "V",
+        "CL/F",
+        "V/F"
+      ],
+      "title": "Parameter Name",
+      "type": "string"
+    },
+    "n_subjects": {
+      "minimum": 2,
+      "title": "N Subjects",
+      "type": "integer"
+    },
+    "geometric_mean": {
+      "title": "Geometric Mean",
+      "type": "number"
+    },
+    "log_variance": {
+      "title": "Log Variance",
+      "type": "number"
+    },
+    "unit": {
+      "title": "Unit",
+      "type": "string"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "parameter_name",
+    "n_subjects",
+    "geometric_mean",
+    "log_variance",
+    "unit",
+    "limitations"
+  ],
+  "title": "LogParameterSummary",
+  "type": "object"
+}

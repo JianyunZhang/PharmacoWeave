@@ -1,0 +1,15 @@
+{
+  "reference_id": "steady_state_one_tissue_v1",
+  "computed_with": "Hand arithmetic with fu=1. CL = Q_liver * CLint / (Q_liver + CLint). Arterial = rate / CL. Liver = Kp_liver * arterial * Q_liver / (Q_liver + CLint). Tissue = Kp_tissue * arterial. This file was not produced by importing PharmacoWeave or PK-Sim.",
+  "cardiac_output_l_h": 2,
+  "liver_blood_flow_l_h": 1,
+  "tissue_blood_flow_l_h": 1,
+  "hepatic_intrinsic_clearance_l_h": 1,
+  "input_rate_mg_h": 1,
+  "kp_liver": 1,
+  "kp_tissue": 2,
+  "hepatic_clearance_l_h": 0.5,
+  "arterial_concentration_mg_l": 2,
+  "liver_concentration_mg_l": 1,
+  "tissue_concentration_mg_l": 4
+}

@@ -16,9 +16,14 @@ from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.diagnostics.prediction_audit import PredictionAuditReport
 from pharmacoweave.dmpk.records import InVitroAdmeSet
 from pharmacoweave.ingestion.mapping import IngestMappingConfig
+from pharmacoweave.pbpk.physiology_table import PhysiologyTableCheck
+from pharmacoweave.pbpk.steady_state import SteadyStatePbpk
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.pk_nca.urine import UrineNcaConfig
+from pharmacoweave.population_pk.results import PopulationResultTable
+from pharmacoweave.population_pk.two_stage import LogParameterSummary
+from pharmacoweave.qsp.turnover import TurnoverSimulation
 from pharmacoweave.simulation.engine_protocol import CallerEngineRun, EngineResponse
 from pharmacoweave.simulation.exposure import ExposureSimulationResult
 from pharmacoweave.toxicology.records import ToxEndpointSet
@@ -38,6 +43,11 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "exposure_simulation.schema.json": ExposureSimulationResult,
     "engine_exchange.schema.json": EngineResponse,
     "caller_engine_run.schema.json": CallerEngineRun,
+    "log_parameter_summary.schema.json": LogParameterSummary,
+    "physiology_table_check.schema.json": PhysiologyTableCheck,
+    "turnover_simulation.schema.json": TurnoverSimulation,
+    "steady_state_pbpk.schema.json": SteadyStatePbpk,
+    "population_result_table.schema.json": PopulationResultTable,
 }
 
 
