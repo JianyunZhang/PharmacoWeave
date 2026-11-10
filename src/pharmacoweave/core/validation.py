@@ -108,6 +108,7 @@ def validate_study(study: PharmacologyStudy, *, mode: str = "research") -> Valid
     _foreign_keys(study, issues)
     _doses(study, issues)
     _samples(study, issues)
+    _urine_collections(study, issues)
     _observations(study, issues)
     _identity(study, issues)
     _evidence(study, issues)
@@ -124,6 +125,7 @@ def _unique_ids(study: PharmacologyStudy, issues: list[ValidationIssue]) -> None
     _duplicates("dose_event", [item.dose_event_id for item in study.dose_events], issues)
     _duplicates("biosample", [item.sample_id for item in study.biosamples], issues)
     _duplicates("observation", [item.observation_id for item in study.observations], issues)
+    _duplicates("urine_collection", [item.collection_id for item in study.urine_collections], issues)
     _duplicates("identity_link", [item.link_id for item in study.identity_links], issues)
     _duplicates("evidence", [item.evidence_id for item in study.external_evidence], issues)
 
@@ -289,6 +291,57 @@ def _samples(study: PharmacologyStudy, issues: list[ValidationIssue]) -> None:
                 "time_since_dose does not match collection_time_absolute minus the dose time.",
                 "biosample",
                 sample.sample_id,
+            )
+
+
+def _urine_collections(study: PharmacologyStudy, issues: list[ValidationIssue]) -> None:
+    samples = {item.sample_id: item for item in study.biosamples}
+    linked: set[str] = set()
+    for collection in study.urine_collections:
+        if collection.sample_id in linked:
+            _add(
+                issues,
+                "error",
+                "urine_collection_duplicate_sample",
+                f"Sample {collection.sample_id} has more than one urine collection.",
+                "urine_collection",
+                collection.collection_id,
+            )
+        linked.add(collection.sample_id)
+        sample = samples.get(collection.sample_id)
+        if sample is None:
+            _missing(issues, "urine_collection", collection.collection_id, "sample_id", collection.sample_id)
+            continue
+        if sample.matrix != "urine":
+            _add(
+                issues,
+                "error",
+                "urine_collection_matrix",
+                f"Urine collection {collection.collection_id} is tied to matrix {sample.matrix}.",
+                "urine_collection",
+                collection.collection_id,
+            )
+            continue
+        if sample.is_predose:
+            _add(
+                issues,
+                "error",
+                "urine_collection_predose",
+                "A urine collection interval cannot end before the dose.",
+                "urine_collection",
+                collection.collection_id,
+            )
+            continue
+        start_h = convert(collection.interval_start_since_dose, collection.interval_start_unit, "h")
+        end_h = convert(sample.time_since_dose, sample.time_since_dose_unit, "h")
+        if end_h <= start_h:
+            _add(
+                issues,
+                "error",
+                "urine_collection_interval",
+                "The urine collection interval must end after it starts.",
+                "urine_collection",
+                collection.collection_id,
             )
 
 

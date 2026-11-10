@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.5 — 2026-11-10
+
+- **调用方进程外引擎槽（`run_caller_engine`）**：可执行文件、版本字符串和许可证文本三者都在时，才启动子进程。结果记录这三项、可执行文件 SHA-256、请求 SHA-256 和响应 SHA-256。缺任何一项则不创建子进程。子进程输出按原样保存，不解释成 PharmacoWeave 的估计。命令是 `pharmacoweave engine-slot`。
+- **内置后端不变**：`supported_backends()` 仍然只有 `pharmacoweave-analytical`。`run_backend("nlmixr2")` 与 `run_backend("pk-sim")` 在启动子进程之前拒绝。这两个引擎不进入依赖，包内也不重写 NONMEM 或 PK-Sim。
+
+## 0.2.4 — 2026-11-10
+
+- **尿药排泄 NCA（`run_urine_excretion`）**：单独配置 `analysis: urine_excretion`。区间排泄量是尿药浓度乘以记录的尿液体积。BLQ、超定量上限和缺失体积保持为空，不写成 0。只有全部区间都有排泄量且区间连续时才汇总总量。肾清除是该总量除以调用方给出的血浆 AUC，单位为 L/h，证据类型是 `renal_clearance`，不是血浆 `clearance`。
+- **与血浆 NCA 分开**：尿药浓度不进入血浆浓度–时间轮廓，也不使用血浆梯形积分。结果写入 `analysis/urine_excretion.parquet`。采集区间和体积在可选表 `urine_collections`；没有尿药采集时不写出该表。命令是 `pharmacoweave urine-nca`。
+
+## 0.2.3 — 2026-11-10
+
+- **一室恒速输注拟合（`fit_one_compartment_iv_infusion`）**：在已有闭式解 `iv_infusion_concentration` 上，用对数参数的 Levenberg–Marquardt 估计 `CL` 与 `V`，并给出渐近标准误和 95% 置信区间。权重仍是 `uniform`、`1/y`、`1/y^2`。不新写 ODE 求解器。参数语义是静脉 `CL` 与 `V`，不是 `CL/F`。
+- **失败时不输出清除率**：输注时长缺失或非正、时长不短于最后定量时间、输注后浓度不下降、或曲率不足以辨识两个参数时，诊断为失败，估计值为空。BLQ 不进入拟合，也不被写成 0。
+- **命令**：`pharmacoweave fit --model one_compartment_iv_infusion` 使用加权非线性最小二乘。对数线性方法只保留给静脉推注。
+
+## 0.2.2 — 2026-11-05
+
+- **等剂量、等间隔 NCA**：`repeated_equal` 计算最后一个由下一次给药闭合的间隔；两端都有定量点才报告 `AUC_tau`，缺端点不外推。该设计不把 Dose/AUC_tau 写成清除率。`steady_state` 由调用方声明该间隔已达稳态，此时静脉清除率是 Dose/AUC_tau，血管外是 Dose/(CL/F)。间隔内不报告 AUC∞。剂量不等、间隔不等、或输注时长不短于间隔时拒绝。配置 `multiple_dose` 仍然无效。
+- **对数参数相关矩阵**：模拟请求可以带 `parameter_correlation`（如 `clearance|volume`）。相关作用在对数参数尺度上，用 Cholesky 生成联合扰动。矩阵不正定或相关系数不在 (-1, 1) 时拒绝。未提供相关时，各参数仍独立抽样。这不是群体后验，也不是 NLME。
+
 ## 0.2.1 — 2026-11-02
 
 - **重复给药与稳态解析暴露（`simulation/exposure.py`）**：在 0.2.0 的单次给药解析解上，用线性叠加实现等剂量、等间隔的重复给药，并用闭式解实现稳态区间。覆盖一室静脉推注、恒速输注、血管外吸收和二室静脉推注。有限次数的 AUC∞ 等于次数乘以单次 AUC；稳态不报告 AUC∞，而报告一个给药间隔的 `auc_tau`（静脉为 Dose/CL，血管外为 Dose/(CL/F)）。稳态时间必须落在一个给药间隔内。输注时长大于或等于给药间隔时拒绝。输出仍是 `predicted`，不构成给药方案。个体间协方差、PBPK 和 QSP 继续拒绝。

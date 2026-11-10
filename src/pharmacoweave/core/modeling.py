@@ -7,6 +7,7 @@ different semantic labels.
 """
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import Field, model_validator
 
@@ -215,6 +216,17 @@ class NcaParameterSet(Record):
     volume_semantic: ParameterSemantic | None = None
     volume: float | None = None
     volume_unit: str | None = None
+    regimen: Literal["single_dose", "repeated_equal", "steady_state"] = "single_dose"
+    n_doses: int | None = Field(default=None, ge=1)
+    dosing_interval_h: float | None = Field(default=None, gt=0)
+    auc_tau: float | None = None
+    auc_tau_unit: str | None = None
+    cmin: float | None = None
+    cmin_unit: str | None = None
+    cavg: float | None = None
+    cavg_unit: str | None = None
+    fluctuation: float | None = None
+    accumulation_ratio: float | None = Field(default=None, gt=0)
     excluded_reason: str | None = None
     warnings: list[str] = Field(default_factory=list)
 
@@ -222,7 +234,12 @@ class NcaParameterSet(Record):
     def reporting_rules(self) -> "NcaParameterSet":
         _pair(self.auc_last, self.auc_last_unit, "auc_last", {AUC_MASS, AUC_AMOUNT})
         _pair(self.cmax, self.cmax_unit, "cmax", {CONC_MASS, CONC_AMOUNT})
-        _pair(self.tmax, self.tmax_unit, "tmax", {TIME})
+        if (self.tmax is None) != (self.tmax_unit is None):
+            raise ValueError("tmax requires both a value and a unit.")
+        if self.tmax is not None and self.tmax < 0:
+            raise ValueError("tmax must be >= 0 when it is reported.")
+        if self.tmax_unit is not None and parse_unit(self.tmax_unit).dimensions not in {TIME}:
+            raise ValueError(f"tmax unit {self.tmax_unit} has the wrong dimension.")
         if not self.terminal_phase_qualified:
             leaked = [
                 name
@@ -239,6 +256,16 @@ class NcaParameterSet(Record):
         _pair(self.auc_inf, self.auc_inf_unit, "auc_inf", {AUC_MASS, AUC_AMOUNT})
         _pair(self.lambda_z, self.lambda_z_unit, "lambda_z", {RATE})
         _pair(self.half_life, self.half_life_unit, "half_life", {TIME})
+        _pair(self.auc_tau, self.auc_tau_unit, "auc_tau", {AUC_MASS, AUC_AMOUNT})
+        _pair(self.cmin, self.cmin_unit, "cmin", {CONC_MASS, CONC_AMOUNT})
+        _pair(self.cavg, self.cavg_unit, "cavg", {CONC_MASS, CONC_AMOUNT})
+        if self.regimen == "single_dose" and any(
+            value is not None
+            for value in (self.auc_tau, self.cmin, self.cavg, self.fluctuation, self.dosing_interval_h, self.n_doses)
+        ):
+            raise ValueError("Interval NCA fields are only recorded for repeated_equal or steady_state.")
+        if self.regimen == "repeated_equal" and self.clearance is not None:
+            raise ValueError("Dose/AUC_tau clearance is recorded only when the interval is declared steady_state.")
         if self.auc_inf is not None and self.auc_inf_extrap_fraction is None:
             raise ValueError("auc_inf requires auc_inf_extrap_fraction.")
         if self.clearance is not None or self.clearance_semantic is not None or self.clearance_unit is not None:

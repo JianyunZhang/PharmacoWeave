@@ -48,6 +48,8 @@ def render_validation_report(
         fit_banner = ""
     elif model_ids == {"one_compartment_iv_bolus"}:
         fit_banner = "A one-compartment IV bolus fit was run."
+    elif model_ids == {"one_compartment_iv_infusion"}:
+        fit_banner = "A one-compartment constant-rate IV infusion fit was run."
     elif model_ids == {"one_compartment_extravascular"}:
         fit_banner = "A one-compartment extravascular fit was run."
     elif model_ids == {"two_compartment_iv_bolus"}:
@@ -101,6 +103,9 @@ def _nca_row(record: NcaParameterSet) -> dict[str, str]:
         "volume": "" if record.volume is None else f"{vz_label}={_fmt(record.volume)}",
         "cmax": _fmt(record.cmax),
         "tmax": _fmt(record.tmax),
+        "auc_tau": _fmt(record.auc_tau),
+        "cmin": _fmt(record.cmin),
+        "regimen": record.regimen,
     }
 
 

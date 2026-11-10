@@ -1,0 +1,23 @@
+{
+  "reference_id": "urine_excretion_quiet_v1",
+  "computed_with": "Hand arithmetic: amount = urine concentration (mg/L) times void volume (L). This file was not produced by importing PharmacoWeave or any NCA package. Urine concentration was not integrated with a plasma trapezoidal method.",
+  "intervals": [
+    {
+      "interval_start_h": 0,
+      "interval_end_h": 4,
+      "urine_concentration_mg_l": 10,
+      "urine_volume_l": 0.25,
+      "amount_excreted_mg": 2.5
+    },
+    {
+      "interval_start_h": 4,
+      "interval_end_h": 8,
+      "urine_concentration_mg_l": 4,
+      "urine_volume_l": 0.5,
+      "amount_excreted_mg": 2.0
+    }
+  ],
+  "amount_excreted_mg": 4.5,
+  "plasma_auc_mg_h_l": 9,
+  "renal_clearance_l_h": 0.5
+}

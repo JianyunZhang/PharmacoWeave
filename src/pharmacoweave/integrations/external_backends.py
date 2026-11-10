@@ -1,9 +1,10 @@
 """Out-of-process engine boundary.
 
-The only executable backend is ``pharmacoweave-analytical``, a MIT-licensed
-subprocess around the analytical exposure simulator. nlmixr2 and PK-Sim stay
-in the catalog so their copyleft licenses are recorded, and neither is imported
-or launched.
+The only built-in executable backend is ``pharmacoweave-analytical``, a
+MIT-licensed subprocess around the analytical exposure simulator. nlmixr2 and
+PK-Sim stay in the catalog so their copyleft licenses are recorded, and neither
+is imported or launched. A separate slot can start one caller-supplied
+executable after that file, a version string, and license text are all present.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from pharmacoweave.errors import AnalysisError, PlannedCapabilityError
 from pharmacoweave.simulation.engine_protocol import (
     ANALYTICAL_ENGINE,
     ENGINE_CATALOG,
+    CallerEngineRun,
     EngineCatalogEntry,
     EngineRequest,
     EngineResponse,
@@ -97,3 +99,79 @@ def run_backend(
     ):
         raise AnalysisError("Engine response failed the PharmacoWeave exchange contract.")
     return response
+
+
+_MAX_RESPONSE_BYTES = 2_000_000
+_CALLER_LIMITATIONS = (
+    "Research use only. The child response is stored as returned and is not a PharmacoWeave estimate.",
+    "The license text was supplied by the caller and was not reviewed by this package.",
+    "This slot does not import or vendor nlmixr2, PK-Sim, or NONMEM.",
+    "pharmacoweave-analytical remains the only built-in executable backend.",
+    "The run is not a dosing recommendation.",
+)
+
+
+def run_caller_engine(
+    executable: str | Path,
+    request_text: str,
+    *,
+    engine_version: str,
+    license_text: str,
+    timeout_s: float = 60.0,
+) -> CallerEngineRun:
+    """Start one caller-supplied executable when its file, version, and license text exist.
+
+    The child receives the request path and the response path as its two arguments.
+    A missing file, a blank version, or a blank license raises before any subprocess.
+    """
+
+    version = engine_version.strip()
+    if not version or not license_text.strip():
+        raise AnalysisError(
+            "A caller engine starts only when the executable file, version, and license text are all present."
+        )
+    selected = Path(executable)
+    if not selected.is_file() or selected.stat().st_size <= 0:
+        raise AnalysisError(
+            "A caller engine starts only when the executable file, version, and license text are all present."
+        )
+    file_bytes = selected.read_bytes()
+    file_hash = hashlib.sha256(file_bytes).hexdigest()
+    request_bytes = request_text.encode("utf-8")
+    request_hash = hashlib.sha256(request_bytes).hexdigest()
+    try:
+        with tempfile.TemporaryDirectory(prefix="pharmacoweave-caller-engine-") as folder:
+            root = Path(folder)
+            request_path = root / "caller_request.txt"
+            response_path = root / "caller_response.txt"
+            request_path.write_bytes(request_bytes)
+            completed = subprocess.run(
+                [str(selected), str(request_path), str(response_path)],
+                check=False,
+                capture_output=True,
+                timeout=timeout_s,
+            )
+            if completed.returncode != 0 or not response_path.is_file():
+                detail = (completed.stderr or completed.stdout or b"no caller engine response").decode(
+                    "utf-8", errors="replace"
+                )
+                raise AnalysisError(f"Caller engine exited {completed.returncode}: {detail.strip()[:2000]}")
+            raw_response = response_path.read_bytes()
+    except subprocess.TimeoutExpired as exc:
+        raise AnalysisError(f"Caller engine exceeded {timeout_s} seconds.") from exc
+    if len(raw_response) > _MAX_RESPONSE_BYTES:
+        raise AnalysisError("Caller engine response exceeds the stored text limit.")
+    try:
+        response_text = raw_response.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise AnalysisError("Caller engine response is not UTF-8 text.") from exc
+    return CallerEngineRun(
+        executable=str(selected.resolve()),
+        engine_version=version,
+        license_text=license_text,
+        executable_sha256=file_hash,
+        request_sha256=request_hash,
+        response_sha256=hashlib.sha256(raw_response).hexdigest(),
+        response_text=response_text,
+        limitations=list(_CALLER_LIMITATIONS),
+    )

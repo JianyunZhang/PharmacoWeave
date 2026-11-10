@@ -159,7 +159,7 @@ class ExposureSimulationRequest(Record):
     """
 
     schema_name: Literal["pharmacoweave-exposure-simulation-request"] = "pharmacoweave-exposure-simulation-request"
-    schema_version: Literal["0.2.1"] = "0.2.1"
+    schema_version: Literal["0.2.1", "0.2.2"] = "0.2.2"
     simulation_id: Identifier
     context_of_use: str = Field(min_length=16)
     model_id: AnalyticalModel
@@ -192,6 +192,7 @@ class ExposureSimulationRequest(Record):
     threshold_concentration: PositiveFloat | None = None
     threshold_unit: str | None = None
     parameter_cvs: dict[str, FiniteFloat] = Field(default_factory=dict)
+    parameter_correlation: dict[str, FiniteFloat] = Field(default_factory=dict)
     n_draws: int = Field(default=0, ge=0, le=_MAX_DRAWS)
     seed: int | None = None
     molecular_weight: PositiveFloat | None = None
@@ -222,6 +223,9 @@ class ExposureSimulationRequest(Record):
         for name, cv in self.parameter_cvs.items():
             if not 0.0 < cv <= _MAX_CV:
                 raise ValueError(f"parameter_cvs[{name}] must be in (0, {_MAX_CV}].")
+        _parse_correlation(self.parameter_correlation, set(self.parameter_cvs))
+        if self.parameter_correlation and not self.parameter_cvs:
+            raise ValueError("parameter_correlation requires parameter_cvs.")
         if self.n_draws == 0 and self.parameter_cvs:
             raise ValueError("parameter_cvs requires n_draws >= 40 and a seed.")
         if 0 < self.n_draws < _MIN_DRAWS:
@@ -264,7 +268,7 @@ class ExposureSimulationResult(Record):
     """Predicted exposure summary. ``evidence_type`` stays predicted."""
 
     schema_name: Literal["pharmacoweave-exposure-simulation"] = "pharmacoweave-exposure-simulation"
-    schema_version: Literal["0.2.1"] = "0.2.1"
+    schema_version: Literal["0.2.1", "0.2.2"] = "0.2.2"
     simulation_id: Identifier
     model_id: AnalyticalModel
     context_of_use: str
@@ -695,8 +699,13 @@ def _assumptions(request: ExposureSimulationRequest, state: _State, regimen: _Re
     else:
         varied = ", ".join(f"{name} CV={cv:g}" for name, cv in sorted(request.parameter_cvs.items()))
         notes.append(
-            f"{request.n_draws} independent lognormal draws (seed {request.seed}) perturbed {varied}. "
-            "Parameters without a CV stayed fixed. Draws are independent, so this is not a covariance matrix."
+            f"{request.n_draws} lognormal draws (seed {request.seed}) perturbed {varied}. "
+            + (
+                "Correlation is on the log-parameter scale and is not a population posterior. "
+                if request.parameter_correlation
+                else "Draws are independent, so this is not a covariance matrix. "
+            )
+            + "Parameters without a CV stayed fixed."
         )
     return notes
 
@@ -1099,7 +1108,10 @@ def _uncertainty_bands(
 ) -> list[tuple[float, float, float]] | None:
     if request.n_draws == 0:
         return None
-    draws = [_perturb(state, request.parameter_cvs, request.seed, index) for index in range(request.n_draws)]
+    draws = [
+        _perturb(state, request.parameter_cvs, request.seed, index, request.parameter_correlation)
+        for index in range(request.n_draws)
+    ]
     bands: list[tuple[float, float, float]] = []
     for time_index in range(len(times)):
         samples = [_regimen_concentration(draw, times[time_index], regimen) for draw in draws]
@@ -1108,11 +1120,20 @@ def _uncertainty_bands(
 
 
 def _summary_band(request: ExposureSimulationRequest, state: _State, metric) -> tuple[float, float, float]:
-    draws = [_perturb(state, request.parameter_cvs, request.seed, index) for index in range(request.n_draws)]
+    draws = [
+        _perturb(state, request.parameter_cvs, request.seed, index, request.parameter_correlation)
+        for index in range(request.n_draws)
+    ]
     return _three_percentiles([metric(draw) for draw in draws])
 
 
-def _perturb(state: _State, cvs: dict[str, float], seed: int | None, index: int) -> _State:
+def _perturb(
+    state: _State,
+    cvs: dict[str, float],
+    seed: int | None,
+    index: int,
+    correlation: dict[str, float] | None = None,
+) -> _State:
     generator = random.Random((0 if seed is None else seed) * 1_000_003 + index + 1)
     drawn = state.copy()
     mapping = {
@@ -1125,12 +1146,74 @@ def _perturb(state: _State, cvs: dict[str, float], seed: int | None, index: int)
         "apparent_clearance": "clf_l_h",
         "apparent_volume": "vf_l",
     }
-    for name, cv in cvs.items():
+    names = sorted(cvs)
+    shocks = _correlated_standard_normals(names, correlation or {}, generator)
+    for name in names:
         attribute = mapping[name]
         point = getattr(drawn, attribute)
-        sigma = math.sqrt(math.log1p(cv * cv))
-        setattr(drawn, attribute, point * math.exp(sigma * generator.gauss(0.0, 1.0)))
+        sigma = math.sqrt(math.log1p(cvs[name] * cvs[name]))
+        setattr(drawn, attribute, point * math.exp(sigma * shocks[name]))
     return drawn
+
+
+def _parse_correlation(raw: dict[str, float], cv_names: set[str]) -> dict[tuple[str, str], float]:
+    parsed: dict[tuple[str, str], float] = {}
+    for key, value in raw.items():
+        parts = key.split("|")
+        if len(parts) != 2 or any(not part for part in parts):
+            raise ValueError("parameter_correlation keys must look like 'clearance|volume'.")
+        left, right = sorted(parts)
+        if left == right:
+            raise ValueError(f"parameter_correlation key {key!r} names one parameter twice.")
+        if left not in cv_names or right not in cv_names:
+            raise ValueError(f"parameter_correlation key {key!r} must name parameters that have a CV.")
+        if not -1.0 < value < 1.0:
+            raise ValueError(f"parameter_correlation[{key}] must lie in (-1, 1).")
+        pair = (left, right)
+        if pair in parsed and parsed[pair] != value:
+            raise ValueError(f"parameter_correlation repeats {left}|{right} with a different value.")
+        parsed[pair] = value
+    return parsed
+
+
+def _correlated_standard_normals(
+    names: list[str],
+    correlation: dict[str, float],
+    generator: random.Random,
+) -> dict[str, float]:
+    if not correlation:
+        return {name: generator.gauss(0.0, 1.0) for name in names}
+    parsed = _parse_correlation(correlation, set(names))
+    size = len(names)
+    matrix = [[1.0 if row == column else 0.0 for column in range(size)] for row in range(size)]
+    index = {name: position for position, name in enumerate(names)}
+    for (left, right), value in parsed.items():
+        matrix[index[left]][index[right]] = value
+        matrix[index[right]][index[left]] = value
+    factor = _cholesky(matrix)
+    independent = [generator.gauss(0.0, 1.0) for _ in names]
+    shocks: dict[str, float] = {}
+    for row, name in enumerate(names):
+        shocks[name] = sum(factor[row][column] * independent[column] for column in range(size))
+    return shocks
+
+
+def _cholesky(matrix: list[list[float]]) -> list[list[float]]:
+    size = len(matrix)
+    lower = [[0.0 for _ in range(size)] for _ in range(size)]
+    for row in range(size):
+        for column in range(row + 1):
+            summed = sum(lower[row][k] * lower[column][k] for k in range(column))
+            if row == column:
+                diagonal = matrix[row][row] - summed
+                if diagonal <= 1e-12:
+                    raise AnalysisError(
+                        "parameter_correlation is not positive definite on the log-parameter scale."
+                    )
+                lower[row][column] = math.sqrt(diagonal)
+            else:
+                lower[row][column] = (matrix[row][column] - summed) / lower[column][column]
+    return lower
 
 
 def _three_percentiles(values: list[float]) -> tuple[float, float, float]:

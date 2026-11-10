@@ -1,9 +1,9 @@
 # PharmacoWeave 项目设计评估与下一阶段实施方案
 
-> **文档版本**：v3.2  
-> **更新日期**：2026-11-02  
-> **适用版本**：PharmacoWeave 0.2.1 (重复给药与稳态解析暴露)  
-> **演进记录**：v1.0 基于 `0.0.1` 撰写；v2.0 升级至 `0.0.4` 基线；v2.1 升级至 `0.0.5` 基线；v2.2 记录 `0.0.6`（血管外/输注与二室模型）；v2.3 记录 `0.0.7`（蛋白结合与 IVIVE/预测审计）；v3.0 升级至 `0.1.0` 基线；v3.1 记录 `0.2.0` 的单次解析暴露和 MIT 参考引擎；本文 v3.2 记录 `0.2.1` 的等剂量重复给药与稳态闭式区间。
+> **文档版本**：v3.8  
+> **更新日期**：2026-11-10  
+> **适用版本**：PharmacoWeave 0.2.5  
+> **演进记录**：v1.0 基于 `0.0.1`；v2.x 记录至 `0.0.7`；v3.0 记录 `0.1.0`；v3.1–v3.3 记录 `0.2.0`–`0.2.2` 的功能落地；v3.4 记入 0.2.3 的一室恒速输注拟合；v3.5 记入 0.2.4 的尿药排泄 NCA；v3.6 记入 0.2.5 的调用方进程外引擎槽；v3.7 把立项 Phase 0–4 与已落地代码对照到 0.2.5；本文 v3.8 指向群体模型、PBPK 与 QSP 的分期计划。
 
 ---
 
@@ -11,14 +11,14 @@
 
 PharmacoWeave 定位为**面向定量药理学研究的数据模型与验证工具包（Research-use Quantitative Pharmacology Toolkit）**，旨在解决定量药理学实验数据孤岛、跨项目证据边界混乱、单位量纲失真、BLQ（低于定量限）处理不规范以及缺乏可复现审计追踪等核心痛点。
 
-### 综合评估结论（0.1.0 基线）
+### 综合评估结论（0.2.5 基线）
 
-1. **设计合理性：优秀（科学严谨度高，认识论护栏与轻量工程高度统一）**  
-   项目坚持“Research Use Only”定位、采用单向依赖的 Hub-and-Spoke 拓扑、构建封闭单位量纲词表、严格执行清除率与分布容积语义隔离（`CL` / `Vz` vs `CL/F` / `Vz/F`）与 BLQ 不可变审计，并建立了 5 级跨项目证据守卫。在不引入 `scipy`、`matplotlib` 或任何 copyleft 外部包的前提下，用标准库纯 Python 实现了静脉/输注/血管外 NCA、带阻尼 Levenberg–Marquardt 的一室/二室 PK 与直接/Sigmoid Emax 非线性最小二乘、$J^T W J$ 渐近不确定度推断、显式生理假设探索性 IVIVE、折叠误差校准审计、跨尺度电生理/组学对齐与原生矢量 SVG 诊断图。
-2. **实现情况：`0.1.0` 圆满闭环 Phase 3 全部组学/电生理时序对齐、声明式映射与结果包核验能力**  
-   打通了研究表观测（`effect` / `toxicity`）向强类型 `EffectObservation` / `ToxEndpoint` 的自动解析与桥接；实现了带严格审核通过身份链接（`review_status="accepted"`）、显式时间基准注册、时钟同步抖动（`sync_error_ms`）校验与“代谢通量绝非浓度”负向红线的跨尺度对齐（`integrations/alignment.py`）；支持声明式映射异构湿实验表格并完整保留原始文件 SHA-256 摘要（`ingest_mapping.yaml`）；交付离线结果包密码学完整性核验（`verify-bundle`）与跨运行结果包深度对比（`diff`）CLI 工具；导出并冻结第 10 份数据契约 `schemas/ingest_mapping.schema.json`。
-3. **重复给药和稳态已经有冻结参考；重型引擎和协方差仍不做**  
-   `0.2.1` 在已验收的解析模型上增加等剂量、等间隔的线性叠加和稳态区间。稳态报告 `auc_tau`，不报告无限时间 AUC。`nlmixr2`、PK-Sim、个体间协方差和给药建议仍然拒绝。
+1. **设计边界仍然成立**  
+   Research Use Only、单向 Hub-and-Spoke、封闭单位、`CL` 与 `CL/F` 隔离、BLQ 不改原值、预测与实测分层，这些决定继续约束后续实现。核心计算不引入 SciPy、Matplotlib 或 copyleft 引擎。
+2. **立项 Phase 0–3 已可运行；收窄后的 Phase 4 切片已到 0.2.5**  
+   可执行的是研究契约、单次与等剂量间隔 NCA、尿药排泄、已列出的房室和 Emax 拟合（含一室恒速输注的 `CL` 与 `V`）、显式假设 IVIVE、预测审计、跨尺度对齐、声明式映射、结果包核验、解析暴露模拟，以及调用方进程外引擎槽。`schemas/` 现有 14 份契约。`population_pk`、`pbpk` 和 `qsp` 仍是预留模块。
+3. **原 Phase 4 的重型引擎没有打开**  
+   立项里的群体后验、PBPK 和 QSP 计算仍然拒绝。内置可执行后端只有 MIT 解析参考引擎。调用方引擎槽只在可执行文件、版本和许可证文本都存在时启动，不把 nlmixr2 或 PK-Sim 写进依赖。临床给药建议和隐式生理表继续拒绝。
 
 ---
 
@@ -30,7 +30,7 @@ flowchart TB
         OW["OmicsWeave<br/>(组学机制 / 代谢通量)"]
         TW["TheraWeave<br/>(候选靶点 / predicted ADMET / 先验审计)"]
         EW["EphysWeave<br/>(电生理表型 / sync_error_ms)"]
-        PW["PharmacoWeave 0.1.0<br/>(实测药理 / 多给药途径 NCA / 1c-2c PK-PD / IVIVE / 跨尺度时序对齐 / Bundle 核验)"]
+        PW["PharmacoWeave 0.2.5<br/>(NCA / 尿药排泄 / 房室与 Emax / 输注拟合 / IVIVE / 对齐 / 解析模拟 / 调用方引擎槽)"]
     end
 
     OW -->|"通量与生物证据 (禁标为浓度)"| PW
@@ -41,7 +41,7 @@ flowchart TB
     subgraph InternalArch ["PharmacoWeave 内部 Hub-and-Spoke 架构"]
         direction TB
         Ingestion["ingestion / bioanalysis<br/>(表格读写 / 声明式 YAML 映射 / 派生观测表)"] --> Core["core 领域核心<br/>(实体 / 封闭单位 / 观测桥接 / 平行样聚合 / Bundle 核验与 Diff)"]
-        PK["pk_nca / pk_models<br/>(IV·输注·血管外 NCA / 1c IV·EV & 2c IV + 95% CI)"] --> Core
+        PK["pk_nca / pk_models<br/>(IV·输注·血管外 NCA / 1c IV·输注·EV & 2c IV + 95% CI)"] --> Core
         PD["pd_models / pkpd<br/>(原始尺度直接 & Sigmoid Emax / 显式浓度配对)"] --> Core
         DMPKTox["dmpk / toxicology<br/>(体外 ADME / 蛋白结合 / 探索性 IVIVE / 毒理终点)"] --> Core
         DiagRep["diagnostics / reporting / integrations<br/>(局限性门禁 / 原生 SVG / 预测审计 / 跨尺度对齐守卫)"] --> Core
@@ -53,21 +53,55 @@ flowchart TB
 2. **跨尺度电生理与组学对齐及全链条可追溯性**：交付 `dose_event → in vivo exposure → EphysWeave / OmicsWeave PD endpoint → source artifact` 端到端示范流；强制校验受试者标识审核通过状态（`review_status="accepted"`）、显式注册时钟及同步抖动阈值（`sync_error_ms`）；严守“代谢通量绝不是浓度”科学红线。
 3. **声明式原始异构表映射与哈希不可篡改性**：支持通过 `ingest_mapping.yaml` 映射异构湿实验导出表格（CSV/TSV/Parquet），实现列重命名、常量注入与枚举映射转换（如 `<LLOQ` / `BLQ`），将原始文件 SHA-256 摘要严格持久化至 `study.source_files`。
 4. **离线结果包核验与差异对比工具链**：提供 `pharmacoweave verify-bundle`（离线逐一哈希全量落盘文件比对校验和、排查文件篡改与未列盘文件）与 `pharmacoweave diff`（对比两次分析运行的元数据差异、文件树增删改状态、Parquet 分析参数表数值相对误差与 JSON 指标变动）。
-5. **全链路 CLI 与 10 份 JSON Schema 落盘**：导出并冻结 `schemas/ingest_mapping.schema.json`；CLI 支持 `verify-bundle`、`diff`、`ingest` 子命令；提供完整运行演示 `examples/multiscale_ephys_omics_alignment.py` 与 `examples/ingest_mapping_demo.py`。
+5. **全链路 CLI 与当时的 10 份 JSON Schema**：0.1.0 导出并冻结 `schemas/ingest_mapping.schema.json`，使当时的契约达到 10 份；CLI 支持 `verify-bundle`、`diff`、`ingest` 子命令；提供完整运行演示 `examples/multiscale_ephys_omics_alignment.py` 与 `examples/ingest_mapping_demo.py`。0.2.x 又增加暴露模拟、引擎交换、尿药配置和调用方引擎槽，截至 0.2.5 共 14 份。
 
-### 2.2 `0.2.1` 的暴露模拟，以及仍未执行的重型引擎
-1. **解析暴露区间**：单次、等剂量重复和稳态的一室静脉推注、恒速输注、血管外吸收和二室静脉推注。输出为 `predicted`。稳态报告 `auc_tau`，不报告 AUC∞。血管外参数保持表观清除率和表观体积。
-2. **MIT 参考引擎的进程外交换**：子进程读写 JSON，记录版本、许可证和请求哈希。数值与进程内解析解对照。
-3. **仍拒绝执行的部分**：`nlmixr2`、PK-Sim、进程内群体模型、PBPK、QSP、个体间协方差和给药建议。NCA 仍不计算多次给药或稳态。
+### 2.2 `0.2.5` 已实现、部分实现与仍拒绝的功能
+
+**可执行**
+
+- 研究实体、封闭单位、显式分子量换算、BLQ 与平行样、声明式 `ingest_mapping.yaml`、结果包、`verify-bundle` 与 `diff`。
+- 单次连续采血 NCA：静脉推注、恒速输注、口服、皮下、肌注。等剂量且等间隔时，`repeated_equal` 报告区间 `AUC_tau`；`steady_state` 由调用方声明后，清除率才是 Dose/AUC_tau，血管外为 Dose/(CL/F)。
+- 尿药排泄：单独配置。排泄量是浓度乘以记录体积。BLQ 与缺失体积保持为空。肾清除使用调用方给出的血浆 AUC，并与血浆清除率分开存放。
+- 拟合：一室静脉推注、一室恒速输注（`CL`、`V`）、一室血管外、二室静脉推注，以及直接效应和 Sigmoid Emax，含渐近标准误与 95% 置信区间。输注时长缺失、时长不短于观察窗或不可辨识时不输出清除率。
+- 显式生理假设的 Well-Stirred IVIVE，以及预测对体内估算的折叠误差审计。
+- 解析模拟：单次、等剂量重复和稳态。可选 `parameter_correlation`，相关写在对数参数尺度上。内置可执行后端只有 MIT 的 `pharmacoweave-analytical` 子进程。调用方另给可执行文件、版本和许可证文本时，可以单独启动该文件并记录哈希。
+
+**只覆盖已写明的模型**
+
+- 房室拟合没有三室。药效没有滞后和间接反应。IVIVE 没有隐式物种表，也不能换成体内实测清除率。相关矩阵不是群体后验。报告是 HTML 和 SVG，没有 PDF 或申报包。
+
+**继续拒绝**
+
+- 稀疏采样、破坏性采样、剂量或间隔不相等。
+- 进程内群体模型、PBPK、QSP，以及把 nlmixr2 或 PK-Sim 引进 import 图。
+- 临床给药建议、SEND 符合性声明、21 CFR Part 11。
 
 ---
 
-## 三、 后续分阶段实施路线（`0.2.1` 之后）
+## 三、 立项阶段与 0.2.5 代码的对照
+
+| 立项阶段 | 原规划要交付的内容 | 0.2.5 的实现情况 |
+|---|---|---|
+| Phase 0 | 可安装包、示例研究、Schema 与许可证 | 已完成（0.0.1）。包名是 PharmacoWeave。 |
+| Phase 1 | 导入、BLQ、NCA、基础拟合、诊断、报告和结果包 | 已完成，并超出第一刀：单次静脉、输注、血管外 NCA，等剂量间隔 NCA，尿药排泄，一室静脉、一室输注、一室血管外和二室静脉拟合。 |
+| Phase 2 | 暴露–效应、体外 ADME、毒理记录和证据回传 | 已完成直接效应与 Sigmoid Emax、体外 ADME、显式假设 IVIVE、毒理终点和预测审计。间接反应没有做。 |
+| Phase 3 | 组学与电生理终点对齐，能追溯到源文件 | 已完成对齐、声明式映射、`verify-bundle` 与 `diff`。代谢通量不能标成浓度。 |
+| Phase 4 原意 | 接入经过验证的 PopPK、PBPK、QSP 引擎 | 未实现。这三个模块的进程内计算继续拒绝。nlmixr2 与 PK-Sim 只登记许可证。 |
+| Phase 4 收窄后的顺序 | 解析暴露、重复与稳态、间隔 NCA、对数相关、输注拟合、尿药 NCA、调用方引擎槽 | 已完成，对应 0.2.0 至 0.2.5。调用方引擎槽不解释子进程输出，也不构成给药建议。 |
+
+## 四、 0.2.5 之后仍拒绝的范围
 
 ```mermaid
 flowchart LR
-    M9["0.2.0 已完成<br/>(单次解析暴露 / MIT 参考引擎)"] --> M10["0.2.1 已完成<br/>(等剂量重复给药 / 稳态 auc_tau)"]
-    M10 --> P4["剩余项<br/>(nlmixr2 / PK-Sim 仍不启动 / 个体间协方差未做)"]
+    Done["0.2.5 已完成<br/>调用方进程外引擎槽"] --> Held["继续拒绝<br/>群体后验 / PBPK / QSP / 临床给药"]
 ```
 
-各里程碑的详细验收切片见 `docs/roadmap.md`。
+上表里收窄后的 Phase 4 已经完成。调用方引擎槽只在可执行文件、版本和许可证文本都存在时启动子进程，并记录文件哈希；缺任何一项则零子进程。MIT 参考引擎仍可运行。nlmixr2 与 PK-Sim 不进入依赖，包内也不重写 NONMEM 或 PK-Sim。细则见 `docs/validation.md`。
+
+| 状态 | 目标 | 实现细则 | 验收 | 明确不做 |
+|---|---|---|---|---|
+| 维持拒绝 | 群体后验、PBPK、QSP、间接反应、效应滞后、不等剂量方案、临床给药 | 预留模块的 `run_in_process` 继续拒绝。新算法没有冻结参考就不得出现在公开函数里。 | 现有拒绝测试保持失败。 | 不把对数相关矩阵解释成群体清除率。 |
+
+稀疏采样和破坏性采样需要另一套估计，不能并进现在的连续采血 NCA。效应滞后和间接反应在有独立基准之前保持拒绝。
+
+群体模型、PBPK 和 QSP 的下一阶段计划写在 `docs/phase4-population-pbpk-qsp.md`。该文档不改变 0.2.5 的拒绝行为。进入公开函数的顺序是两阶段汇总、生理参数表、线性周转闭式解、单组织稳态代数 PBPK，然后才是调用方群体结果表。进程内群体后验、全身动态 PBPK 和 QSP 网络仍停在各自的冻结参考出现之前。

@@ -23,6 +23,31 @@ ONE_COMPARTMENT_IV_BOLUS = ModelSpec(
     estimation_implemented=True,
 )
 
+ONE_COMPARTMENT_IV_INFUSION = ModelSpec(
+    model_id="one_compartment_iv_infusion",
+    model_type="one_compartment_iv_infusion",
+    equations_ref=(
+        "C(t) = (Rate/CL) * (1 - exp(-(CL/V)*t)) during a constant-rate IV infusion, "
+        "then C(T) * exp(-(CL/V)*(t-T)); Rate = Dose/T"
+    ),
+    parameters=["CL", "V"],
+    error_model=ErrorModel.UNSPECIFIED,
+    assumptions=[
+        "Input is a single-dose constant-rate IV infusion of a declared positive duration.",
+        "The infusion duration is shorter than the last quantified time.",
+        "Elimination is linear and first order.",
+        "The observation is the central-compartment concentration.",
+        "CL and V are absolute intravenous parameters, not CL/F or V/F.",
+        "Supported weights are uniform, 1/y, and 1/y^2. BLQ observations are omitted and are not replaced with zero.",
+    ],
+    question_of_interest="What CL and V does a one-compartment constant-rate IV infusion curve support?",
+    context_of_use=(
+        "Research-use estimation of CL and V for a single-dose one-compartment constant-rate IV infusion. "
+        "Not a dosing recommendation and not a regulatory validation."
+    ),
+    estimation_implemented=True,
+)
+
 ONE_COMPARTMENT_EXTRAVASCULAR = ModelSpec(
     model_id="one_compartment_extravascular",
     model_type="one_compartment_extravascular",
@@ -65,6 +90,7 @@ TWO_COMPARTMENT_IV_BOLUS = ModelSpec(
 
 BUILTIN_SPECS = {
     "one_compartment_iv_bolus": ONE_COMPARTMENT_IV_BOLUS,
+    "one_compartment_iv_infusion": ONE_COMPARTMENT_IV_INFUSION,
     "one_compartment_extravascular": ONE_COMPARTMENT_EXTRAVASCULAR,
     "two_compartment_iv_bolus": TWO_COMPARTMENT_IV_BOLUS,
 }

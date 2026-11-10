@@ -516,6 +516,139 @@
           "default": null,
           "title": "Volume Unit"
         },
+        "regimen": {
+          "default": "single_dose",
+          "enum": [
+            "single_dose",
+            "repeated_equal",
+            "steady_state"
+          ],
+          "title": "Regimen",
+          "type": "string"
+        },
+        "n_doses": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Doses"
+        },
+        "dosing_interval_h": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dosing Interval H"
+        },
+        "auc_tau": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Tau"
+        },
+        "auc_tau_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auc Tau Unit"
+        },
+        "cmin": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cmin"
+        },
+        "cmin_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cmin Unit"
+        },
+        "cavg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cavg"
+        },
+        "cavg_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cavg Unit"
+        },
+        "fluctuation": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fluctuation"
+        },
+        "accumulation_ratio": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accumulation Ratio"
+        },
         "excluded_reason": {
           "anyOf": [
             {

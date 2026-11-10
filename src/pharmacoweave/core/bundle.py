@@ -35,6 +35,7 @@ from pharmacoweave.ingestion.tabular import (
     observation_row,
     sample_row,
     subject_row,
+    urine_collection_row,
     write_named_table,
 )
 from pharmacoweave.reporting.figures import (
@@ -91,6 +92,10 @@ _OMITTED = (
     OmittedArtifact(
         role="nca_parameters",
         reason="analysis/nca_parameters.parquet is absent because NCA was not run.",
+    ),
+    OmittedArtifact(
+        role="urine_excretion",
+        reason="analysis/urine_excretion.parquet is absent because urine excretion NCA was not run.",
     ),
     OmittedArtifact(
         role="model_parameters",
@@ -182,6 +187,7 @@ def export_bundle(
     ivive_predictions: Sequence[Any] | None = None,
     prediction_audit: Any | None = None,
     exposure_simulation: Any | None = None,
+    urine_results: Sequence[Any] | None = None,
 ) -> ResultBundleManifest:
     """Validate ``study`` and write a new bundle directory.
 
@@ -218,6 +224,7 @@ def export_bundle(
             ivive_predictions=ivive_predictions,
             prediction_audit=prediction_audit,
             exposure_simulation=exposure_simulation,
+            urine_results=urine_results,
         )
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
@@ -239,6 +246,7 @@ def _write_bundle(
     ivive_predictions: Sequence[Any] | None = None,
     prediction_audit: Any | None = None,
     exposure_simulation: Any | None = None,
+    urine_results: Sequence[Any] | None = None,
 ) -> ResultBundleManifest:
     created_at = datetime.now(UTC)
     counts = _counts(study, report, adme_records=adme_records, tox_endpoints=tox_endpoints)
@@ -269,6 +277,12 @@ def _write_bundle(
         "biosamples",
         [sample_row(item) for item in study.biosamples],
     )
+    if study.urine_collections:
+        write_named_table(
+            destination / "experimental/urine_collections.parquet",
+            "urine_collections",
+            [urine_collection_row(item) for item in study.urine_collections],
+        )
     by_type = {
         ObservationType.CONCENTRATION: "concentration_observations",
         ObservationType.EFFECT: "pd_observations",
@@ -283,6 +297,8 @@ def _write_bundle(
         write_named_table(destination / _PATHS[role], "observations", partitioned[kind])
 
     paths = dict(_PATHS)
+    if study.urine_collections:
+        paths["urine_collections"] = "experimental/urine_collections.parquet"
     if adme_records is not None:
         adme_path = "experimental/in_vitro_adme.parquet"
         paths["in_vitro_adme"] = adme_path
@@ -306,6 +322,7 @@ def _write_bundle(
             ivive_predictions,
             prediction_audit,
             exposure_simulation,
+            urine_results,
         )
     )
     notes: list[str] = []
@@ -319,6 +336,11 @@ def _write_bundle(
         notes.append("Exploratory explicit-assumption well-stirred IVIVE was run; outputs stay predicted.")
     if prediction_audit is not None:
         notes.append("Prior predictions were audited against in vivo estimates with fold-error metrics.")
+    if urine_results is not None:
+        notes.append(
+            "Urine excretion NCA was run. Amounts use recorded void volumes. "
+            "Renal clearance uses a caller-supplied plasma AUC and is not plasma clearance."
+        )
     if exposure_simulation is not None:
         notes.append(
             "Exploratory single-dose exposure simulation was run from declared parameters. "
@@ -417,6 +439,12 @@ def _write_bundle(
             figure.parent.mkdir(parents=True, exist_ok=True)
             figure.write_text(concentration_time_svg(profiles), encoding="utf-8")
             omitted = [item for item in omitted if item.role not in {"nca_parameters", "concentration_time_figure"}]
+
+    if urine_results is not None:
+        urine_path = "analysis/urine_excretion.parquet"
+        paths["urine_excretion"] = urine_path
+        _write_urine_parquet(destination / urine_path, urine_results)
+        omitted = [item for item in omitted if item.role != "urine_excretion"]
 
     fit_points: list[PredictedPoint] = []
     gof_text: str | None = None
@@ -563,10 +591,11 @@ def _build_evidence_exchange(
     adme_records: Sequence[Any] | None,
     tox_endpoints: Sequence[Any] | None,
     ivive_predictions: Sequence[Any] | None = None,
+    urine_results: Sequence[Any] | None = None,
 ) -> EvidenceExchange:
     has_run_sources = any(
         item is not None
-        for item in (nca_parameters, fits, emax_fits, adme_records, tox_endpoints, ivive_predictions)
+        for item in (nca_parameters, fits, emax_fits, adme_records, tox_endpoints, ivive_predictions, urine_results)
     )
     if not has_run_sources:
         return EvidenceExchange(records=list(study.external_evidence))
@@ -581,6 +610,7 @@ def _build_evidence_exchange(
         adme_records=adme_records,
         tox_endpoints=tox_endpoints,
         ivive_predictions=ivive_predictions,
+        urine_results=urine_results,
     )
     merged: list[EvidenceRecord] = list(study.external_evidence)
     seen = {record.evidence_id for record in merged}
@@ -733,6 +763,17 @@ def _write_nca_parquet(path: Path, records: list[NcaParameterSet]) -> None:
         "volume_semantic",
         "volume",
         "volume_unit",
+        "regimen",
+        "n_doses",
+        "dosing_interval_h",
+        "auc_tau",
+        "auc_tau_unit",
+        "cmin",
+        "cmin_unit",
+        "cavg",
+        "cavg_unit",
+        "fluctuation",
+        "accumulation_ratio",
         "excluded_reason",
         "warnings",
     )
@@ -747,8 +788,14 @@ def _write_nca_parquet(path: Path, records: list[NcaParameterSet]) -> None:
         "terminal_phase_adjusted_r2",
         "clearance",
         "volume",
+        "dosing_interval_h",
+        "auc_tau",
+        "cmin",
+        "cavg",
+        "fluctuation",
+        "accumulation_ratio",
     }
-    ints = {"terminal_phase_n_points"}
+    ints = {"terminal_phase_n_points", "n_doses"}
     rows: list[dict[str, object]] = []
     for record in records:
         payload = record.model_dump(mode="json")
@@ -1335,6 +1382,56 @@ def _write_diagnostics_json(
             "diagnostics": [item.diagnostic.model_dump(mode="json") for item in all_items],
         },
     )
+
+
+def _write_urine_parquet(path: Path, results: Sequence[Any]) -> None:
+    columns = (
+        "subject_id",
+        "analyte_id",
+        "dose_event_id",
+        "matrix",
+        "observation_id",
+        "interval_start_h",
+        "interval_end_h",
+        "urine_concentration_mg_l",
+        "urine_volume_l",
+        "amount_excreted_mg",
+        "omitted_reason",
+        "total_amount_excreted_mg",
+        "renal_clearance_l_h",
+        "plasma_auc_source_id",
+    )
+    floats = {
+        "interval_start_h",
+        "interval_end_h",
+        "urine_concentration_mg_l",
+        "urine_volume_l",
+        "amount_excreted_mg",
+        "total_amount_excreted_mg",
+        "renal_clearance_l_h",
+    }
+    rows: list[dict[str, object]] = []
+    for result in results:
+        for interval in result.intervals:
+            rows.append(
+                {
+                    "subject_id": result.subject_id,
+                    "analyte_id": result.analyte_id,
+                    "dose_event_id": result.dose_event_id,
+                    "matrix": result.matrix,
+                    "observation_id": interval.observation_id,
+                    "interval_start_h": interval.interval_start_h,
+                    "interval_end_h": interval.interval_end_h,
+                    "urine_concentration_mg_l": interval.urine_concentration_mg_l,
+                    "urine_volume_l": interval.urine_volume_l,
+                    "amount_excreted_mg": interval.amount_excreted_mg,
+                    "omitted_reason": interval.omitted_reason,
+                    "total_amount_excreted_mg": result.amount_excreted_mg,
+                    "renal_clearance_l_h": result.renal_clearance_l_h,
+                    "plasma_auc_source_id": result.plasma_auc_source_id,
+                }
+            )
+    _write_typed_parquet(path, columns, floats, rows)
 
 
 def _write_typed_parquet(

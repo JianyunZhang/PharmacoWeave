@@ -30,7 +30,7 @@ class EngineRequest(Record):
     """JSON file handed to the reference-engine subprocess."""
 
     schema_name: Literal["pharmacoweave-engine-request"] = "pharmacoweave-engine-request"
-    schema_version: Literal["0.2.1"] = "0.2.1"
+    schema_version: Literal["0.2.1", "0.2.2"] = "0.2.2"
     engine: Literal["pharmacoweave-analytical"] = ANALYTICAL_ENGINE
     simulation: ExposureSimulationRequest
 
@@ -39,7 +39,7 @@ class EngineResponse(Record):
     """JSON file returned by the reference-engine subprocess."""
 
     schema_name: Literal["pharmacoweave-engine-exchange"] = "pharmacoweave-engine-exchange"
-    schema_version: Literal["0.2.1"] = "0.2.1"
+    schema_version: Literal["0.2.1", "0.2.2"] = "0.2.2"
     engine_name: Literal["pharmacoweave-analytical"] = ANALYTICAL_ENGINE
     engine_version: str
     license_spdx: Literal["MIT"] = "MIT"
@@ -97,6 +97,23 @@ def catalog_entry(name: str) -> EngineCatalogEntry:
             return entry
     known = ", ".join(entry.name for entry in ENGINE_CATALOG)
     raise AnalysisError(f"Unknown engine {name!r}. Known engines: {known}.")
+
+
+class CallerEngineRun(Record):
+    """Provenance for one caller-supplied executable. The response text is not interpreted."""
+
+    schema_name: Literal["pharmacoweave-caller-engine-run"] = "pharmacoweave-caller-engine-run"
+    schema_version: Literal["0.1.0"] = "0.1.0"
+    executable: str
+    engine_version: str
+    license_text: str
+    executable_sha256: str
+    request_sha256: str
+    response_sha256: str
+    exit_code: Literal[0] = 0
+    response_text: str
+    constitutes_dosing_recommendation: Literal[False] = False
+    limitations: list[str]
 
 
 def response_for(raw_request: str, result: ExposureSimulationResult) -> EngineResponse:

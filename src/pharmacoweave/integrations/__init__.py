@@ -12,7 +12,12 @@ from pharmacoweave.integrations.alignment import (
     align_study_cross_project_evidence,
 )
 from pharmacoweave.integrations.ephysweave import attach_neural_endpoints, read_neural_endpoint
-from pharmacoweave.integrations.external_backends import describe_engine, run_backend, supported_backends
+from pharmacoweave.integrations.external_backends import (
+    describe_engine,
+    run_backend,
+    run_caller_engine,
+    supported_backends,
+)
 from pharmacoweave.integrations.omicsweave import attach_biomarker_evidence
 from pharmacoweave.integrations.pharmacology_evidence import (
     collect_run_evidence,
@@ -53,6 +58,7 @@ __all__ = [
     "read_neural_endpoint",
     "round_trip_exchange",
     "run_backend",
+    "run_caller_engine",
     "supported_backends",
     "write_exchange",
 ]

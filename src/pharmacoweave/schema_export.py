@@ -18,7 +18,8 @@ from pharmacoweave.dmpk.records import InVitroAdmeSet
 from pharmacoweave.ingestion.mapping import IngestMappingConfig
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
 from pharmacoweave.pk_nca.config import NcaConfig
-from pharmacoweave.simulation.engine_protocol import EngineResponse
+from pharmacoweave.pk_nca.urine import UrineNcaConfig
+from pharmacoweave.simulation.engine_protocol import CallerEngineRun, EngineResponse
 from pharmacoweave.simulation.exposure import ExposureSimulationResult
 from pharmacoweave.toxicology.records import ToxEndpointSet
 
@@ -28,6 +29,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "pharmacology_study.schema.json": PharmacologyStudy,
     "analysis_records.schema.json": AnalysisRecords,
     "nca_config.schema.json": NcaConfig,
+    "urine_nca_config.schema.json": UrineNcaConfig,
     "pd_records.schema.json": PdAnalysisRecords,
     "dmpk_records.schema.json": InVitroAdmeSet,
     "toxicology_records.schema.json": ToxEndpointSet,
@@ -35,6 +37,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "ingest_mapping.schema.json": IngestMappingConfig,
     "exposure_simulation.schema.json": ExposureSimulationResult,
     "engine_exchange.schema.json": EngineResponse,
+    "caller_engine_run.schema.json": CallerEngineRun,
 }
 
 

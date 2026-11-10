@@ -38,14 +38,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     nca.add_argument("--run-id")
 
+    urine = commands.add_parser("urine-nca", help="Run urine excretion amount and renal clearance")
+    urine.add_argument("study_dir", type=Path)
+    urine.add_argument("--config", type=Path, required=True)
+    urine.add_argument("--plasma-auc", type=Path, help="YAML file of caller-supplied plasma AUC values")
+    urine.add_argument("--bundle", type=Path, help="Write a bundle that includes urine excretion results")
+    urine.add_argument("--run-id")
+
     fit = commands.add_parser(
         "fit",
-        help="Fit a compartmental PK model (1c IV bolus, 1c extravascular, or 2c IV bolus)",
+        help="Fit a compartmental PK model (1c IV bolus, 1c IV infusion, 1c extravascular, or 2c IV bolus)",
     )
     fit.add_argument("study_dir", type=Path)
     fit.add_argument(
         "--model",
-        choices=("one_compartment_iv_bolus", "one_compartment_extravascular", "two_compartment_iv_bolus"),
+        choices=(
+            "one_compartment_iv_bolus",
+            "one_compartment_iv_infusion",
+            "one_compartment_extravascular",
+            "two_compartment_iv_bolus",
+        ),
         default="one_compartment_iv_bolus",
     )
     fit.add_argument("--method", choices=("log_linear_ols", "weighted_nls"), default=None)
@@ -77,7 +89,12 @@ def main(argv: list[str] | None = None) -> int:
     audit.add_argument("--nca-config", type=Path, help="NCA config YAML to compute in vivo estimates")
     audit.add_argument(
         "--fit-model",
-        choices=("one_compartment_iv_bolus", "one_compartment_extravascular", "two_compartment_iv_bolus"),
+        choices=(
+            "one_compartment_iv_bolus",
+            "one_compartment_iv_infusion",
+            "one_compartment_extravascular",
+            "two_compartment_iv_bolus",
+        ),
         default=None,
         help="PK model to compute in vivo estimates",
     )
@@ -154,6 +171,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     engine.add_argument("--output", type=Path, help="Write the EngineResponse JSON to this path")
 
+    slot = commands.add_parser(
+        "engine-slot",
+        help="Run one caller-supplied executable when its file, version, and license text are all present",
+    )
+    slot.add_argument("request_file", type=Path, help="Request text passed to the executable")
+    slot.add_argument("--executable", type=Path, required=True)
+    slot.add_argument("--engine-version", required=True)
+    slot.add_argument("--license-file", type=Path, required=True)
+    slot.add_argument("--output", type=Path, help="Write the CallerEngineRun JSON to this path")
+
     commands.add_parser("capabilities", help="Show which modules can execute")
     export = commands.add_parser("export-schemas", help="Write JSON Schema files from the data contracts")
     export.add_argument("--directory", type=Path, default=Path("schemas"))
@@ -162,6 +189,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "validate":
             return _validate(args.study_dir, strict=args.strict, bundle=args.bundle, run_id=args.run_id)
+        if args.command == "urine-nca":
+            return _urine_nca(
+                args.study_dir,
+                config=args.config,
+                plasma_auc=args.plasma_auc,
+                bundle=args.bundle,
+                run_id=args.run_id,
+            )
         if args.command == "nca":
             return _nca(
                 args.study_dir,
@@ -231,6 +266,14 @@ def main(argv: list[str] | None = None) -> int:
             )
         if args.command == "engine-run":
             return _engine_run(args.input_json, engine=args.engine, output=args.output)
+        if args.command == "engine-slot":
+            return _engine_slot(
+                args.request_file,
+                executable=args.executable,
+                engine_version=args.engine_version,
+                license_file=args.license_file,
+                output=args.output,
+            )
         if args.command == "capabilities":
             return _capabilities()
         if args.command == "export-schemas":
@@ -272,12 +315,14 @@ def _nca(
     loaded_cfg = load_nca_config(config)
     study = PharmacologyStudy.from_files(study_dir)
     results = study.run_nca(loaded_cfg)
+    if with_fit and loaded_cfg.dosing != "single_dose":
+        raise AnalysisError("--with-fit applies to single-dose NCA only.")
     for row in results:
         cl_label = "CL/F" if row.clearance_semantic is ParameterSemantic.CL_OVER_F else "CL"
         vz_label = "Vz/F" if row.volume_semantic is ParameterSemantic.VZ_OVER_F else "Vz"
         print(
-            f"{row.subject_id}\tAUC_inf={row.auc_inf}\t{cl_label}={row.clearance}\t"
-            f"half_life={row.half_life}\t{vz_label}={row.volume}"
+            f"{row.subject_id}\tregimen={row.regimen}\tAUC_inf={row.auc_inf}\tAUC_tau={row.auc_tau}\t"
+            f"{cl_label}={row.clearance}\thalf_life={row.half_life}\t{vz_label}={row.volume}"
         )
     if bundle is not None:
         fits: list[Any] | None = None
@@ -297,6 +342,33 @@ def _nca(
         selected_run = run_id or f"{study.metadata.study_id}-nca"
         study.export_bundle(bundle, run_id=selected_run, nca_parameters=results, fits=fits)
         print(f"Wrote NCA bundle to {bundle}")
+    return 0
+
+
+def _urine_nca(
+    study_dir: Path,
+    *,
+    config: Path,
+    plasma_auc: Path | None,
+    bundle: Path | None,
+    run_id: str | None,
+) -> int:
+    from pharmacoweave.core.study import PharmacologyStudy
+    from pharmacoweave.pk_nca.urine import load_plasma_auc_inputs, load_urine_nca_config, run_urine_excretion
+
+    loaded = load_urine_nca_config(config)
+    aucs = load_plasma_auc_inputs(plasma_auc) if plasma_auc is not None else []
+    study = PharmacologyStudy.from_files(study_dir)
+    results = run_urine_excretion(study, loaded, plasma_aucs=aucs)
+    for row in results:
+        print(
+            f"{row.subject_id}\tamount_excreted_mg={row.amount_excreted_mg}\t"
+            f"renal_clearance_l_h={row.renal_clearance_l_h}"
+        )
+    if bundle is not None:
+        selected_run = run_id or f"{study.metadata.study_id}-urine-nca"
+        study.export_bundle(bundle, run_id=selected_run, urine_results=results)
+        print(f"Wrote urine excretion bundle to {bundle}")
     return 0
 
 
@@ -322,18 +394,26 @@ def _fit(
             if resolved_method == "log_linear_ols"
             else list(fit_iv_bolus_wnls(study, weight=weight))
         )
+    elif model == "one_compartment_iv_infusion":
+        from pharmacoweave.pk_models.fit_infusion import fit_one_compartment_iv_infusion
+
+        if method == "log_linear_ols":
+            raise AnalysisError("one_compartment_iv_infusion requires --method weighted_nls.")
+        fits = list(fit_one_compartment_iv_infusion(study, weight=weight))
     elif model == "one_compartment_extravascular":
         from pharmacoweave.pk_models.fit_extravascular import fit_one_compartment_extravascular
 
         if method == "log_linear_ols":
             raise AnalysisError("one_compartment_extravascular requires --method weighted_nls.")
         fits = list(fit_one_compartment_extravascular(study, weight=weight))
-    else:
+    elif model == "two_compartment_iv_bolus":
         from pharmacoweave.pk_models.fit_two_compartment import fit_two_compartment_iv_bolus
 
         if method == "log_linear_ols":
             raise AnalysisError("two_compartment_iv_bolus requires --method weighted_nls.")
         fits = list(fit_two_compartment_iv_bolus(study, weight=weight))
+    else:
+        raise AnalysisError(f"Unsupported fit model {model}.")
 
     for item in fits:
         params = "\t".join(f"{est.parameter}={est.value:.6g}" for est in item.estimates)
@@ -523,6 +603,10 @@ def _audit_predictions(
             from pharmacoweave.pk_models.fit_iv import fit_iv_bolus
 
             pk_fits = list(fit_iv_bolus(study))
+        elif fit_model == "one_compartment_iv_infusion":
+            from pharmacoweave.pk_models.fit_infusion import fit_one_compartment_iv_infusion
+
+            pk_fits = list(fit_one_compartment_iv_infusion(study))
         elif fit_model == "one_compartment_extravascular":
             from pharmacoweave.pk_models.fit_extravascular import fit_one_compartment_extravascular
 
@@ -688,6 +772,37 @@ def _engine_run(input_json: Path, *, engine: str, output: Path | None) -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(response.model_dump_json(indent=2), encoding="utf-8")
         print(f"Wrote engine response to {output}")
+    return 0
+
+
+def _engine_slot(
+    request_file: Path,
+    *,
+    executable: Path,
+    engine_version: str,
+    license_file: Path,
+    output: Path | None,
+) -> int:
+    from pharmacoweave.integrations.external_backends import run_caller_engine
+
+    if not request_file.is_file():
+        raise IngestError(f"Caller engine request {request_file} does not exist.")
+    if not license_file.is_file():
+        raise IngestError(f"Caller engine license file {license_file} does not exist.")
+    recorded = run_caller_engine(
+        executable,
+        request_file.read_text(encoding="utf-8"),
+        engine_version=engine_version,
+        license_text=license_file.read_text(encoding="utf-8"),
+    )
+    print(
+        f"executable_sha256={recorded.executable_sha256}\tengine_version={recorded.engine_version}\t"
+        f"response_sha256={recorded.response_sha256}\tdosing_recommendation=false"
+    )
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(recorded.model_dump_json(indent=2), encoding="utf-8")
+        print(f"Wrote caller engine run to {output}")
     return 0
 
 

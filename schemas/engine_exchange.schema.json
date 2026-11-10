@@ -54,8 +54,11 @@
           "type": "string"
         },
         "schema_version": {
-          "const": "0.2.1",
-          "default": "0.2.1",
+          "default": "0.2.2",
+          "enum": [
+            "0.2.1",
+            "0.2.2"
+          ],
           "title": "Schema Version",
           "type": "string"
         },
@@ -480,8 +483,11 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "0.2.1",
-      "default": "0.2.1",
+      "default": "0.2.2",
+      "enum": [
+        "0.2.1",
+        "0.2.2"
+      ],
       "title": "Schema Version",
       "type": "string"
     },

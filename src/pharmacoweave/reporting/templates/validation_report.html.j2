@@ -21,7 +21,7 @@
     <strong>Research use only.</strong>
     This is a research-use report for run <code>{{ run_id }}</code>.
     {% if nca_rows or fit_rows or emax_rows or ivive_rows or audit_summary_rows or simulation_rows %}
-    {% if nca_rows %}Single-dose NCA was run.{% endif %}
+    {% if nca_rows %}NCA was run.{% endif %}
     {% if fit_rows %}{{ fit_banner }}{% endif %}
     {% if emax_rows %}Direct/sigmoid Emax exposure-response fitting was run.{% endif %}
     {% if ivive_rows %}Exploratory well-stirred IVIVE was run (predicted grade).{% endif %}
@@ -69,8 +69,8 @@
   <table>
     <thead>
       <tr>
-        <th>Subject</th><th>Route</th><th>AUC last</th><th>AUC inf</th><th>Extrap</th>
-        <th>Half-life</th><th>Clearance</th><th>Volume</th><th>Cmax</th><th>Tmax</th>
+        <th>Subject</th><th>Route</th><th>AUC last</th><th>AUC inf</th><th>AUC tau</th><th>Extrap</th>
+        <th>Half-life</th><th>Clearance</th><th>Volume</th><th>Cmax</th><th>Cmin</th><th>Tmax</th>
       </tr>
     </thead>
     <tbody>
@@ -80,11 +80,13 @@
         <td><code>{{ row.route }}</code></td>
         <td>{{ row.auc_last }}</td>
         <td>{{ row.auc_inf }}</td>
+        <td>{{ row.auc_tau }}</td>
         <td>{{ row.auc_inf_extrap_fraction }}</td>
         <td>{{ row.half_life }}</td>
         <td>{{ row.clearance }}</td>
         <td>{{ row.volume }}</td>
         <td>{{ row.cmax }}</td>
+        <td>{{ row.cmin }}</td>
         <td>{{ row.tmax }}</td>
       </tr>
       {% endfor %}

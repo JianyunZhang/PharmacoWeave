@@ -1,0 +1,5 @@
+analysis: urine_excretion
+schema_version: "0.1.0"
+note: >
+  Urine interval amount is concentration times recorded void volume.
+  Renal clearance uses a caller-supplied plasma AUC and is not plasma clearance.

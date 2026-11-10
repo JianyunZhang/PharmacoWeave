@@ -1,0 +1,77 @@
+{
+  "additionalProperties": false,
+  "description": "Provenance for one caller-supplied executable. The response text is not interpreted.",
+  "properties": {
+    "schema_name": {
+      "const": "pharmacoweave-caller-engine-run",
+      "default": "pharmacoweave-caller-engine-run",
+      "title": "Schema Name",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "executable": {
+      "title": "Executable",
+      "type": "string"
+    },
+    "engine_version": {
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "license_text": {
+      "title": "License Text",
+      "type": "string"
+    },
+    "executable_sha256": {
+      "title": "Executable Sha256",
+      "type": "string"
+    },
+    "request_sha256": {
+      "title": "Request Sha256",
+      "type": "string"
+    },
+    "response_sha256": {
+      "title": "Response Sha256",
+      "type": "string"
+    },
+    "exit_code": {
+      "const": 0,
+      "default": 0,
+      "title": "Exit Code",
+      "type": "integer"
+    },
+    "response_text": {
+      "title": "Response Text",
+      "type": "string"
+    },
+    "constitutes_dosing_recommendation": {
+      "const": false,
+      "default": false,
+      "title": "Constitutes Dosing Recommendation",
+      "type": "boolean"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "executable",
+    "engine_version",
+    "license_text",
+    "executable_sha256",
+    "request_sha256",
+    "response_sha256",
+    "response_text",
+    "limitations"
+  ],
+  "title": "CallerEngineRun",
+  "type": "object"
+}

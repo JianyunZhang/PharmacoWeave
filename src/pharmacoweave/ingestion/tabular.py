@@ -22,6 +22,7 @@ from pharmacoweave.core.entities import (
     Record,
     StudyMetadata,
     Subject,
+    UrineCollection,
 )
 from pharmacoweave.core.evidence import IdentityLink, SourceFile
 from pharmacoweave.core.study import PharmacologyStudy
@@ -44,6 +45,7 @@ _MODELS: dict[str, type[Record]] = {
     "biosamples": Biosample,
     "observations": Observation,
     "identity_map": IdentityLink,
+    "urine_collections": UrineCollection,
 }
 _SUFFIXES = (".csv", ".tsv", ".parquet")
 
@@ -70,6 +72,9 @@ def read_study_directory(path: str | Path) -> PharmacologyStudy:
     identity_path = _locate(directory, "identity_map", required=False)
     if identity_path is not None:
         located["identity_map"] = identity_path
+    urine_path = _locate(directory, "urine_collections", required=False)
+    if urine_path is not None:
+        located["urine_collections"] = urine_path
 
     loaded = {stem: _read_table(file_path, stem) for stem, file_path in located.items() if stem != "study_metadata"}
     study = PharmacologyStudy(
@@ -80,6 +85,7 @@ def read_study_directory(path: str | Path) -> PharmacologyStudy:
         assays=cast(list[Assay], loaded["assays"]),
         dose_events=cast(list[DoseEvent], loaded["dosing_events"]),
         biosamples=cast(list[Biosample], loaded["biosamples"]),
+        urine_collections=cast(list[UrineCollection], loaded.get("urine_collections", [])),
         observations=cast(list[Observation], loaded["observations"]),
         identity_links=cast(list[IdentityLink], loaded.get("identity_map", [])),
     )
@@ -110,8 +116,11 @@ def write_study_directory(study: PharmacologyStudy, path: str | Path, *, file_fo
         "biosamples": [sample_row(item) for item in study.biosamples],
         "observations": [observation_row(item) for item in study.observations],
         "identity_map": [identity_row(item) for item in study.identity_links],
+        "urine_collections": [urine_collection_row(item) for item in study.urine_collections],
     }
     for stem, records in rows.items():
+        if stem == "urine_collections" and not records:
+            continue
         _write_table(directory, stem, TABLE_COLUMNS[stem], records, file_format)
 
 
@@ -175,6 +184,10 @@ def observation_row(observation: Observation) -> dict[str, object]:
 
 def identity_row(link: IdentityLink) -> dict[str, object]:
     return link.model_dump(mode="json")
+
+
+def urine_collection_row(collection: UrineCollection) -> dict[str, object]:
+    return collection.model_dump(mode="json")
 
 
 def _locate(directory: Path, stem: str, *, required: bool) -> Path | None:

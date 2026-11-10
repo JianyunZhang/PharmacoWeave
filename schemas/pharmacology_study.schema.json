@@ -1141,6 +1141,62 @@
       ],
       "title": "Timebase",
       "type": "object"
+    },
+    "UrineCollection": {
+      "additionalProperties": false,
+      "description": "One urine collection interval tied to the sample that ends the interval.\n\n``volume`` stays empty when the void volume was not recorded. A recorded\nvolume is positive. This record does not store a urine concentration.",
+      "properties": {
+        "collection_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Collection Id",
+          "type": "string"
+        },
+        "sample_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "title": "Sample Id",
+          "type": "string"
+        },
+        "interval_start_since_dose": {
+          "title": "Interval Start Since Dose",
+          "type": "number"
+        },
+        "interval_start_unit": {
+          "title": "Interval Start Unit",
+          "type": "string"
+        },
+        "volume": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Volume"
+        },
+        "volume_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Volume Unit"
+        }
+      },
+      "required": [
+        "collection_id",
+        "sample_id",
+        "interval_start_since_dose",
+        "interval_start_unit"
+      ],
+      "title": "UrineCollection",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -1189,6 +1245,13 @@
         "$ref": "#/$defs/Biosample"
       },
       "title": "Biosamples",
+      "type": "array"
+    },
+    "urine_collections": {
+      "items": {
+        "$ref": "#/$defs/UrineCollection"
+      },
+      "title": "Urine Collections",
       "type": "array"
     },
     "observations": {

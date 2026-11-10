@@ -200,6 +200,8 @@ flowchart TB
 
 ### 4.2 中环整合：无缝复用开源数据湖与专业建模引擎
 
+截至 0.2.5，本节的 DuckDB、RDKit、NWB、AnnData 和 CDISC SEND 仍未进入包。nlmixr2 与 PK-Sim 只登记许可证。群体模型、PBPK 和 QSP 的分期见 `docs/phase4-population-pbpk-qsp.md`，当前 `run_in_process` 仍拒绝。已经落地的进程外路径只有 MIT 解析参考引擎，以及调用方自备可执行文件、版本和许可证文本之后才启动的引擎槽。
+
 1. **基于 Parquet + DuckDB 构建零运维“跨批次药理证据库”**：
    由于 `PharmacologyResultBundle` 已统一采用强 Schema 约束的 Parquet 表存储，无需引入重型关系型数据库服务，仅需提供一个轻量查询模块，即可利用 DuckDB 直接跨本地或对象存储上的数百个历史 `ResultBundle` 目录执行联邦 SQL 查询（例如一键汇总某靶点项目所有批次化合物的清除率、生物利用度与 Assay BLQ 比例）。
 2. **与开源标准格式及专业建模引擎分层对接**：
@@ -215,7 +217,9 @@ flowchart TB
 
 ---
 
-## 五、 下一阶段优先落地行动项汇总（基于 `0.0.4` 基线）
+## 五、 已完成的行动项（原基于 `0.0.4` 基线，至 `0.1.0` 已交付）
+
+下表各项已经实现。0.2.5 之后仍拒绝的功能见 `docs/project-evaluation.md` 与 `docs/roadmap.md`，不再以本表作为当前目标。
 
 | 目标版本 | 行动项 | 涉及模块 / 路径 | 预期产出与科学验收标准 |
 | :---: | :--- | :--- | :--- |

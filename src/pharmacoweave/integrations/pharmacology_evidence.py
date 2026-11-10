@@ -10,6 +10,7 @@ this module imports TheraWeave.
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from pharmacoweave.core.evidence import (
     RESEARCH_USE_LIMITATION,
@@ -30,15 +31,17 @@ from pharmacoweave.dmpk.records import AdmeStatus, InVitroAdmeRecord
 from pharmacoweave.integrations.guards import screen_exchange
 from pharmacoweave.pd_models.emax import DirectEmaxFit
 from pharmacoweave.pk_models.fit_extravascular import ExtravascularFit
+from pharmacoweave.pk_models.fit_infusion import InfusionFit
 from pharmacoweave.pk_models.fit_iv import IvBolusFit
 from pharmacoweave.pk_models.fit_two_compartment import TwoCompartmentFit
 from pharmacoweave.toxicology.records import ToxEndpoint
 
-PkFitResult = IvBolusFit | ExtravascularFit | TwoCompartmentFit
+PkFitResult = IvBolusFit | InfusionFit | ExtravascularFit | TwoCompartmentFit
 
 _NCA_MEASUREMENT = {
     "auc_last": "auc",
     "auc_inf": "auc",
+    "auc_tau": "auc",
     "cmax": "cmax",
     "tmax": "tmax",
     "lambda_z": "lambda_z",
@@ -85,6 +88,7 @@ def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[Evide
         raise ValueError("run_id is required.")
     claims: list[tuple[str, float, str]] = []
     _append(claims, "auc_last", parameters.auc_last, parameters.auc_last_unit)
+    _append(claims, "auc_tau", parameters.auc_tau, parameters.auc_tau_unit)
     if auc_inf_is_reportable(parameters):
         _append(claims, "auc_inf", parameters.auc_inf, parameters.auc_inf_unit)
     _append(claims, "cmax", parameters.cmax, parameters.cmax_unit)
@@ -108,10 +112,17 @@ def evidence_from_nca(parameters: NcaParameterSet, *, run_id: str) -> list[Evide
         f"analyte:{parameters.analyte_id}",
         f"subject:{parameters.subject_id}",
     ]
-    nca_note = (
-        f"Estimated from single-dose {parameters.route.value} NCA. "
-        "Not an observed concentration and not a dosing recommendation."
-    )
+    if parameters.regimen == "single_dose":
+        nca_note = (
+            f"Estimated from single-dose {parameters.route.value} NCA. "
+            "Not an observed concentration and not a dosing recommendation."
+        )
+    else:
+        nca_note = (
+            f"Estimated from {parameters.regimen} {parameters.route.value} NCA over one dosing interval. "
+            "Steady-state clearance is Dose/AUC_tau only when the caller declared steady_state. "
+            "Not an observed concentration and not a dosing recommendation."
+        )
     records: list[EvidenceRecord] = []
     for claim, value, unit in claims:
         records.append(
@@ -185,6 +196,69 @@ def evidence_from_pk_fit(result: PkFitResult, *, run_id: str) -> list[EvidenceRe
             subject_id=result.subject_id,
         )
         for estimate in result.estimates
+    ]
+
+
+def evidence_from_urine(result: Any, *, run_id: str) -> list[EvidenceRecord]:
+    """Estimated urine amount and renal clearance. Urine concentration is not exported."""
+
+    if not run_id.strip():
+        raise ValueError("run_id is required.")
+    limitations = list(result.limitations)
+    if RESEARCH_USE_LIMITATION not in limitations:
+        limitations.insert(0, RESEARCH_USE_LIMITATION)
+    limitations.extend(result.warnings)
+    derived = [
+        f"dose_event:{result.dose_event_id}",
+        f"subject:{result.subject_id}",
+        f"analyte:{result.analyte_id}",
+    ]
+    derived.extend(f"observation:{item.observation_id}" for item in result.intervals)
+    if result.amount_excreted_mg is None and result.renal_clearance_l_h is None:
+        return [
+            _record(
+                evidence_id=f"urine-{run_id}-{result.subject_id}-{result.analyte_id}-incomplete",
+                run_id=run_id,
+                entity_type="UrineExcretionResult",
+                entity_id=f"{result.subject_id}:{result.analyte_id}",
+                measurement_type="renal_clearance",
+                evidence_type=EvidenceType.ESTIMATED,
+                qc_status=EvidenceQc.NOT_REVIEWED,
+                claim_type="urine_excretion_incomplete",
+                unit=None,
+                numeric_value=None,
+                limitations=limitations,
+                derived_from=derived,
+                applicability="Research-use urine excretion. Amount and renal clearance were withheld.",
+                subject_id=result.subject_id,
+            )
+        ]
+    claims: list[tuple[str, float, str, str]] = []
+    if result.amount_excreted_mg is not None:
+        claims.append(("amount_excreted", result.amount_excreted_mg, "mg", "amount_excreted"))
+    if result.renal_clearance_l_h is not None:
+        claims.append(("renal_clearance", result.renal_clearance_l_h, "L/h", "renal_clearance"))
+    return [
+        _record(
+            evidence_id=f"urine-{run_id}-{result.subject_id}-{result.analyte_id}-{claim}",
+            run_id=run_id,
+            entity_type="UrineExcretionResult",
+            entity_id=f"{result.subject_id}:{result.analyte_id}",
+            measurement_type=measurement,
+            evidence_type=EvidenceType.ESTIMATED,
+            qc_status=EvidenceQc.NOT_REVIEWED,
+            claim_type=claim,
+            unit=unit,
+            numeric_value=value,
+            limitations=limitations,
+            derived_from=derived,
+            applicability=(
+                "Research-use urine excretion estimate. "
+                "Renal clearance uses a caller-supplied plasma AUC and is not plasma clearance."
+            ),
+            subject_id=result.subject_id,
+        )
+        for claim, value, unit, measurement in claims
     ]
 
 
@@ -366,6 +440,7 @@ def collect_run_evidence(
     adme_records: Sequence[InVitroAdmeRecord] | None = None,
     tox_endpoints: Sequence[ToxEndpoint] | None = None,
     ivive_predictions: Sequence[IviveClearancePrediction] | None = None,
+    urine_results: Sequence[Any] | None = None,
 ) -> list[EvidenceRecord]:
     """Build and screen PharmacologyEvidence records across all run outputs."""
 
@@ -384,6 +459,8 @@ def collect_run_evidence(
         records.append(evidence_from_tox(tox, run_id=run_id))
     for prediction in ivive_predictions or ():
         records.append(evidence_from_ivive(prediction, run_id=run_id))
+    for urine in urine_results or ():
+        records.extend(evidence_from_urine(urine, run_id=run_id))
     if records:
         screen_exchange(EvidenceExchange(records=records))
     return records

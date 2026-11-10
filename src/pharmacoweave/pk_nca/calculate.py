@@ -43,8 +43,10 @@ class _TerminalPhase:
 
 
 def nca_profile(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:
-    """Dispatch single-dose NCA according to ``profile.route``."""
+    """Dispatch NCA according to the config dosing and ``profile.route``."""
 
+    if config.dosing in {"repeated_equal", "steady_state"}:
+        return nca_interval(profile, config)
     if profile.route is Route.IV_BOLUS:
         return nca_iv_bolus(profile, config)
     if profile.route is Route.IV_INFUSION:
@@ -52,6 +54,180 @@ def nca_profile(profile: ConcentrationProfile, config: NcaConfig) -> NcaParamete
     if profile.route in _EXTRAVASCULAR_ROUTES:
         return nca_extravascular(profile, config)
     raise AnalysisError(f"NCA is not implemented for route {profile.route.value}.")
+
+
+def nca_interval(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:
+    """NCA over one equal-dose interdose interval.
+
+    AUC_tau is the linear-up/log-down integral only when quantified samples
+    exist at both ends. No concentration is imputed. Clearance is Dose/AUC_tau
+    only when the config declares ``steady_state``.
+    """
+
+    if config.dosing not in {"repeated_equal", "steady_state"}:
+        raise AnalysisError("nca_interval requires repeated_equal or steady_state.")
+    if profile.tau_h is None or profile.tau_h <= 0:
+        raise AnalysisError("Interval NCA requires a positive dosing interval.")
+    tau = profile.tau_h
+    warnings = _initial_warnings(profile)
+    warnings.append(
+        "Equal-dose, equal-interval NCA uses observed samples at the interval ends. "
+        "Missing ends are not imputed."
+    )
+    if config.dosing == "repeated_equal":
+        warnings.append("Clearance is omitted because Dose/AUC_tau equals clearance only at steady state.")
+    else:
+        warnings.append(
+            "Steady state is declared by the caller. Clearance is Dose/AUC_tau under that declaration, "
+            "not a demonstration that steady state was reached."
+        )
+    if not profile.points:
+        return _empty_interval_result(profile, config, warnings, tau)
+
+    snapped = _snap_interval_points(profile.points, tau)
+    cmax_point = max(snapped, key=lambda point: (point.concentration_mg_l, -point.time_h))
+    curve = [(point.time_h, point.concentration_mg_l) for point in snapped]
+    auc_observed = _auc_linear_up_log_down(curve)
+    has_start = any(point.time_h == 0.0 for point in snapped)
+    has_end = any(point.time_h == tau for point in snapped)
+    auc_tau = auc_observed if has_start and has_end else None
+    if auc_tau is None:
+        warnings.append("AUC_tau is omitted because a quantified sample is missing at 0 h or at tau.")
+    cmin = next((point.concentration_mg_l for point in snapped if point.time_h == tau), None)
+    cavg = None if auc_tau is None else auc_tau / tau
+    fluctuation = None
+    if cavg is not None and cmin is not None and cavg > 0:
+        fluctuation = (cmax_point.concentration_mg_l - cmin) / cavg
+    terminal_points = _interval_terminal_points(profile, snapped, cmax_point)
+    terminal = _terminal_phase(
+        terminal_points,
+        min_points=config.lambda_z_min_points,
+        min_adjusted_r2=config.lambda_z_min_adjusted_r2,
+    )
+    half_life = None
+    lambda_z = None
+    if terminal.qualified and terminal.lambda_per_h is not None:
+        lambda_z = terminal.lambda_per_h
+        half_life = math.log(2.0) / lambda_z
+    elif terminal.n_points < config.lambda_z_min_points:
+        warnings.append("The terminal phase has fewer quantified points than lambda_z_min_points.")
+    else:
+        warnings.append("The terminal phase did not meet the adjusted R² minimum, so λz is omitted.")
+    warnings.append("AUC∞ is not reported for an interdose interval.")
+    clearance_semantic = (
+        ParameterSemantic.CL_OVER_F if profile.route in _EXTRAVASCULAR_ROUTES else ParameterSemantic.CL
+    )
+    volume_semantic = (
+        ParameterSemantic.VZ_OVER_F if profile.route in _EXTRAVASCULAR_ROUTES else ParameterSemantic.VZ
+    )
+    clearance = None
+    volume = None
+    if config.dosing == "steady_state" and auc_tau is not None and auc_tau > 0 and profile.dose_mg > 0:
+        clearance = profile.dose_mg / auc_tau
+        if lambda_z is not None and lambda_z > 0:
+            volume = clearance / lambda_z
+    accumulation = None
+    if (
+        profile.reference_cmax_mg_l is not None
+        and profile.reference_cmax_mg_l > 0
+        and config.dosing == "repeated_equal"
+    ):
+        accumulation = cmax_point.concentration_mg_l / profile.reference_cmax_mg_l
+    return NcaParameterSet(
+        subject_id=profile.subject_id,
+        analyte_id=profile.analyte_id,
+        route=profile.route,
+        dose_event_id=profile.dose_event_id,
+        auc_method=config.auc_method,
+        terminal_phase_qualified=terminal.qualified,
+        auc_last=auc_observed,
+        auc_last_unit="mg*h/L",
+        cmax=cmax_point.concentration_mg_l,
+        cmax_unit="mg/L",
+        tmax=cmax_point.time_h,
+        tmax_unit="h",
+        lambda_z=lambda_z,
+        lambda_z_unit=None if lambda_z is None else "1/h",
+        half_life=half_life,
+        half_life_unit=None if half_life is None else "h",
+        terminal_phase_n_points=terminal.n_points,
+        terminal_phase_adjusted_r2=terminal.adjusted_r2,
+        clearance_semantic=None if clearance is None else clearance_semantic,
+        clearance=clearance,
+        clearance_unit=None if clearance is None else "L/h",
+        volume_semantic=None if volume is None else volume_semantic,
+        volume=volume,
+        volume_unit=None if volume is None else "L",
+        regimen=config.dosing,
+        n_doses=profile.n_doses,
+        dosing_interval_h=tau,
+        auc_tau=auc_tau,
+        auc_tau_unit=None if auc_tau is None else "mg*h/L",
+        cmin=cmin,
+        cmin_unit=None if cmin is None else "mg/L",
+        cavg=cavg,
+        cavg_unit=None if cavg is None else "mg/L",
+        fluctuation=fluctuation,
+        accumulation_ratio=accumulation,
+        warnings=warnings,
+    )
+
+
+def _empty_interval_result(
+    profile: ConcentrationProfile,
+    config: NcaConfig,
+    warnings: list[str],
+    tau: float,
+) -> NcaParameterSet:
+    warnings.append("No quantified concentrations inside the dosing interval.")
+    return NcaParameterSet(
+        subject_id=profile.subject_id,
+        analyte_id=profile.analyte_id,
+        route=profile.route,
+        dose_event_id=profile.dose_event_id,
+        auc_method=config.auc_method,
+        terminal_phase_qualified=False,
+        excluded_reason="No quantified concentrations inside the dosing interval.",
+        regimen=config.dosing,
+        n_doses=profile.n_doses,
+        dosing_interval_h=tau,
+        warnings=warnings,
+    )
+
+
+def _snap_interval_points(points: tuple[QuantifiedPoint, ...], tau: float) -> list[QuantifiedPoint]:
+    snapped: list[QuantifiedPoint] = []
+    for point in points:
+        if point.time_h < -1e-6 or point.time_h > tau + 1e-6:
+            continue
+        time_h = point.time_h
+        if abs(time_h) <= 1e-6:
+            time_h = 0.0
+        elif abs(time_h - tau) <= 1e-6:
+            time_h = tau
+        snapped.append(
+            QuantifiedPoint(
+                observation_id=point.observation_id,
+                time_h=time_h,
+                concentration_mg_l=point.concentration_mg_l,
+            )
+        )
+    return snapped
+
+
+def _interval_terminal_points(
+    profile: ConcentrationProfile,
+    points: list[QuantifiedPoint],
+    cmax_point: QuantifiedPoint,
+) -> list[QuantifiedPoint]:
+    if profile.route is Route.IV_BOLUS:
+        return [point for point in points if point.time_h + 1e-12 >= cmax_point.time_h]
+    if profile.route is Route.IV_INFUSION:
+        cutoff = cmax_point.time_h
+        if profile.infusion_duration_h is not None:
+            cutoff = max(cutoff, profile.infusion_duration_h)
+        return [point for point in points if point.time_h + 1e-12 >= cutoff]
+    return [point for point in points if point.time_h > cmax_point.time_h + 1e-12]
 
 
 def nca_iv_bolus(profile: ConcentrationProfile, config: NcaConfig) -> NcaParameterSet:

@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "description": "Rules for urine excretion. This config has no plasma AUC method.",
+  "properties": {
+    "analysis": {
+      "const": "urine_excretion",
+      "title": "Analysis",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "note": {
+      "default": "",
+      "title": "Note",
+      "type": "string"
+    }
+  },
+  "required": [
+    "analysis"
+  ],
+  "title": "UrineNcaConfig",
+  "type": "object"
+}

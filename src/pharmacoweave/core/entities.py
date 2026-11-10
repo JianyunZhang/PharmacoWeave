@@ -19,6 +19,7 @@ from pharmacoweave.core.units import (
     DRUG_MASS,
     MASS_PER_AMOUNT,
     TIME,
+    VOLUME,
     convert_with_molecular_weight,
     parse_unit,
 )
@@ -334,6 +335,35 @@ class Biosample(Record):
             raise ValueError("A negative time_since_dose is predose and requires is_predose=true.")
         if self.is_predose and self.time_since_dose >= 0:
             raise ValueError("is_predose requires a negative time_since_dose.")
+        return self
+
+
+class UrineCollection(Record):
+    """One urine collection interval tied to the sample that ends the interval.
+
+    ``volume`` stays empty when the void volume was not recorded. A recorded
+    volume is positive. This record does not store a urine concentration.
+    """
+
+    collection_id: Identifier
+    sample_id: Identifier
+    interval_start_since_dose: FiniteFloat
+    interval_start_unit: str
+    volume: float | None = None
+    volume_unit: str | None = None
+
+    @model_validator(mode="after")
+    def interval_and_volume(self) -> "UrineCollection":
+        if parse_unit(self.interval_start_unit).dimensions != TIME:
+            raise ValueError("interval_start_unit must be a time unit.")
+        if self.interval_start_since_dose < 0:
+            raise ValueError("interval_start_since_dose must be >= 0.")
+        if (self.volume is None) != (self.volume_unit is None):
+            raise ValueError("volume and volume_unit are recorded together. A missing volume stays empty.")
+        if self.volume is not None and (not math.isfinite(self.volume) or self.volume <= 0):
+            raise ValueError("A recorded urine volume must be positive. A missing volume stays empty.")
+        if self.volume_unit is not None and parse_unit(self.volume_unit).dimensions != VOLUME:
+            raise ValueError("volume_unit must be a volume.")
         return self
 
 

@@ -69,6 +69,14 @@ SAMPLE_COLUMNS = (
     "timebase_id",
     "is_predose",
 )
+URINE_COLLECTION_COLUMNS = (
+    "collection_id",
+    "sample_id",
+    "interval_start_since_dose",
+    "interval_start_unit",
+    "volume",
+    "volume_unit",
+)
 OBSERVATION_COLUMNS = (
     "observation_id",
     "sample_id",
@@ -108,6 +116,8 @@ FLOAT_COLUMNS = frozenset(
         "body_weight_normalized_value",
         "time_since_dose",
         "numeric_value",
+        "interval_start_since_dose",
+        "volume",
     }
 )
 BOOL_COLUMNS = frozenset({"is_predose"})
@@ -121,7 +131,7 @@ REQUIRED_TABLES = (
     "biosamples",
     "observations",
 )
-OPTIONAL_TABLES = ("identity_map",)
+OPTIONAL_TABLES = ("identity_map", "urine_collections")
 TABLE_COLUMNS = {
     "subjects": SUBJECT_COLUMNS,
     "compounds": COMPOUND_COLUMNS,
@@ -131,6 +141,7 @@ TABLE_COLUMNS = {
     "biosamples": SAMPLE_COLUMNS,
     "observations": OBSERVATION_COLUMNS,
     "identity_map": IDENTITY_COLUMNS,
+    "urine_collections": URINE_COLLECTION_COLUMNS,
 }
 
 

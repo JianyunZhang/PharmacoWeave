@@ -42,13 +42,16 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "pk_nca",
         "P1",
         "available",
-        "Single-dose rich-serial NCA for IV bolus, IV infusion, and extravascular (oral/SC/IM) designs.",
+        "Single-dose rich-serial NCA for IV bolus, IV infusion, and extravascular routes, "
+        "equal-dose equal-interval and declared steady-state interval NCA, "
+        "and urine excretion amount plus renal clearance kept separate from plasma AUC.",
     ),
     ModuleStatus(
         "pk_models",
         "P1",
         "partial",
-        "1c IV bolus (OLS/WNLS), 1c extravascular (ka, CL/F, V/F), and 2c IV bolus (CL, V1, Q, V2) with SE and 95% CI.",
+        "1c IV bolus (OLS/WNLS), 1c IV infusion (CL, V), 1c extravascular (ka, CL/F, V/F), "
+        "and 2c IV bolus (CL, V1, Q, V2) with SE and 95% CI.",
     ),
     ModuleStatus(
         "diagnostics",
@@ -67,7 +70,8 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "P0",
         "available",
         "Evidence guards, PharmacologyEvidence export, prediction audit, and multi-scale Ephys/Omics "
-        "time alignment with clock sync checks.",
+        "time alignment with clock sync checks. A caller-supplied executable starts only with a file, "
+        "version, and license text; nlmixr2 and PK-Sim stay unlaunched.",
     ),
     ModuleStatus(
         "pd_models",
@@ -117,7 +121,8 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "simulation",
         "P4",
         "partial",
-        "Single-dose, repeated-dose, and steady-state analytical exposure intervals. Not a dosing regimen.",
+        "Single-dose, repeated-dose, and steady-state analytical exposure intervals. "
+        "Optional caller-supplied log-parameter correlation. Not a dosing regimen or a population model.",
     ),
 )
 

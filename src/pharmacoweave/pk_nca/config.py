@@ -1,4 +1,11 @@
-"""NCA configuration for the single-dose rich-serial designs supported in 0.0.6."""
+"""NCA configuration for rich-serial plasma designs.
+
+Supported routes are ``iv_bolus``, ``iv_infusion``, ``oral``,
+``subcutaneous``, and ``intramuscular``. ``single_dose`` is one dose.
+``repeated_equal`` and ``steady_state`` require equal doses and equal
+intervals. Sparse destructive sampling, urine excretion, and ``other`` routes
+fail validation here instead of being passed to a calculator.
+"""
 
 from typing import Literal
 
@@ -9,17 +16,16 @@ from pharmacoweave.version import SCHEMA_VERSION
 
 
 class NcaConfig(Record):
-    """Reporting rules for single-dose rich-serial plasma NCA.
+    """Reporting rules for rich-serial plasma NCA.
 
-    Supported routes are ``iv_bolus``, ``iv_infusion``, ``oral``,
-    ``subcutaneous``, and ``intramuscular``. Multiple dosing, sparse destructive
-    sampling, urine excretion, steady state, and ``other`` routes fail
-    validation here instead of being passed to a calculator.
+    ``repeated_equal`` reports the last closed interdose interval and does not
+    treat Dose/AUC_tau as clearance. ``steady_state`` is a caller declaration
+    that the analyzed interval is at steady state, so clearance is Dose/AUC_tau.
     """
 
     analysis: Literal["nca"]
     design_route: Literal["iv_bolus", "iv_infusion", "oral", "subcutaneous", "intramuscular"]
-    dosing: Literal["single_dose"]
+    dosing: Literal["single_dose", "repeated_equal", "steady_state"]
     sampling: Literal["rich_serial"]
     auc_method: Literal["linear_up_log_down"]
     lambda_z_min_points: int = Field(ge=3, le=20)

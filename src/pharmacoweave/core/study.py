@@ -23,6 +23,7 @@ from pharmacoweave.core.entities import (
     Record,
     StudyMetadata,
     Subject,
+    UrineCollection,
 )
 from pharmacoweave.core.evidence import EvidenceRecord, IdentityLink, SourceFile
 
@@ -42,6 +43,7 @@ class PharmacologyStudy(Record):
     assays: list[Assay] = Field(default_factory=list)
     dose_events: list[DoseEvent] = Field(default_factory=list)
     biosamples: list[Biosample] = Field(default_factory=list)
+    urine_collections: list[UrineCollection] = Field(default_factory=list)
     observations: list[Observation] = Field(default_factory=list)
     identity_links: list[IdentityLink] = Field(default_factory=list)
     external_evidence: list[EvidenceRecord] = Field(default_factory=list)
@@ -129,6 +131,7 @@ class PharmacologyStudy(Record):
         ivive_predictions: Sequence[Any] | None = None,
         prediction_audit: Any | None = None,
         exposure_simulation: Any | None = None,
+        urine_results: Sequence[Any] | None = None,
     ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
@@ -148,6 +151,7 @@ class PharmacologyStudy(Record):
             ivive_predictions=ivive_predictions,
             prediction_audit=prediction_audit,
             exposure_simulation=exposure_simulation,
+            urine_results=urine_results,
         )
 
     def run_nca(self, config: str | Path | Any) -> list[NcaParameterSet]:

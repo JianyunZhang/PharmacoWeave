@@ -1,0 +1,14 @@
+schema_version: "0.1.0"
+analysis: nca
+design_route: iv_bolus
+dosing: steady_state
+sampling: rich_serial
+auc_method: linear_up_log_down
+lambda_z_min_points: 3
+lambda_z_min_adjusted_r2: 0.90
+auc_inf_max_extrapolated_fraction: 0.20
+blq_rule: keep_as_censored
+note: >
+  Equal-dose steady-state interval. Clearance is Dose/AUC_tau only because
+  this config declares the interval to be at steady state. AUC infinity is
+  not reported. This is not a dosing recommendation.

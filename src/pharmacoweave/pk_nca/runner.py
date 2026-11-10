@@ -1,4 +1,4 @@
-"""NCA entry point for supported single-dose rich-serial designs."""
+"""NCA entry point for supported rich-serial designs."""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from pharmacoweave.core.entities import Route
 from pharmacoweave.core.modeling import NcaParameterSet
-from pharmacoweave.core.profiles import single_dose_profiles
+from pharmacoweave.core.profiles import equal_interval_profiles, single_dose_profiles
 from pharmacoweave.core.study import PharmacologyStudy
 from pharmacoweave.core.validation import validate_study
 from pharmacoweave.errors import IngestError, ValidationFailed
@@ -34,10 +34,11 @@ def load_nca_config(path: str | Path) -> NcaConfig:
 
 
 def run_nca(study: PharmacologyStudy, config: str | Path | NcaConfig) -> list[NcaParameterSet]:
-    """Run single-dose rich-serial NCA for the configured route.
+    """Run rich-serial NCA for the configured route and dosing design.
 
-    Sparse sampling, urine, steady state, and multiple dosing are rejected by
-    the config or by the profile builder.
+    Sparse sampling and urine excretion are rejected by the config. A
+    single-dose config rejects subjects with more than one dose. Equal-interval
+    configs reject unequal doses or unequal spacing.
     """
 
     loaded = config if isinstance(config, NcaConfig) else load_nca_config(config)
@@ -45,5 +46,12 @@ def run_nca(study: PharmacologyStudy, config: str | Path | NcaConfig) -> list[Nc
     if not report.ok:
         raise ValidationFailed(report)
     expected_route = Route(loaded.design_route)
-    profiles = single_dose_profiles(study, allowed_routes=(expected_route,))
+    if loaded.dosing == "single_dose":
+        profiles = single_dose_profiles(study, allowed_routes=(expected_route,))
+    else:
+        profiles = equal_interval_profiles(
+            study,
+            allowed_routes=(expected_route,),
+            regimen=loaded.dosing,
+        )
     return [nca_profile(profile, loaded) for profile in profiles]

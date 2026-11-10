@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Reporting rules for single-dose rich-serial plasma NCA.\n\nSupported routes are ``iv_bolus``, ``iv_infusion``, ``oral``,\n``subcutaneous``, and ``intramuscular``. Multiple dosing, sparse destructive\nsampling, urine excretion, steady state, and ``other`` routes fail\nvalidation here instead of being passed to a calculator.",
+  "description": "Reporting rules for rich-serial plasma NCA.\n\n``repeated_equal`` reports the last closed interdose interval and does not\ntreat Dose/AUC_tau as clearance. ``steady_state`` is a caller declaration\nthat the analyzed interval is at steady state, so clearance is Dose/AUC_tau.",
   "properties": {
     "analysis": {
       "const": "nca",
@@ -19,7 +19,11 @@
       "type": "string"
     },
     "dosing": {
-      "const": "single_dose",
+      "enum": [
+        "single_dose",
+        "repeated_equal",
+        "steady_state"
+      ],
       "title": "Dosing",
       "type": "string"
     },

@@ -20,6 +20,7 @@ python -m pharmacoweave.schema_export
 - `schemas/ingest_mapping.schema.json`（`IngestMappingConfig`，声明式异构实验室表格映射契约）
 - `schemas/exposure_simulation.schema.json`（`ExposureSimulationResult`，单次、重复和稳态解析暴露，契约 `0.2.1`）
 - `schemas/engine_exchange.schema.json`（`EngineResponse`，进程外参考引擎交换，契约 `0.2.1`）
+- `schemas/caller_engine_run.schema.json`（`CallerEngineRun`，调用方进程外引擎槽的运行记录，契约 `0.1.0`）
 
 ## 研究目录
 
@@ -34,6 +35,7 @@ python -m pharmacoweave.schema_export
 | `biosamples` | 必需 |
 | `observations` | 必需 |
 | `identity_map` | 可省略 |
+| `urine_collections` | 可省略。只在存在尿药采集时写出。列是 `collection_id`、`sample_id`、`interval_start_since_dose`、`interval_start_unit`、`volume`、`volume_unit`。体积缺失时两列都空，不写成 0。 |
 
 编码为 UTF-8，不带 BOM。空单元格是缺失，不是 0。`qc_flags` 用 `|` 连接，条目本身不能含 `|`。绝对时间是带时区偏移的 ISO-8601 字符串；Parquet 里同样用字符串，避免各语言的 timestamp 时区不一致。
 
@@ -73,6 +75,6 @@ python -m pharmacoweave.schema_export
 `manifest.json` 的 `schema_name` 是 `pharmacology-result-bundle`，`quality_status` 固定为 `research_only`。
 
 - 实验观测表：`experimental/concentration_observations.parquet`、`experimental/pd_observations.parquet`、`experimental/toxicology_observations.parquet`（研究原始表保持只读），以及可选传入的 `experimental/in_vitro_adme.parquet`、`experimental/tox_endpoints.parquet`。
-- 派生与分析表（仅在对应分析运行后写出）：`analysis/derived_observations.parquet`、`analysis/nca_parameters.parquet`、`analysis/model_parameters.parquet`、`analysis/predictions.parquet`、`analysis/residuals.parquet`、`analysis/emax_parameters.parquet`、`analysis/emax_predictions.parquet`、`analysis/ivive_predictions.parquet`、`analysis/diagnostics.json`、`analysis/prediction_audit.json`。
+- 派生与分析表（仅在对应分析运行后写出）：`analysis/derived_observations.parquet`、`analysis/nca_parameters.parquet`、`analysis/urine_excretion.parquet`、`analysis/model_parameters.parquet`、`analysis/predictions.parquet`、`analysis/residuals.parquet`、`analysis/emax_parameters.parquet`、`analysis/emax_predictions.parquet`、`analysis/ivive_predictions.parquet`、`analysis/diagnostics.json`、`analysis/prediction_audit.json`。有尿药采集时另写 `experimental/urine_collections.parquet`。
 - 诊断图（原生 SVG）：`figures/concentration_time.svg`、`figures/concentration_time_semilog.svg`、`figures/goodness_of_fit.svg`、`figures/residual_diagnostics.svg`、`figures/weighted_residuals.svg`、`figures/concentration_effect.svg`。
 - 证据交换：`evidence/pharmacology_evidence.json`（自动汇集并经 `screen_exchange` 核验所有运行产出的 `estimated`、`predicted` 与体外/毒理 `observed` 证据）。

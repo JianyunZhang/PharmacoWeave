@@ -7,6 +7,7 @@ They are not replaced with zero. Predose rows are not part of the series.
 import math
 from collections.abc import Collection
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal
 
 from pydantic import Field
@@ -73,6 +74,10 @@ class ConcentrationProfile:
     n_above_uloq_omitted: int
     n_predose_omitted: int
     infusion_duration_h: float | None = None
+    tau_h: float | None = None
+    n_doses: int = 1
+    interval_regimen: Literal["single_dose", "repeated_equal", "steady_state"] = "single_dose"
+    reference_cmax_mg_l: float | None = None
 
 
 class ReplicateSummary(Record):
@@ -287,6 +292,8 @@ def single_dose_profiles(
         sample = samples.get(observation.sample_id)
         if sample is None:
             raise AnalysisError(f"Observation {observation.observation_id} has no biosample.")
+        if sample.matrix == "urine":
+            continue
         dose_event = doses.get(sample.dose_event_id)
         if dose_event is None:
             raise AnalysisError(f"Sample {sample.sample_id} has no dose event.")
@@ -417,6 +424,196 @@ def extravascular_profiles(
         allowed_routes=EXTRAVASCULAR_ROUTES,
         replicate_policy=replicate_policy,
     )
+
+
+def equal_interval_profiles(
+    study: PharmacologyStudy,
+    *,
+    allowed_routes: Collection[Route] | None = None,
+    regimen: Literal["repeated_equal", "steady_state"],
+    replicate_policy: ReplicatePolicy = "error",
+) -> list[ConcentrationProfile]:
+    """Build the analyzed interdose interval for equal doses and equal spacing.
+
+    ``repeated_equal`` uses the last interval that ends at the next dose.
+    ``steady_state`` uses the interval that starts at the last dose and lasts
+    one spacing. Samples are placed by absolute clock time. A sample exactly
+    at the end of the interval is the end-of-interval concentration, not the
+    concentration after the next dose.
+    """
+
+    if regimen not in {"repeated_equal", "steady_state"}:
+        raise AnalysisError("regimen must be repeated_equal or steady_state.")
+    if replicate_policy not in {"error", "arithmetic_mean", "geometric_mean"}:
+        raise AnalysisError("replicate_policy must be 'error', 'arithmetic_mean', or 'geometric_mean'.")
+    if replicate_policy != "error":
+        study, _ = collapse_replicates(study, method=replicate_policy)
+
+    permitted = frozenset(SUPPORTED_SINGLE_DOSE_ROUTES if allowed_routes is None else allowed_routes)
+    by_subject: dict[str, list] = {}
+    for dose in study.dose_events:
+        by_subject.setdefault(dose.subject_id, []).append(dose)
+    samples = {sample.sample_id: sample for sample in study.biosamples}
+    analytes = {analyte.analyte_id: analyte for analyte in study.analytes}
+    compounds = {compound.compound_id: compound for compound in study.compounds}
+
+    profiles: list[ConcentrationProfile] = []
+    grouped: dict[tuple[str, str], list[tuple[Biosample, Observation]]] = {}
+    for observation in study.observations:
+        if observation.observation_type is not ObservationType.CONCENTRATION or observation.analyte_id is None:
+            continue
+        sample = samples.get(observation.sample_id)
+        if sample is None:
+            raise AnalysisError(f"Observation {observation.observation_id} has no biosample.")
+        if sample.matrix == "urine":
+            continue
+        grouped.setdefault((sample.subject_id, observation.analyte_id), []).append((sample, observation))
+
+    for subject_id, subject_doses in sorted(by_subject.items()):
+        ordered = sorted(subject_doses, key=lambda item: item.absolute_time)
+        if len(ordered) < 2:
+            raise AnalysisError(
+                f"Subject {subject_id} has {len(ordered)} dose events. "
+                "Equal-interval NCA requires at least two doses."
+            )
+        if any(dose.route not in permitted for dose in ordered):
+            raise AnalysisError(f"Subject {subject_id} has a route outside this NCA design.")
+        if len({dose.route for dose in ordered}) != 1 or len({dose.compound_id for dose in ordered}) != 1:
+            raise AnalysisError(f"Subject {subject_id} mixes route or compound across doses.")
+        compound = compounds.get(ordered[0].compound_id)
+        dose_mg = [
+            _dose_to_mg(dose.dose_event_id, dose.dose_value, dose.dose_unit, compound) for dose in ordered
+        ]
+        if any(abs(amount - dose_mg[0]) > 1e-9 * max(1.0, dose_mg[0]) for amount in dose_mg):
+            raise AnalysisError(f"Subject {subject_id} doses are not equal. Unequal regimens are not calculated.")
+        gaps = [
+            (later.absolute_time - earlier.absolute_time).total_seconds() / 3600.0
+            for earlier, later in zip(ordered, ordered[1:], strict=False)
+        ]
+        if any(gap <= 0 for gap in gaps) or any(abs(gap - gaps[0]) > 1e-6 for gap in gaps):
+            raise AnalysisError(f"Subject {subject_id} dosing intervals are not equal and positive.")
+        tau_h = gaps[0]
+        infusions = [_infusion_hours(dose) for dose in ordered]
+        if ordered[0].route is Route.IV_INFUSION:
+            if any(value is None or value <= 0 for value in infusions):
+                raise AnalysisError(f"Subject {subject_id} is missing a positive infusion duration.")
+            assert infusions[0] is not None
+            if any(value is None or abs(value - infusions[0]) > 1e-6 for value in infusions):
+                raise AnalysisError(f"Subject {subject_id} infusion durations are not equal.")
+            if infusions[0] >= tau_h:
+                raise AnalysisError(
+                    f"Subject {subject_id} infusion duration is not shorter than the dosing interval."
+                )
+        anchor = ordered[-1] if regimen == "steady_state" else ordered[-2]
+        analyte_ids = {analyte_id for (sid, analyte_id) in grouped if sid == subject_id}
+        if not analyte_ids:
+            raise AnalysisError(f"Subject {subject_id} has no concentration observations.")
+        for analyte_id in sorted(analyte_ids):
+            analyte = analytes.get(analyte_id)
+            if analyte is not None and analyte.compound_id not in {None, ordered[0].compound_id}:
+                raise AnalysisError(
+                    f"Analyte {analyte_id} is linked to {analyte.compound_id}, "
+                    f"not dose compound {ordered[0].compound_id}."
+                )
+            analyte_compound = (
+                compounds.get(analyte.compound_id) if analyte is not None and analyte.compound_id is not None else None
+            )
+            points, n_blq, n_above, n_predose = _interval_points(
+                grouped[(subject_id, analyte_id)],
+                anchor_time=anchor.absolute_time,
+                tau_h=tau_h,
+                compound=analyte_compound or compound,
+            )
+            reference = None
+            if regimen == "repeated_equal" and len(ordered) >= 3:
+                first_points, _, _, _ = _interval_points(
+                    grouped[(subject_id, analyte_id)],
+                    anchor_time=ordered[0].absolute_time,
+                    tau_h=tau_h,
+                    compound=analyte_compound or compound,
+                )
+                if first_points:
+                    reference = max(point.concentration_mg_l for point in first_points)
+            infusion_h = infusions[0] if ordered[0].route is Route.IV_INFUSION else None
+            profiles.append(
+                ConcentrationProfile(
+                    subject_id=subject_id,
+                    analyte_id=analyte_id,
+                    dose_event_id=anchor.dose_event_id,
+                    route=ordered[0].route,
+                    dose_mg=dose_mg[0],
+                    points=tuple(points),
+                    n_blq_omitted=n_blq,
+                    n_above_uloq_omitted=n_above,
+                    n_predose_omitted=n_predose,
+                    infusion_duration_h=infusion_h,
+                    tau_h=tau_h,
+                    n_doses=len(ordered),
+                    interval_regimen=regimen,
+                    reference_cmax_mg_l=reference,
+                )
+            )
+    return profiles
+
+
+def _infusion_hours(dose) -> float | None:
+    if dose.infusion_duration is None or dose.infusion_duration_unit is None:
+        return None
+    return convert(dose.infusion_duration, dose.infusion_duration_unit, "h")
+
+
+def _interval_points(
+    rows: list[tuple[Biosample, Observation]],
+    *,
+    anchor_time: datetime,
+    tau_h: float,
+    compound: Compound | None,
+) -> tuple[list[QuantifiedPoint], int, int, int]:
+    points: list[QuantifiedPoint] = []
+    n_blq = 0
+    n_above = 0
+    n_predose = 0
+    for sample, observation in rows:
+        time_h = (sample.collection_time_absolute - anchor_time).total_seconds() / 3600.0
+        if time_h < -1e-6:
+            n_predose += 1
+            continue
+        if time_h > tau_h + 1e-6:
+            continue
+        if abs(time_h) <= 1e-6:
+            time_h = 0.0
+        elif abs(time_h - tau_h) <= 1e-6:
+            time_h = tau_h
+        if observation.status is ObservationStatus.BLQ:
+            n_blq += 1
+            continue
+        if observation.status is ObservationStatus.ABOVE_ULOQ:
+            n_above += 1
+            continue
+        if observation.status is not ObservationStatus.QUANTIFIED:
+            continue
+        if observation.unit is None or observation.numeric_value is None:
+            raise AnalysisError(f"Quantified observation {observation.observation_id} has no value.")
+        points.append(
+            QuantifiedPoint(
+                observation_id=observation.observation_id,
+                time_h=time_h,
+                concentration_mg_l=_concentration_to_mg_l(
+                    observation.observation_id,
+                    observation.numeric_value,
+                    observation.unit,
+                    compound,
+                ),
+            )
+        )
+    points.sort(key=lambda item: (item.time_h, item.observation_id))
+    for earlier, later in zip(points, points[1:], strict=False):
+        if abs(later.time_h - earlier.time_h) <= 1e-9:
+            raise AnalysisError(
+                f"Two quantified concentrations fall at {earlier.time_h:g} h in one dosing interval. "
+                "Collapse replicates before NCA."
+            )
+    return points, n_blq, n_above, n_predose
 
 
 def _convert_with_optional_compound(

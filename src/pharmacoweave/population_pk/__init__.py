@@ -1,7 +1,8 @@
 """Population PK is not calculated in this package.
 
-nlmixr2 is copyleft and is not imported. The executable out-of-process backend
-is only the MIT analytical reference engine in ``integrations.external_backends``.
+nlmixr2 is copyleft and is not imported. The built-in executable backend is
+only the MIT analytical reference engine. A caller-supplied executable is a
+separate slot and does not add nlmixr2 to ``supported_backends()``.
 """
 
 from pharmacoweave.core.roadmap import status

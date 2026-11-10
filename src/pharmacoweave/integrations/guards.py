@@ -18,6 +18,8 @@ _PK_MEASUREMENTS = frozenset(
         "volume",
         "apparent_volume",
         "ka",
+        "renal_clearance",
+        "amount_excreted",
     }
 )
 _EPHYS_ENDPOINTS = frozenset({"neural_pd_endpoint", "behavioral_endpoint"})
