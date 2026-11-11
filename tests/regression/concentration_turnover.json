@@ -1,0 +1,14 @@
+{
+  "reference_id": "concentration_turnover_v1",
+  "computed_with": "Hand formula. C(t)=(Dose/V)*exp(-kel*t). dR/dt = kin*C(t) - kout*R with R0=0. When kout=kel, R(t)=kin*(Dose/V)*t*exp(-kout*t). When kout differs from kel, R(t)=kin*(Dose/V)/(kout-kel)*(exp(-kel*t)-exp(-kout*t)). This file was not produced by importing PharmacoWeave.",
+  "dose_mg": 1,
+  "volume_l": 1,
+  "clearance_l_h": 1,
+  "kin": 1,
+  "equal_kout": 1,
+  "equal_time_h": 1,
+  "equal_response_expression": "1/e",
+  "distinct_kin": 2,
+  "distinct_kout": 2,
+  "distinct_response_at_ln2": 0.5
+}

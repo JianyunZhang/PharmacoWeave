@@ -19,6 +19,8 @@ from pharmacoweave.core.units import convert, convert_with_molecular_weight
 from pharmacoweave.errors import AnalysisError, ContractViolation, PlannedCapabilityError
 from pharmacoweave.pk_models.analytical import (
     bateman_mg_l,
+    three_compartment_bolus_mg_l,
+    three_compartment_macro_constants,
     two_compartment_bolus_mg_l,
     two_compartment_macro_constants,
 )
@@ -27,11 +29,13 @@ MODEL_IV_BOLUS = "one_compartment_iv_bolus"
 MODEL_IV_INFUSION = "one_compartment_iv_infusion"
 MODEL_EXTRAVASCULAR = "one_compartment_extravascular"
 MODEL_TWO_COMPARTMENT = "two_compartment_iv_bolus"
+MODEL_THREE_COMPARTMENT = "three_compartment_iv_bolus"
 AnalyticalModel = Literal[
     "one_compartment_iv_bolus",
     "one_compartment_iv_infusion",
     "one_compartment_extravascular",
     "two_compartment_iv_bolus",
+    "three_compartment_iv_bolus",
 ]
 
 _MIN_DRAWS = 40
@@ -68,6 +72,14 @@ _NUMERIC_PARAMETERS: dict[str, tuple[str, ...]] = {
         "intercompartmental_clearance",
         "peripheral_volume",
     ),
+    MODEL_THREE_COMPARTMENT: (
+        "clearance",
+        "central_volume",
+        "intercompartmental_clearance",
+        "peripheral_volume",
+        "q3",
+        "peripheral_volume_3",
+    ),
 }
 _REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     MODEL_IV_BOLUS: ("clearance", "clearance_unit", "volume", "volume_unit"),
@@ -97,6 +109,20 @@ _REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
         "peripheral_volume",
         "peripheral_volume_unit",
     ),
+    MODEL_THREE_COMPARTMENT: (
+        "clearance",
+        "clearance_unit",
+        "central_volume",
+        "central_volume_unit",
+        "intercompartmental_clearance",
+        "intercompartmental_clearance_unit",
+        "peripheral_volume",
+        "peripheral_volume_unit",
+        "q3",
+        "q3_unit",
+        "peripheral_volume_3",
+        "peripheral_volume_3_unit",
+    ),
 }
 _ALL_OPTIONAL = (
     "clearance",
@@ -117,6 +143,10 @@ _ALL_OPTIONAL = (
     "intercompartmental_clearance_unit",
     "peripheral_volume",
     "peripheral_volume_unit",
+    "q3",
+    "q3_unit",
+    "peripheral_volume_3",
+    "peripheral_volume_3_unit",
 )
 
 
@@ -135,6 +165,8 @@ class DeclaredParameter(Record):
         "central_volume",
         "peripheral_volume",
         "intercompartmental_clearance",
+        "q3",
+        "peripheral_volume_3",
         "absorption_rate",
         "infusion_duration",
         "dosing_interval",
@@ -183,6 +215,10 @@ class ExposureSimulationRequest(Record):
     intercompartmental_clearance_unit: str | None = None
     peripheral_volume: PositiveFloat | None = None
     peripheral_volume_unit: str | None = None
+    q3: PositiveFloat | None = None
+    q3_unit: str | None = None
+    peripheral_volume_3: PositiveFloat | None = None
+    peripheral_volume_3_unit: str | None = None
     times_h: list[FiniteFloat] | None = None
     time_start_h: FiniteFloat = 0.0
     time_end_h: PositiveFloat | None = None
@@ -261,6 +297,8 @@ class ExposureSimulationRequest(Record):
                 raise ValueError("Repeated dosing and steady state require dosing_interval and dosing_interval_unit.")
         elif self.dosing_interval is not None:
             raise ValueError("A single dose does not take a dosing_interval.")
+        if self.model_id == MODEL_THREE_COMPARTMENT and (self.n_doses > 1 or self.steady_state):
+            raise ValueError("three_compartment_iv_bolus exposure simulation is single-dose only.")
         return self
 
 
@@ -298,7 +336,7 @@ class ExposureSimulationResult(Record):
     cmin: float | None = None
     accumulation_ratio: float | None = None
     half_life_h: float
-    terminal_rate_name: Literal["kel", "ka", "ka_equals_kel", "beta"]
+    terminal_rate_name: Literal["kel", "ka", "ka_equals_kel", "beta", "gamma"]
     time_above_threshold_h: float | None = None
     threshold_concentration: float | None = None
     threshold_unit: str | None = None
@@ -325,6 +363,8 @@ class _State:
         vf_l: float | None = None,
         q_l_h: float | None = None,
         v2_l: float | None = None,
+        q3_l_h: float | None = None,
+        v3_l: float | None = None,
     ) -> None:
         self.model_id = model_id
         self.dose_mg = dose_mg
@@ -336,6 +376,8 @@ class _State:
         self.vf_l = vf_l
         self.q_l_h = q_l_h
         self.v2_l = v2_l
+        self.q3_l_h = q3_l_h
+        self.v3_l = v3_l
 
     def copy(self) -> _State:
         return _State(
@@ -349,6 +391,8 @@ class _State:
             vf_l=self.vf_l,
             q_l_h=self.q_l_h,
             v2_l=self.v2_l,
+            q3_l_h=self.q3_l_h,
+            v3_l=self.v3_l,
         )
 
 
@@ -546,6 +590,15 @@ def _canonicalize(request: ExposureSimulationRequest) -> _State:
                 "L",
             ),
         )
+    q3_l_h = None
+    v3_l = None
+    if request.model_id == MODEL_THREE_COMPARTMENT:
+        q3_l_h = convert(_required(request.q3, "q3"), _required(request.q3_unit, "unit"), "L/h")
+        v3_l = convert(
+            _required(request.peripheral_volume_3, "peripheral_volume_3"),
+            _required(request.peripheral_volume_3_unit, "unit"),
+            "L",
+        )
     return _State(
         model_id=request.model_id,
         dose_mg=dose_mg,
@@ -565,6 +618,8 @@ def _canonicalize(request: ExposureSimulationRequest) -> _State:
             _required(request.peripheral_volume_unit, "unit"),
             "L",
         ),
+        q3_l_h=q3_l_h,
+        v3_l=v3_l,
     )
 
 
@@ -650,6 +705,47 @@ def _declared_parameters(request: ExposureSimulationRequest) -> list[DeclaredPar
                 ),
             ]
         )
+    if request.model_id == MODEL_THREE_COMPARTMENT:
+        rows.extend(
+            [
+                DeclaredParameter(
+                    name="CL",
+                    value=_required(request.clearance, "clearance"),
+                    unit=_required(request.clearance_unit, "unit"),
+                    role="clearance",
+                ),
+                DeclaredParameter(
+                    name="V1",
+                    value=_required(request.central_volume, "central_volume"),
+                    unit=_required(request.central_volume_unit, "unit"),
+                    role="central_volume",
+                ),
+                DeclaredParameter(
+                    name="Q2",
+                    value=_required(request.intercompartmental_clearance, "Q2"),
+                    unit=_required(request.intercompartmental_clearance_unit, "unit"),
+                    role="intercompartmental_clearance",
+                ),
+                DeclaredParameter(
+                    name="V2",
+                    value=_required(request.peripheral_volume, "peripheral_volume"),
+                    unit=_required(request.peripheral_volume_unit, "unit"),
+                    role="peripheral_volume",
+                ),
+                DeclaredParameter(
+                    name="Q3",
+                    value=_required(request.q3, "Q3"),
+                    unit=_required(request.q3_unit, "unit"),
+                    role="q3",
+                ),
+                DeclaredParameter(
+                    name="V3",
+                    value=_required(request.peripheral_volume_3, "V3"),
+                    unit=_required(request.peripheral_volume_3_unit, "unit"),
+                    role="peripheral_volume_3",
+                ),
+            ]
+        )
     if request.dosing_interval is not None and request.dosing_interval_unit is not None:
         rows.append(
             DeclaredParameter(
@@ -694,6 +790,11 @@ def _assumptions(request: ExposureSimulationRequest, state: _State, regimen: _Re
         )
     if request.model_id == MODEL_TWO_COMPARTMENT:
         notes.append("The reported concentration is the central compartment. Peripheral concentration is not reported.")
+    if request.model_id == MODEL_THREE_COMPARTMENT:
+        notes.append(
+            "The reported concentration is the central compartment of a three-compartment IV bolus. "
+            "Repeated dosing and steady state are not simulated for this model."
+        )
     if request.n_draws == 0:
         notes.append("No parameter uncertainty was propagated.")
     else:
@@ -732,6 +833,17 @@ def _concentration_mg_l(state: _State, time_h: float) -> float:
             ka_h=_required(state.ka_h, "ka"),
             clf_l_h=_required(state.clf_l_h, "CL/F"),
             vf_l=_required(state.vf_l, "V/F"),
+            time_h=time_h,
+        )
+    if state.model_id == MODEL_THREE_COMPARTMENT:
+        return three_compartment_bolus_mg_l(
+            dose_mg=state.dose_mg,
+            cl_l_h=_required(state.cl_l_h, "CL"),
+            v1_l=_required(state.v_l, "V1"),
+            q2_l_h=_required(state.q_l_h, "Q2"),
+            v2_l=_required(state.v2_l, "V2"),
+            q3_l_h=_required(state.q3_l_h, "Q3"),
+            v3_l=_required(state.v3_l, "V3"),
             time_h=time_h,
         )
     return two_compartment_bolus_mg_l(
@@ -983,7 +1095,7 @@ def _cmax_tmax(state: _State) -> tuple[float, float]:
     if state.model_id == MODEL_IV_INFUSION:
         duration = _required(state.infusion_h, "infusion_duration")
         return _infusion_mg_l(state, duration), duration
-    if state.model_id == MODEL_TWO_COMPARTMENT:
+    if state.model_id in {MODEL_TWO_COMPARTMENT, MODEL_THREE_COMPARTMENT}:
         return state.dose_mg / _required(state.v_l, "V1"), 0.0
     ka = _required(state.ka_h, "ka")
     kel = _required(state.clf_l_h, "CL/F") / _required(state.vf_l, "V/F")
@@ -1000,7 +1112,18 @@ def _auc_inf_mg_h_l(state: _State) -> float:
     return state.dose_mg / _required(state.cl_l_h, "CL")
 
 
-def _terminal_half_life(state: _State) -> tuple[float, Literal["kel", "ka", "ka_equals_kel", "beta"]]:
+def _terminal_half_life(state: _State) -> tuple[float, Literal["kel", "ka", "ka_equals_kel", "beta", "gamma"]]:
+    if state.model_id == MODEL_THREE_COMPARTMENT:
+        rates = three_compartment_macro_constants(
+            dose_mg=state.dose_mg,
+            cl_l_h=_required(state.cl_l_h, "CL"),
+            v1_l=_required(state.v_l, "V1"),
+            q2_l_h=_required(state.q_l_h, "Q2"),
+            v2_l=_required(state.v2_l, "V2"),
+            q3_l_h=_required(state.q3_l_h, "Q3"),
+            v3_l=_required(state.v3_l, "V3"),
+        )
+        return math.log(2.0) / rates[5], "gamma"
     if state.model_id == MODEL_TWO_COMPARTMENT:
         _a, _alpha, _b, beta = two_compartment_macro_constants(
             dose_mg=state.dose_mg,
@@ -1041,15 +1164,9 @@ def _time_above_h(state: _State, threshold_mg_l: float) -> float:
         start = -math.log(remaining) / kel
         end = duration + math.log(cmax / threshold_mg_l) / kel
         return max(0.0, end - start)
-    if state.model_id == MODEL_TWO_COMPARTMENT:
-        _a, _alpha, _b, beta = two_compartment_macro_constants(
-            dose_mg=state.dose_mg,
-            cl_l_h=_required(state.cl_l_h, "CL"),
-            v1_l=_required(state.v_l, "V1"),
-            q_l_h=_required(state.q_l_h, "Q"),
-            v2_l=_required(state.v2_l, "V2"),
-        )
-        upper = _past_threshold(state, math.log(cmax / threshold_mg_l) / beta, threshold_mg_l)
+    if state.model_id in {MODEL_TWO_COMPARTMENT, MODEL_THREE_COMPARTMENT}:
+        slow = _terminal_half_life(state)[0] / math.log(2.0)
+        upper = _past_threshold(state, math.log(cmax / threshold_mg_l) / slow, threshold_mg_l)
         return _bisection_descending(state, 0.0, upper, threshold_mg_l)
     start = _bisection_rising(state, 0.0, tmax, threshold_mg_l)
     kel = _required(state.clf_l_h, "CL/F") / _required(state.vf_l, "V/F")
@@ -1142,6 +1259,8 @@ def _perturb(
         "central_volume": "v_l",
         "peripheral_volume": "v2_l",
         "intercompartmental_clearance": "q_l_h",
+        "q3": "q3_l_h",
+        "peripheral_volume_3": "v3_l",
         "ka": "ka_h",
         "apparent_clearance": "clf_l_h",
         "apparent_volume": "vf_l",

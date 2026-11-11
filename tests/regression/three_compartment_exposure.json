@@ -1,0 +1,13 @@
+{
+  "reference_id": "three_compartment_exposure_v1",
+  "computed_with": "Single-dose three-compartment IV bolus. C(0)=Dose/V1 and AUC infinity = Dose/CL. Repeated dosing is outside this reference. This file was not produced by importing PharmacoWeave.",
+  "dose_mg": 1,
+  "clearance_l_h": 0.5,
+  "central_volume_l": 1,
+  "q2_l_h": 1.5,
+  "v2_l": 4,
+  "q3_l_h": 0.25,
+  "v3_l": 10,
+  "c0_mg_l": 1,
+  "auc_inf_mg_h_l": 2
+}

@@ -16,7 +16,7 @@ PharmacoWeave 定位为**面向定量药理学研究的数据模型与验证工�
 1. **设计边界仍然成立**  
    Research Use Only、单向 Hub-and-Spoke、封闭单位、`CL` 与 `CL/F` 隔离、BLQ 不改原值、预测与实测分层，这些决定继续约束后续实现。核心计算不引入 SciPy、Matplotlib 或 copyleft 引擎。
 2. **立项 Phase 0–3 已可运行；收窄后的 Phase 4 切片已到 0.2.6**  
-   可执行的是研究契约、单次与等剂量间隔 NCA、尿药排泄、已列出的房室和 Emax 拟合（含一室恒速输注的 `CL` 与 `V`）、显式假设 IVIVE、预测审计、跨尺度对齐、声明式映射、结果包核验、解析暴露模拟、调用方进程外引擎槽，以及 0.2.6 的五项有限函数：两阶段对数参数汇总、显式生理表、线性周转闭式解、肝加一个组织的代数稳态、调用方群体结果表。`schemas/` 现有 22 份契约。`population_pk`、`pbpk` 和 `qsp` 是 partial。
+   可执行的是研究契约、单次与等剂量间隔 NCA、尿药排泄、已列出的房室和 Emax 拟合（含一室恒速输注的 `CL` 与 `V`）、显式假设 IVIVE、预测审计、跨尺度对齐、声明式映射、结果包核验、解析暴露模拟、调用方进程外引擎槽，以及 0.2.6 的五项有限函数：两阶段对数参数汇总、显式生理表、线性周转闭式解、肝加一个组织的代数稳态、调用方群体结果表。`schemas/` 现有 23 份契约。`population_pk`、`pbpk` 和 `qsp` 是 partial。
 3. **原 Phase 4 的重型引擎没有打开**  
    立项里的群体后验、全身动态 PBPK 和 QSP 网络仍然拒绝。内置可执行后端只有 MIT 解析参考引擎。调用方引擎槽只在可执行文件、版本和许可证文本都存在时启动，不把 nlmixr2 或 PK-Sim 写进依赖。临床给药建议和隐式生理表继续拒绝。
 
@@ -53,7 +53,7 @@ flowchart TB
 2. **跨尺度电生理与组学对齐及全链条可追溯性**：交付 `dose_event → in vivo exposure → EphysWeave / OmicsWeave PD endpoint → source artifact` 端到端示范流；强制校验受试者标识审核通过状态（`review_status="accepted"`）、显式注册时钟及同步抖动阈值（`sync_error_ms`）；严守“代谢通量绝不是浓度”科学红线。
 3. **声明式原始异构表映射与哈希不可篡改性**：支持通过 `ingest_mapping.yaml` 映射异构湿实验导出表格（CSV/TSV/Parquet），实现列重命名、常量注入与枚举映射转换（如 `<LLOQ` / `BLQ`），将原始文件 SHA-256 摘要严格持久化至 `study.source_files`。
 4. **离线结果包核验与差异对比工具链**：提供 `pharmacoweave verify-bundle`（离线逐一哈希全量落盘文件比对校验和、排查文件篡改与未列盘文件）与 `pharmacoweave diff`（对比两次分析运行的元数据差异、文件树增删改状态、Parquet 分析参数表数值相对误差与 JSON 指标变动）。
-5. **全链路 CLI 与当时的 10 份 JSON Schema**：0.1.0 导出并冻结 `schemas/ingest_mapping.schema.json`，使当时的契约达到 10 份；CLI 支持 `verify-bundle`、`diff`、`ingest` 子命令；提供完整运行演示 `examples/multiscale_ephys_omics_alignment.py` 与 `examples/ingest_mapping_demo.py`。0.2.x 又增加暴露模拟、引擎交换、尿药配置和调用方引擎槽，截至 0.2.5 共 14 份。0.2.6 再增加五项结果契约，共 19 份。0.2.8 再增加周转抑制、效应室和三室回收，共 22 份。暴露模拟与引擎交换契约保持 `0.2.2`。
+5. **全链路 CLI 与当时的 10 份 JSON Schema**：0.1.0 导出并冻结 `schemas/ingest_mapping.schema.json`，使当时的契约达到 10 份；CLI 支持 `verify-bundle`、`diff`、`ingest` 子命令；提供完整运行演示 `examples/multiscale_ephys_omics_alignment.py` 与 `examples/ingest_mapping_demo.py`。0.2.x 又增加暴露模拟、引擎交换、尿药配置和调用方引擎槽，截至 0.2.5 共 14 份。0.2.6 再增加五项结果契约，共 19 份。0.2.8 再增加周转抑制、效应室和三室回收，共 22 份。0.2.10 再增加浓度驱动周转，共 23 份。暴露模拟与引擎交换契约保持 `0.2.2`。
 
 ### 2.2 `0.2.6` 已实现、部分实现与仍拒绝的功能
 

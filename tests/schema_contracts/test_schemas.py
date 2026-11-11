@@ -16,6 +16,7 @@ from pharmacoweave.pk_models.fit_three_compartment import ThreeCompartmentRecove
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.population_pk.results import PopulationResultTable
 from pharmacoweave.population_pk.two_stage import LogParameterSummary
+from pharmacoweave.qsp.concentration_turnover import ConcentrationTurnoverSimulation
 from pharmacoweave.qsp.inhibited_turnover import InhibitedTurnoverSimulation
 from pharmacoweave.qsp.turnover import TurnoverSimulation
 from pharmacoweave.schema_export import CONTRACTS, json_schema
@@ -41,6 +42,7 @@ def test_schema_version_defaults_match_the_package_constant() -> None:
     assert SteadyStatePbpk.model_fields["schema_version"].default == SCHEMA_VERSION
     assert PopulationResultTable.model_fields["schema_version"].default == SCHEMA_VERSION
     assert InhibitedTurnoverSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert ConcentrationTurnoverSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
     assert EffectCompartmentSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
     assert ThreeCompartmentRecovery.model_fields["schema_version"].default == SCHEMA_VERSION
 

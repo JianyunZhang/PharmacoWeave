@@ -19,6 +19,7 @@ from pharmacoweave.population_pk.two_stage import (
     summarize_log_parameters,
     summarize_weighted_log_parameters,
 )
+from pharmacoweave.qsp.concentration_turnover import simulate_concentration_driven_turnover
 from pharmacoweave.qsp.inhibited_turnover import simulate_constant_inhibition_turnover
 from pharmacoweave.qsp.turnover import simulate_linear_turnover
 
@@ -36,6 +37,8 @@ def evaluate_accepted_record(payload: dict[str, Any]) -> BaseModel | Sequence[Ba
         return simulate_linear_turnover(**body)
     if kind == "inhibited_turnover":
         return simulate_constant_inhibition_turnover(**body)
+    if kind == "concentration_turnover":
+        return simulate_concentration_driven_turnover(**body)
     if kind == "effect_compartment":
         return simulate_effect_compartment(**body)
     if kind == "log_parameters":

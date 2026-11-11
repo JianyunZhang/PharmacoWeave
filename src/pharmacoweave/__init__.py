@@ -1,6 +1,6 @@
 """PharmacoWeave, a research-use quantitative pharmacology toolkit.
 
-Version 0.2.9 validates study data, calculates equal-dose interval NCA, and
+Version 0.2.10 validates study data, calculates equal-dose interval NCA, and
 calculates urine excretion amount and renal clearance from recorded void
 volumes. A caller-supplied executable starts only when its file, version, and
 license text are all present. A one-compartment constant-rate IV infusion can

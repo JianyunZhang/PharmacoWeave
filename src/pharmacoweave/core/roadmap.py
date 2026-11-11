@@ -117,14 +117,15 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "qsp",
         "P3",
         "partial",
-        "Closed forms for linear turnover and constant production inhibition, evidence grade predicted. "
-        "QSP networks are not simulated.",
+        "Closed forms for linear turnover, constant inhibition, and production driven by an IV bolus "
+        "concentration. QSP networks are not simulated.",
     ),
     ModuleStatus(
         "simulation",
         "P4",
         "partial",
         "Single-dose, repeated-dose, and steady-state analytical exposure intervals. "
+        "Three-compartment IV bolus is single-dose only. "
         "Optional caller-supplied log-parameter correlation. Not a dosing regimen or a population model.",
     ),
 )

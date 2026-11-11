@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.10 — 2026-11-11
+
+- **浓度驱动周转（`simulate_concentration_driven_turnover`）**：`dR/dt = kin·C(t) − kout·R`，`C(t)` 是一室静脉推注闭式解。`kout = kel = 1`、`kin = 1`、`R0 = 0` 时，`R(1) = 1/e`。`kout = 2`、`kin = 2` 时，`R(ln 2)` 的驱动项是 0.5。稳态是 0。不估计参数，也不把 `kout` 乘上浓度。
+- **三室单次暴露模拟**：`pharmacoweave simulate` 接受 `three_compartment_iv_bolus`。`C(0) = Dose/V1`，`AUC∞ = Dose/CL`，终末速率名是 `gamma`。重复给药和稳态请求被拒绝。
+- **预测审计**：`audit-predictions --fit-model three_compartment_iv_bolus` 可以用三室拟合产生体内估计。
+
 ## 0.2.9 — 2026-11-11
 
 - **三室静脉推注拟合（`fit_three_compartment_iv_bolus`）**：在已验收的闭式解上，用加权非线性最小二乘估计 `CL`、`V1`、`Q2`、`V2`、`Q3`、`V3`，并给出渐近标准误和 95% 置信区间。命令是 `pharmacoweave fit --model three_compartment_iv_bolus --method weighted_nls`。点数少于八个、剂量非正或曲线不下降时，诊断为失败，不报告清除率。

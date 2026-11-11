@@ -95,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             "one_compartment_iv_infusion",
             "one_compartment_extravascular",
             "two_compartment_iv_bolus",
+            "three_compartment_iv_bolus",
         ),
         default=None,
         help="PK model to compute in vivo estimates",
@@ -640,6 +641,10 @@ def _audit_predictions(
             from pharmacoweave.pk_models.fit_two_compartment import fit_two_compartment_iv_bolus
 
             pk_fits = list(fit_two_compartment_iv_bolus(study))
+        elif fit_model == "three_compartment_iv_bolus":
+            from pharmacoweave.pk_models.fit_three_compartment import fit_three_compartment_iv_bolus
+
+            pk_fits = list(fit_three_compartment_iv_bolus(study))
         estimates.extend(collect_run_evidence(run_id=selected_run, pk_fits=pk_fits))
 
     estimates = [r for r in estimates if r.evidence_type is EvidenceType.ESTIMATED]

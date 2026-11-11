@@ -26,6 +26,8 @@
             "central_volume",
             "peripheral_volume",
             "intercompartmental_clearance",
+            "q3",
+            "peripheral_volume_3",
             "absorption_rate",
             "infusion_duration",
             "dosing_interval"
@@ -128,7 +130,8 @@
         "one_compartment_iv_bolus",
         "one_compartment_iv_infusion",
         "one_compartment_extravascular",
-        "two_compartment_iv_bolus"
+        "two_compartment_iv_bolus",
+        "three_compartment_iv_bolus"
       ],
       "title": "Model Id",
       "type": "string"
@@ -375,7 +378,8 @@
         "kel",
         "ka",
         "ka_equals_kel",
-        "beta"
+        "beta",
+        "gamma"
       ],
       "title": "Terminal Rate Name",
       "type": "string"

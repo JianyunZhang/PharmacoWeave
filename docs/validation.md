@@ -173,6 +173,12 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 - **三室**：`tests/regression/three_compartment_iv_bolus.json` 取 Dose = 1 mg、CL = 0.5 L/h、V1 = 1 L、Q2 = 1.5 L/h、V2 = 4 L、Q3 = 0.25 L/h、V3 = 10 L。`C(0) = 1 mg/L`。系数积分 AUC∞ = 2 mg·h/L，相对误差不超过 **1e-12**。无噪声回收和 `fit_three_compartment_iv_bolus_profile` 的相对误差不超过 **1e-4**。拟合报告标准误和 95% 置信区间。点数不足时诊断为失败，估计值为空。
 - **命令与结果包**：`accepted-record` 写出的 JSON 与直接调用的相对误差不超过 **1e-12**。结果包文件是 `analysis/accepted_record.json`。`kind` 为 `engine_response` 时拒绝。群体结果表请求不调用 `subprocess.run`。
 
+## 0.2.10 浓度驱动周转、三室单次模拟和审计拟合
+
+- **浓度驱动周转**：`tests/regression/concentration_turnover.json`。`kin = kout = kel = 1`、`R0 = 0` 时 `R(1) = 1/e`。`kin = kout = 2`、`kel = 1` 时，`R(ln 2)` 的驱动项是 0.5。相对误差不超过 **1e-12**。血浆浓度来自一室静脉推注闭式解。`estimate_parameters=True` 时拒绝。
+- **三室单次模拟**：`tests/regression/three_compartment_exposure.json`。`C(0) = 1 mg/L`，`AUC∞ = 2 mg·h/L`，相对误差不超过 **1e-12**。终末速率名是 `gamma`。`n_doses = 2` 时请求无法建成。
+- **审计拟合选项**：三室拟合导出的 `CL` 证据与 0.5 L/h 的相对误差不超过 **1e-4**。`audit-predictions --help` 列出 `three_compartment_iv_bolus`。
+
 ## 明确不做的符合性声明
 
 字段设计参考 ICH M10 的定量限和 QC 概念，以及 ICH M15 的 question of interest 与 context of use。测试通过不等于生物分析方法学验证，也不等于 MIDD 证据已经被监管机构接受。CDISC SEND 导出、21 CFR Part 11 审计追踪和人类受试者访问控制不在本版本。

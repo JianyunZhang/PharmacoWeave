@@ -1,6 +1,6 @@
 # 数据契约
 
-Schema 版本：研究、结果包和既有分析契约仍是 `0.1.0`。暴露模拟与引擎交换契约是 `0.2.2`，并仍接受 `0.2.1`。Pydantic 模型是唯一真源，`schemas/` 是导出的 22 份 JSON Schema。重新生成：
+Schema 版本：研究、结果包和既有分析契约仍是 `0.1.0`。暴露模拟与引擎交换契约是 `0.2.2`，并仍接受 `0.2.1`。Pydantic 模型是唯一真源，`schemas/` 是导出的 23 份 JSON Schema。重新生成：
 
 ```bash
 python -m pharmacoweave.schema_export
@@ -28,6 +28,7 @@ python -m pharmacoweave.schema_export
 - `schemas/steady_state_pbpk.schema.json`（`SteadyStatePbpk`，肝加一个组织的代数稳态，契约 `0.1.0`）
 - `schemas/population_result_table.schema.json`（`PopulationResultTable`，调用方群体结果表，契约 `0.1.0`）
 - `schemas/inhibited_turnover.schema.json`（`InhibitedTurnoverSimulation`，恒定抑制周转，契约 `0.1.0`）
+- `schemas/concentration_turnover.schema.json`（`ConcentrationTurnoverSimulation`，浓度驱动周转，契约 `0.1.0`）
 - `schemas/effect_compartment.schema.json`（`EffectCompartmentSimulation`，效应室曲线，契约 `0.1.0`）
 - `schemas/three_compartment_recovery.schema.json`（`ThreeCompartmentRecovery`，三室无噪声回收，契约 `0.1.0`）
 

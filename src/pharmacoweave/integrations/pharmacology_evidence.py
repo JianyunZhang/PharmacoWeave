@@ -33,10 +33,11 @@ from pharmacoweave.pd_models.emax import DirectEmaxFit
 from pharmacoweave.pk_models.fit_extravascular import ExtravascularFit
 from pharmacoweave.pk_models.fit_infusion import InfusionFit
 from pharmacoweave.pk_models.fit_iv import IvBolusFit
+from pharmacoweave.pk_models.fit_three_compartment import ThreeCompartmentFit
 from pharmacoweave.pk_models.fit_two_compartment import TwoCompartmentFit
 from pharmacoweave.toxicology.records import ToxEndpoint
 
-PkFitResult = IvBolusFit | InfusionFit | ExtravascularFit | TwoCompartmentFit
+PkFitResult = IvBolusFit | InfusionFit | ExtravascularFit | TwoCompartmentFit | ThreeCompartmentFit
 
 _NCA_MEASUREMENT = {
     "auc_last": "auc",

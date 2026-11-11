@@ -25,6 +25,7 @@ from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.pk_nca.urine import UrineNcaConfig
 from pharmacoweave.population_pk.results import PopulationResultTable
 from pharmacoweave.population_pk.two_stage import LogParameterSummary
+from pharmacoweave.qsp.concentration_turnover import ConcentrationTurnoverSimulation
 from pharmacoweave.qsp.inhibited_turnover import InhibitedTurnoverSimulation
 from pharmacoweave.qsp.turnover import TurnoverSimulation
 from pharmacoweave.simulation.engine_protocol import CallerEngineRun, EngineResponse
@@ -52,6 +53,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "steady_state_pbpk.schema.json": SteadyStatePbpk,
     "population_result_table.schema.json": PopulationResultTable,
     "inhibited_turnover.schema.json": InhibitedTurnoverSimulation,
+    "concentration_turnover.schema.json": ConcentrationTurnoverSimulation,
     "effect_compartment.schema.json": EffectCompartmentSimulation,
     "three_compartment_recovery.schema.json": ThreeCompartmentRecovery,
 }
