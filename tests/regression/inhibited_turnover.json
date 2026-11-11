@@ -1,0 +1,12 @@
+{
+  "reference_id": "inhibited_turnover_v1",
+  "computed_with": "Hand formula for dR/dt = kin*(1-I) - kout*R with R0=0: R(t)=(kin*(1-I)/kout)*(1-exp(-kout*t)). Steady state is kin*(1-I)/kout. This file was not produced by importing PharmacoWeave.",
+  "kin": 2,
+  "kout": 1,
+  "r0": 0,
+  "inhibition": 0.5,
+  "time_h": 0.6931471805599453,
+  "steady_state": 1,
+  "response_at_0": 0,
+  "response_at_ln2": 0.5
+}

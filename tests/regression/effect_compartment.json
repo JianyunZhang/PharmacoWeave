@@ -1,0 +1,14 @@
+{
+  "reference_id": "effect_compartment_v1",
+  "computed_with": "Hand formula. C(t)=(Dose/V)*exp(-kel*t). Ce(t)=(Dose/V)*ke0/(ke0-kel)*(exp(-kel*t)-exp(-ke0*t)) when ke0 differs from kel. When ke0=kel, Ce(t)=(Dose/V)*kel*t*exp(-kel*t). This file was not produced by importing PharmacoWeave.",
+  "dose_mg": 1,
+  "volume_l": 1,
+  "clearance_l_h": 1,
+  "ke0_per_h": 2,
+  "time_ln2": 0.6931471805599453,
+  "effect_site_at_0": 0,
+  "effect_site_at_ln2_mg_l": 0.5,
+  "equal_rate_ke0_per_h": 1,
+  "equal_rate_time_h": 1,
+  "equal_rate_effect_site_mg_l_expression": "1/e"
+}

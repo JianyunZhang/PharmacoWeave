@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
 
     fit = commands.add_parser(
         "fit",
-        help="Fit a compartmental PK model (1c IV bolus, 1c IV infusion, 1c extravascular, or 2c IV bolus)",
+        help="Fit a compartmental PK model (1c IV bolus, 1c infusion, 1c extravascular, 2c or 3c IV bolus)",
     )
     fit.add_argument("study_dir", type=Path)
     fit.add_argument(
@@ -57,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
             "one_compartment_iv_infusion",
             "one_compartment_extravascular",
             "two_compartment_iv_bolus",
+            "three_compartment_iv_bolus",
         ),
         default="one_compartment_iv_bolus",
     )
@@ -181,6 +182,16 @@ def main(argv: list[str] | None = None) -> int:
     slot.add_argument("--license-file", type=Path, required=True)
     slot.add_argument("--output", type=Path, help="Write the CallerEngineRun JSON to this path")
 
+    accepted = commands.add_parser(
+        "accepted-record",
+        help="Evaluate one already accepted record and optionally store it in a result bundle",
+    )
+    accepted.add_argument("request_json", type=Path, help="JSON request with a kind field")
+    accepted.add_argument("--output", type=Path, help="Write the function result JSON to this path")
+    accepted.add_argument("--study", type=Path, help="Study directory used when exporting a result bundle")
+    accepted.add_argument("--bundle", type=Path, help="Write a result bundle including the record (requires --study)")
+    accepted.add_argument("--run-id")
+
     commands.add_parser("capabilities", help="Show which modules can execute")
     export = commands.add_parser("export-schemas", help="Write JSON Schema files from the data contracts")
     export.add_argument("--directory", type=Path, default=Path("schemas"))
@@ -211,6 +222,14 @@ def main(argv: list[str] | None = None) -> int:
                 model=args.model,
                 method=args.method,
                 weight=args.weight,
+                bundle=args.bundle,
+                run_id=args.run_id,
+            )
+        if args.command == "accepted-record":
+            return _accepted_record(
+                args.request_json,
+                output=args.output,
+                study_dir=args.study,
                 bundle=args.bundle,
                 run_id=args.run_id,
             )
@@ -412,6 +431,12 @@ def _fit(
         if method == "log_linear_ols":
             raise AnalysisError("two_compartment_iv_bolus requires --method weighted_nls.")
         fits = list(fit_two_compartment_iv_bolus(study, weight=weight))
+    elif model == "three_compartment_iv_bolus":
+        from pharmacoweave.pk_models.fit_three_compartment import fit_three_compartment_iv_bolus
+
+        if method == "log_linear_ols":
+            raise AnalysisError("three_compartment_iv_bolus requires --method weighted_nls.")
+        fits = list(fit_three_compartment_iv_bolus(study, weight=weight))
     else:
         raise AnalysisError(f"Unsupported fit model {model}.")
 
@@ -711,6 +736,44 @@ def _load_simulation_request(input_json: Path):
         return ExposureSimulationRequest.model_validate(raw)
     except ValidationError as exc:
         raise IngestError(f"{input_json} is not an exposure simulation request: {exc}") from exc
+
+
+def _accepted_record(
+    request_json: Path,
+    *,
+    output: Path | None,
+    study_dir: Path | None,
+    bundle: Path | None,
+    run_id: str | None,
+) -> int:
+    import json
+
+    from pharmacoweave.accepted_records import evaluate_accepted_record
+    from pharmacoweave.core.bundle import _json_ready
+
+    try:
+        payload = json.loads(request_json.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise IngestError(f"{request_json} is not valid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise IngestError(f"{request_json} must contain a JSON object.")
+    result = evaluate_accepted_record(payload)
+    ready = _json_ready(result)
+    print(f"kind={payload.get('kind')}\tdosing_recommendation=false")
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(ready, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"Wrote accepted record to {output}")
+    if bundle is not None and study_dir is not None:
+        from pharmacoweave.core.study import PharmacologyStudy
+
+        study = PharmacologyStudy.from_files(study_dir)
+        selected_run = run_id or "accepted-record"
+        study.export_bundle(bundle, run_id=selected_run, accepted_record=result)
+        print(f"Wrote accepted record bundle to {bundle}")
+    elif bundle is not None:
+        raise IngestError("accepted-record --bundle requires --study.")
+    return 0
 
 
 def _simulate(

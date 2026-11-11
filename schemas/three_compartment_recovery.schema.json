@@ -1,0 +1,112 @@
+{
+  "additionalProperties": false,
+  "description": "Recovered three-compartment parameters. Empty values mean the fit failed.",
+  "properties": {
+    "dose_mg": {
+      "title": "Dose Mg",
+      "type": "number"
+    },
+    "clearance_l_h": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Clearance L H"
+    },
+    "central_volume_l": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Central Volume L"
+    },
+    "q2_l_h": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Q2 L H"
+    },
+    "v2_l": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "V2 L"
+    },
+    "q3_l_h": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Q3 L H"
+    },
+    "v3_l": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "V3 L"
+    },
+    "converged": {
+      "default": false,
+      "title": "Converged",
+      "type": "boolean"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "constitutes_dosing_recommendation": {
+      "const": false,
+      "default": false,
+      "title": "Constitutes Dosing Recommendation",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dose_mg",
+    "limitations"
+  ],
+  "title": "ThreeCompartmentRecovery",
+  "type": "object"
+}

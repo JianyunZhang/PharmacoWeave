@@ -35,7 +35,10 @@ class ParameterSemantic(StrEnum):
     VZ_OVER_F = "Vz_over_F"
     V1 = "V1"
     V2 = "V2"
+    V3 = "V3"
     Q = "Q"
+    Q2 = "Q2"
+    Q3 = "Q3"
     KA = "ka"
     KEL = "kel"
     K12 = "k12"
@@ -66,7 +69,10 @@ _ABSOLUTE_CLEARANCE = {
     ParameterSemantic.VZ,
     ParameterSemantic.V1,
     ParameterSemantic.V2,
+    ParameterSemantic.V3,
     ParameterSemantic.Q,
+    ParameterSemantic.Q2,
+    ParameterSemantic.Q3,
 }
 _APPARENT_CLEARANCE = {
     ParameterSemantic.CL_OVER_F,
@@ -82,7 +88,10 @@ _SEMANTIC_DIMENSIONS = {
     ParameterSemantic.VZ_OVER_F: VOLUME,
     ParameterSemantic.V1: VOLUME,
     ParameterSemantic.V2: VOLUME,
+    ParameterSemantic.V3: VOLUME,
     ParameterSemantic.Q: CLEARANCE,
+    ParameterSemantic.Q2: CLEARANCE,
+    ParameterSemantic.Q3: CLEARANCE,
     ParameterSemantic.KA: RATE,
     ParameterSemantic.KEL: RATE,
     ParameterSemantic.K12: RATE,

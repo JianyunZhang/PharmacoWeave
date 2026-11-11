@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "EffectCompartmentPoint": {
+      "additionalProperties": false,
+      "description": "Plasma and effect-site concentrations at one time. Both are predicted.",
+      "properties": {
+        "time_h": {
+          "title": "Time H",
+          "type": "number"
+        },
+        "plasma_concentration_mg_l": {
+          "title": "Plasma Concentration Mg L",
+          "type": "number"
+        },
+        "effect_site_concentration_mg_l": {
+          "title": "Effect Site Concentration Mg L",
+          "type": "number"
+        }
+      },
+      "required": [
+        "time_h",
+        "plasma_concentration_mg_l",
+        "effect_site_concentration_mg_l"
+      ],
+      "title": "EffectCompartmentPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A predicted effect-compartment curve for one IV bolus.",
+  "properties": {
+    "context_of_use": {
+      "minLength": 1,
+      "title": "Context Of Use",
+      "type": "string"
+    },
+    "evidence_grade": {
+      "const": "predicted",
+      "default": "predicted",
+      "title": "Evidence Grade",
+      "type": "string"
+    },
+    "dose_mg": {
+      "title": "Dose Mg",
+      "type": "number"
+    },
+    "volume_l": {
+      "title": "Volume L",
+      "type": "number"
+    },
+    "clearance_l_h": {
+      "title": "Clearance L H",
+      "type": "number"
+    },
+    "ke0_per_h": {
+      "title": "Ke0 Per H",
+      "type": "number"
+    },
+    "curve": {
+      "items": {
+        "$ref": "#/$defs/EffectCompartmentPoint"
+      },
+      "title": "Curve",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "constitutes_dosing_recommendation": {
+      "const": false,
+      "default": false,
+      "title": "Constitutes Dosing Recommendation",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "context_of_use",
+    "dose_mg",
+    "volume_l",
+    "clearance_l_h",
+    "ke0_per_h",
+    "curve",
+    "limitations"
+  ],
+  "title": "EffectCompartmentSimulation",
+  "type": "object"
+}

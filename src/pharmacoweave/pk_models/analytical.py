@@ -274,6 +274,160 @@ def two_compartment_bolus_mg_l(
     return a_coef * math.exp(-alpha * time_h) + b_coef * math.exp(-beta * time_h)
 
 
+def three_compartment_iv_bolus_concentration(
+    *,
+    dose: float,
+    dose_unit: str,
+    clearance: float,
+    clearance_unit: str,
+    central_volume: float,
+    central_volume_unit: str,
+    q2: float,
+    q2_unit: str,
+    peripheral_volume_2: float,
+    peripheral_volume_2_unit: str,
+    q3: float,
+    q3_unit: str,
+    peripheral_volume_3: float,
+    peripheral_volume_3_unit: str,
+    time: float,
+    time_unit: str,
+    concentration_unit: str,
+    molecular_weight: float | None = None,
+    molecular_weight_unit: str | None = "g/mol",
+) -> float:
+    """Return central C(t) for CL, V1, Q2, V2, Q3, and V3."""
+
+    if (
+        dose < 0
+        or clearance <= 0
+        or central_volume <= 0
+        or q2 <= 0
+        or peripheral_volume_2 <= 0
+        or q3 <= 0
+        or peripheral_volume_3 <= 0
+        or time < 0
+    ):
+        raise ValueError(
+            "dose must be >= 0, clearance, volumes, and intercompartmental clearances must be > 0, "
+            "and time must be >= 0."
+        )
+    dose_mg = convert_with_molecular_weight(
+        dose,
+        dose_unit,
+        "mg",
+        molecular_weight=molecular_weight,
+        molecular_weight_unit=molecular_weight_unit,
+    )
+    concentration_mg_l = three_compartment_bolus_mg_l(
+        dose_mg=dose_mg,
+        cl_l_h=convert(clearance, clearance_unit, "L/h"),
+        v1_l=convert(central_volume, central_volume_unit, "L"),
+        q2_l_h=convert(q2, q2_unit, "L/h"),
+        v2_l=convert(peripheral_volume_2, peripheral_volume_2_unit, "L"),
+        q3_l_h=convert(q3, q3_unit, "L/h"),
+        v3_l=convert(peripheral_volume_3, peripheral_volume_3_unit, "L"),
+        time_h=convert(time, time_unit, "h"),
+    )
+    return convert_with_molecular_weight(
+        concentration_mg_l,
+        "mg/L",
+        concentration_unit,
+        molecular_weight=molecular_weight,
+        molecular_weight_unit=molecular_weight_unit,
+    )
+
+
+def three_compartment_macro_constants(
+    *,
+    dose_mg: float,
+    cl_l_h: float,
+    v1_l: float,
+    q2_l_h: float,
+    v2_l: float,
+    q3_l_h: float,
+    v3_l: float,
+) -> tuple[float, float, float, float, float, float]:
+    """Return (A, alpha, B, beta, G, gamma) in mg/L and 1/h, with alpha > beta > gamma > 0."""
+
+    k10 = cl_l_h / v1_l
+    k12 = q2_l_h / v1_l
+    k21 = q2_l_h / v2_l
+    k13 = q3_l_h / v1_l
+    k31 = q3_l_h / v3_l
+    alpha, beta, gamma = _three_decay_rates(k10, k12, k21, k13, k31)
+    c0 = dose_mg / v1_l
+    a_coef = c0 * _hybrid_fraction(alpha, beta, gamma, k21, k31)
+    b_coef = c0 * _hybrid_fraction(beta, alpha, gamma, k21, k31)
+    g_coef = c0 * _hybrid_fraction(gamma, alpha, beta, k21, k31)
+    return a_coef, alpha, b_coef, beta, g_coef, gamma
+
+
+def three_compartment_bolus_mg_l(
+    *,
+    dose_mg: float,
+    cl_l_h: float,
+    v1_l: float,
+    q2_l_h: float,
+    v2_l: float,
+    q3_l_h: float,
+    v3_l: float,
+    time_h: float,
+) -> float:
+    """Evaluate three-compartment IV bolus C(t) in canonical mg/L."""
+
+    if dose_mg == 0.0:
+        return 0.0
+    a_coef, alpha, b_coef, beta, g_coef, gamma = three_compartment_macro_constants(
+        dose_mg=dose_mg,
+        cl_l_h=cl_l_h,
+        v1_l=v1_l,
+        q2_l_h=q2_l_h,
+        v2_l=v2_l,
+        q3_l_h=q3_l_h,
+        v3_l=v3_l,
+    )
+    return (
+        a_coef * math.exp(-alpha * time_h)
+        + b_coef * math.exp(-beta * time_h)
+        + g_coef * math.exp(-gamma * time_h)
+    )
+
+
+def _three_decay_rates(k10: float, k12: float, k21: float, k13: float, k31: float) -> tuple[float, float, float]:
+    elimination = k10 + k12 + k13
+    sum_rates = elimination + k21 + k31
+    sum_products = k10 * (k21 + k31) + k21 * k31 + k12 * k31 + k13 * k21
+    product = k10 * k21 * k31
+    roots = _cubic_real_roots(-sum_rates, sum_products, -product)
+    positive = sorted((root for root in roots if root > 1e-12), reverse=True)
+    if len(positive) != 3 or positive[0] - positive[1] < 1e-8 or positive[1] - positive[2] < 1e-8:
+        raise ValueError("Three-compartment hybrid rates are not three separated positive values.")
+    return positive[0], positive[1], positive[2]
+
+
+def _hybrid_fraction(rate: float, other_a: float, other_b: float, k21: float, k31: float) -> float:
+    return ((rate - k21) * (rate - k31)) / ((rate - other_a) * (rate - other_b))
+
+
+def _cubic_real_roots(linear2: float, linear1: float, constant: float) -> tuple[float, float, float]:
+    """Return three real roots of x^3 + linear2 x^2 + linear1 x + constant = 0."""
+
+    shift = linear2 / 3.0
+    depressed_a = linear1 - linear2 * linear2 / 3.0
+    depressed_b = (2.0 * linear2**3 - 9.0 * linear2 * linear1 + 27.0 * constant) / 27.0
+    if depressed_a >= 0.0:
+        raise ValueError("Three-compartment characteristic polynomial does not have three real roots.")
+    rho = math.sqrt(-depressed_a / 3.0)
+    cosine = (-depressed_b / 2.0) / (rho**3)
+    cosine = max(-1.0, min(1.0, cosine))
+    theta = math.acos(cosine)
+    first = 2.0 * rho * math.cos(theta / 3.0)
+    second = 2.0 * rho * math.cos((theta + 2.0 * math.pi) / 3.0)
+    third = 2.0 * rho * math.cos((theta + 4.0 * math.pi) / 3.0)
+    return (first - shift, second - shift, third - shift)
+
+
 def half_life(
     *,
     volume: float,

@@ -158,6 +158,21 @@ CI 在 Python 3.11 和 3.12 上执行 lint、类型检查和测试。
 - **群体结果表**：缺列、把 `CL/F` 标成 `CL`、证据等级为 `observed`、把 `predicted` 改标成 `estimated`，或出现 `dosing_recommendation` / `constitutes_dosing_recommendation` 时拒绝。读取过程把 `subprocess.run` 换成会失败的探针，探针不被调用。
 - **重型算法仍拒绝**：`population_pk`、`pbpk`、`qsp` 的 `run_in_process` 仍抛出 `PlannedCapabilityError`。这三个包的源码不导入 nlmixr2、rpy2、PK-Sim、NONMEM 或 MoBi。
 
+## 0.2.7 加权两阶段汇总
+
+- **相对标准误相同**：`tests/regression/weighted_two_stage.json` 取 0.05 与 0.20 L/h，标准误为 0.005 与 0.02 L/h。`s / theta` 相同，几何均值是 0.10 L/h，对数方差是 `2·(ln 2)^2`。与 `summarize_log_parameters` 的相对误差不超过 **1e-12**。两名标准误再乘同一个正数，结果不变。绝对标准误相同而点估计不同时，权重不同，几何均值不再是 0.10 L/h。
+- **两名受试者、标准误不同**：0.05 L/h 配 0.005 L/h，0.20 L/h 配 0.10 L/h。权重是 100 与 4。几何均值是 `exp((100·ln 0.05 + 4·ln 0.20) / 104)`。对数方差是 `(ln 0.20 − ln 0.05)^2 / 2`。相对误差不超过 **1e-12**。
+- **三名受试者**：0.05、0.10、0.20 L/h 配标准误 0.05、0.10、0.10 L/h。权重是 1、1、4。几何均值是 `0.1·√2`，对数方差是 `(7/6)·(ln 2)^2`。相对误差不超过 **1e-12**。该结果与不加权汇总不同。
+- **单位**：50 与 200 mL/h，标准误 10 与 40 mL/h，换到 L/h 后与 0.05、0.20 L/h 的等权重结果一致。
+- **不退回**：标准误缺失、为 0 或为负时拒绝，且不调用不加权公式代替。其中一组失败时不返回其他组的均值。
+
+## 0.2.8 周转抑制、效应室、三室和已验收记录
+
+- **恒定抑制**：`tests/regression/inhibited_turnover.json` 取 kin = 2、kout = 1、R0 = 0、I = 0.5。稳态是 1，`R(ln 2) = 0.5`，相对误差不超过 **1e-12**。`I = 0` 时与 `simulate_linear_turnover` 的相对误差不超过 **1e-12**。`I = 1` 或 `estimate_parameters=True` 时拒绝。
+- **效应室**：`tests/regression/effect_compartment.json` 取 Dose = 1 mg、V = 1 L、CL = 1 L/h、ke0 = 2 h⁻¹。`Ce(0) = 0`，`Ce(ln 2) = 0.5 mg/L`。`ke0 = kel = 1` 时 `Ce(1) = 1/e mg/L`。相对误差不超过 **1e-12**。血浆浓度来自一室静脉推注闭式解。
+- **三室**：`tests/regression/three_compartment_iv_bolus.json` 取 Dose = 1 mg、CL = 0.5 L/h、V1 = 1 L、Q2 = 1.5 L/h、V2 = 4 L、Q3 = 0.25 L/h、V3 = 10 L。`C(0) = 1 mg/L`。系数积分 AUC∞ = 2 mg·h/L，相对误差不超过 **1e-12**。无噪声回收和 `fit_three_compartment_iv_bolus_profile` 的相对误差不超过 **1e-4**。拟合报告标准误和 95% 置信区间。点数不足时诊断为失败，估计值为空。
+- **命令与结果包**：`accepted-record` 写出的 JSON 与直接调用的相对误差不超过 **1e-12**。结果包文件是 `analysis/accepted_record.json`。`kind` 为 `engine_response` 时拒绝。群体结果表请求不调用 `subprocess.run`。
+
 ## 明确不做的符合性声明
 
 字段设计参考 ICH M10 的定量限和 QC 概念，以及 ICH M15 的 question of interest 与 context of use。测试通过不等于生物分析方法学验证，也不等于 MIDD 证据已经被监管机构接受。CDISC SEND 导出、21 CFR Part 11 审计追踪和人类受试者访问控制不在本版本。

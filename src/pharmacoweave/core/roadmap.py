@@ -51,7 +51,7 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "P1",
         "partial",
         "1c IV bolus (OLS/WNLS), 1c IV infusion (CL, V), 1c extravascular (ka, CL/F, V/F), "
-        "and 2c IV bolus (CL, V1, Q, V2) with SE and 95% CI.",
+        "2c IV bolus (CL, V1, Q, V2) and 3c IV bolus (CL, V1, Q2, V2, Q3, V3) with SE and 95% CI.",
     ),
     ModuleStatus(
         "diagnostics",
@@ -77,8 +77,8 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "pd_models",
         "P1",
         "partial",
-        "Original-scale nonlinear LS for direct and sigmoid Emax; study observation bridging to "
-        "EffectObservation. Indirect response not fitted.",
+        "Original-scale nonlinear LS for direct and sigmoid Emax, plus a predicted effect-compartment "
+        "curve driven by the IV bolus solution. Indirect response is not fitted.",
     ),
     ModuleStatus(
         "pkpd",
@@ -103,8 +103,8 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "population_pk",
         "P2",
         "partial",
-        "Two-stage geometric means of finished individual estimates, plus a reader for caller-supplied "
-        "population tables. In-process NLME is refused. nlmixr2 is not imported or launched.",
+        "Unweighted and weighted geometric means of finished individual estimates, plus a reader for "
+        "caller-supplied population tables. In-process NLME is refused. nlmixr2 is not imported or launched.",
     ),
     ModuleStatus(
         "pbpk",
@@ -117,7 +117,8 @@ MODULE_STATUS: tuple[ModuleStatus, ...] = (
         "qsp",
         "P3",
         "partial",
-        "Closed form for one linear turnover equation, evidence grade predicted. QSP networks are not simulated.",
+        "Closed forms for linear turnover and constant production inhibition, evidence grade predicted. "
+        "QSP networks are not simulated.",
     ),
     ModuleStatus(
         "simulation",

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pharmacoweave"
-version = "0.2.6"
+version = "0.2.9"
 description = "Research-use data model and validation toolkit for quantitative pharmacology."
 readme = "README.md"
 requires-python = ">=3.11"

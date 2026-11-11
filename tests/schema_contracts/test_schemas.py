@@ -10,10 +10,13 @@ from pharmacoweave.dmpk.records import InVitroAdmeSet
 from pharmacoweave.ingestion.mapping import IngestMappingConfig
 from pharmacoweave.pbpk.physiology_table import PhysiologyTableCheck
 from pharmacoweave.pbpk.steady_state import SteadyStatePbpk
+from pharmacoweave.pd_models.effect_compartment import EffectCompartmentSimulation
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
+from pharmacoweave.pk_models.fit_three_compartment import ThreeCompartmentRecovery
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.population_pk.results import PopulationResultTable
 from pharmacoweave.population_pk.two_stage import LogParameterSummary
+from pharmacoweave.qsp.inhibited_turnover import InhibitedTurnoverSimulation
 from pharmacoweave.qsp.turnover import TurnoverSimulation
 from pharmacoweave.schema_export import CONTRACTS, json_schema
 from pharmacoweave.simulation.engine_protocol import EngineResponse
@@ -37,6 +40,9 @@ def test_schema_version_defaults_match_the_package_constant() -> None:
     assert TurnoverSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
     assert SteadyStatePbpk.model_fields["schema_version"].default == SCHEMA_VERSION
     assert PopulationResultTable.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert InhibitedTurnoverSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert EffectCompartmentSimulation.model_fields["schema_version"].default == SCHEMA_VERSION
+    assert ThreeCompartmentRecovery.model_fields["schema_version"].default == SCHEMA_VERSION
 
 
 def test_committed_schemas_match_the_models(repo_root) -> None:

@@ -158,6 +158,10 @@ _OMITTED = (
         reason="analysis/exposure_simulation.json is absent because no exploratory exposure simulation was run.",
     ),
     OmittedArtifact(
+        role="accepted_record",
+        reason="analysis/accepted_record.json is absent because no accepted-record evaluation was run.",
+    ),
+    OmittedArtifact(
         role="analysis_report",
         reason=(
             "reports/analysis_report.html is absent. reports/validation_report.html is the data-validation inventory."
@@ -188,6 +192,7 @@ def export_bundle(
     prediction_audit: Any | None = None,
     exposure_simulation: Any | None = None,
     urine_results: Sequence[Any] | None = None,
+    accepted_record: Any | None = None,
 ) -> ResultBundleManifest:
     """Validate ``study`` and write a new bundle directory.
 
@@ -225,6 +230,7 @@ def export_bundle(
             prediction_audit=prediction_audit,
             exposure_simulation=exposure_simulation,
             urine_results=urine_results,
+            accepted_record=accepted_record,
         )
     except Exception:
         shutil.rmtree(destination, ignore_errors=True)
@@ -247,6 +253,7 @@ def _write_bundle(
     prediction_audit: Any | None = None,
     exposure_simulation: Any | None = None,
     urine_results: Sequence[Any] | None = None,
+    accepted_record: Any | None = None,
 ) -> ResultBundleManifest:
     created_at = datetime.now(UTC)
     counts = _counts(study, report, adme_records=adme_records, tox_endpoints=tox_endpoints)
@@ -323,6 +330,7 @@ def _write_bundle(
             prediction_audit,
             exposure_simulation,
             urine_results,
+            accepted_record,
         )
     )
     notes: list[str] = []
@@ -346,6 +354,8 @@ def _write_bundle(
             "Exploratory single-dose exposure simulation was run from declared parameters. "
             "The curve stays predicted and is not a dosing recommendation."
         )
+    if accepted_record is not None:
+        notes.append("An accepted record was evaluated. The stored JSON is that function result.")
     if blq_policy is not None and not notes:
         notes.append("Derived observations were materialized under an explicit BLQ policy.")
 
@@ -523,6 +533,11 @@ def _write_bundle(
         paths["exposure_simulation"] = simulation_path
         _write_json(destination / simulation_path, json.loads(exposure_simulation.model_dump_json()))
         omitted = [item for item in omitted if item.role != "exposure_simulation"]
+    if accepted_record is not None:
+        accepted_path = "analysis/accepted_record.json"
+        paths["accepted_record"] = accepted_path
+        _write_json(destination / accepted_path, _json_ready(accepted_record))
+        omitted = [item for item in omitted if item.role != "accepted_record"]
 
     html = render_validation_report(
         study,
@@ -714,6 +729,15 @@ def _software_versions() -> dict[str, str]:
         "pandas": metadata.version("pandas"),
         "jinja2": metadata.version("jinja2"),
     }
+
+
+def _json_ready(record: object) -> object:
+    if isinstance(record, list):
+        return [_json_ready(item) for item in record]
+    dump = getattr(record, "model_dump_json", None)
+    if not callable(dump):
+        raise IngestError("An accepted record must be a model or a list of models.")
+    return json.loads(dump())
 
 
 def _write_json(path: Path, payload: object) -> None:

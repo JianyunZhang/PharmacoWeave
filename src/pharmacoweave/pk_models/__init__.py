@@ -7,6 +7,7 @@ from pharmacoweave.pk_models.analytical import (
     iv_bolus_concentration,
     iv_infusion_concentration,
     one_compartment_oral_concentration,
+    three_compartment_iv_bolus_concentration,
     two_compartment_iv_bolus_concentration,
 )
 from pharmacoweave.pk_models.fit_extravascular import (
@@ -20,6 +21,13 @@ from pharmacoweave.pk_models.fit_infusion import (
     fit_one_compartment_iv_infusion_profile,
 )
 from pharmacoweave.pk_models.fit_iv import IvBolusFit, fit_iv_bolus, fit_iv_bolus_profile
+from pharmacoweave.pk_models.fit_three_compartment import (
+    ThreeCompartmentFit,
+    ThreeCompartmentRecovery,
+    fit_three_compartment_iv_bolus,
+    fit_three_compartment_iv_bolus_profile,
+    recover_three_compartment_iv_bolus,
+)
 from pharmacoweave.pk_models.fit_two_compartment import (
     TwoCompartmentFit,
     fit_two_compartment_iv_bolus,
@@ -30,6 +38,7 @@ from pharmacoweave.pk_models.specs import (
     ONE_COMPARTMENT_EXTRAVASCULAR,
     ONE_COMPARTMENT_IV_BOLUS,
     ONE_COMPARTMENT_IV_INFUSION,
+    THREE_COMPARTMENT_IV_BOLUS,
     TWO_COMPARTMENT_IV_BOLUS,
 )
 from pharmacoweave.pk_models.wnls import fit_iv_bolus_profile_wnls, fit_iv_bolus_wnls
@@ -45,7 +54,10 @@ __all__ = [
     "ONE_COMPARTMENT_IV_BOLUS",
     "ONE_COMPARTMENT_IV_INFUSION",
     "STATUS",
+    "THREE_COMPARTMENT_IV_BOLUS",
     "TWO_COMPARTMENT_IV_BOLUS",
+    "ThreeCompartmentFit",
+    "ThreeCompartmentRecovery",
     "TwoCompartmentFit",
     "auc_inf_iv_bolus",
     "fit_iv_bolus",
@@ -56,11 +68,15 @@ __all__ = [
     "fit_one_compartment_extravascular_profile",
     "fit_one_compartment_iv_infusion",
     "fit_one_compartment_iv_infusion_profile",
+    "recover_three_compartment_iv_bolus",
+    "fit_three_compartment_iv_bolus",
+    "fit_three_compartment_iv_bolus_profile",
     "fit_two_compartment_iv_bolus",
     "fit_two_compartment_iv_bolus_profile",
     "half_life",
     "iv_bolus_concentration",
     "iv_infusion_concentration",
     "one_compartment_oral_concentration",
+    "three_compartment_iv_bolus_concentration",
     "two_compartment_iv_bolus_concentration",
 ]

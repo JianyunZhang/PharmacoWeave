@@ -132,6 +132,7 @@ class PharmacologyStudy(Record):
         prediction_audit: Any | None = None,
         exposure_simulation: Any | None = None,
         urine_results: Sequence[Any] | None = None,
+        accepted_record: Any | None = None,
     ) -> ResultBundleManifest:
         """Write a research-use result bundle. Fails when validation has errors."""
 
@@ -152,6 +153,7 @@ class PharmacologyStudy(Record):
             prediction_audit=prediction_audit,
             exposure_simulation=exposure_simulation,
             urine_results=urine_results,
+            accepted_record=accepted_record,
         )
 
     def run_nca(self, config: str | Path | Any) -> list[NcaParameterSet]:

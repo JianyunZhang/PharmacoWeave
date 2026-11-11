@@ -1,19 +1,26 @@
-"""One linear turnover equation. Networks are not simulated.
+"""Linear turnover equations. Networks are not simulated.
 
-``run_in_process`` still refuses a QSP network. ``simulate_linear_turnover``
-evaluates one supplied closed form and does not estimate parameters.
+``run_in_process`` still refuses a QSP network. ``simulate_linear_turnover`` and
+``simulate_constant_inhibition_turnover`` evaluate supplied closed forms and do
+not estimate parameters.
 """
 
 from pharmacoweave.core.roadmap import status
 from pharmacoweave.errors import PlannedCapabilityError
+from pharmacoweave.qsp.inhibited_turnover import (
+    InhibitedTurnoverSimulation,
+    simulate_constant_inhibition_turnover,
+)
 from pharmacoweave.qsp.turnover import TurnoverSimulation, simulate_linear_turnover
 
 STATUS = status("qsp")
 
 __all__ = [
     "STATUS",
+    "InhibitedTurnoverSimulation",
     "TurnoverSimulation",
     "run_in_process",
+    "simulate_constant_inhibition_turnover",
     "simulate_linear_turnover",
 ]
 
@@ -25,7 +32,7 @@ def run_in_process(*_args: object, **_kwargs: object) -> None:
         module="qsp",
         phase="P4",
         detail=(
-            "QSP networks are not implemented. simulate_linear_turnover evaluates one supplied "
-            "linear turnover equation and does not estimate its parameters."
+            "QSP networks are not implemented. simulate_linear_turnover and "
+            "simulate_constant_inhibition_turnover evaluate supplied closed forms and do not estimate parameters."
         ),
     )

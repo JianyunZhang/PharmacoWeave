@@ -18,11 +18,14 @@ from pharmacoweave.dmpk.records import InVitroAdmeSet
 from pharmacoweave.ingestion.mapping import IngestMappingConfig
 from pharmacoweave.pbpk.physiology_table import PhysiologyTableCheck
 from pharmacoweave.pbpk.steady_state import SteadyStatePbpk
+from pharmacoweave.pd_models.effect_compartment import EffectCompartmentSimulation
 from pharmacoweave.pd_models.emax import PdAnalysisRecords
+from pharmacoweave.pk_models.fit_three_compartment import ThreeCompartmentRecovery
 from pharmacoweave.pk_nca.config import NcaConfig
 from pharmacoweave.pk_nca.urine import UrineNcaConfig
 from pharmacoweave.population_pk.results import PopulationResultTable
 from pharmacoweave.population_pk.two_stage import LogParameterSummary
+from pharmacoweave.qsp.inhibited_turnover import InhibitedTurnoverSimulation
 from pharmacoweave.qsp.turnover import TurnoverSimulation
 from pharmacoweave.simulation.engine_protocol import CallerEngineRun, EngineResponse
 from pharmacoweave.simulation.exposure import ExposureSimulationResult
@@ -48,6 +51,9 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "turnover_simulation.schema.json": TurnoverSimulation,
     "steady_state_pbpk.schema.json": SteadyStatePbpk,
     "population_result_table.schema.json": PopulationResultTable,
+    "inhibited_turnover.schema.json": InhibitedTurnoverSimulation,
+    "effect_compartment.schema.json": EffectCompartmentSimulation,
+    "three_compartment_recovery.schema.json": ThreeCompartmentRecovery,
 }
 
 

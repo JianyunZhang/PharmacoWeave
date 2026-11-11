@@ -219,7 +219,7 @@ flowchart TB
 
 ## 五、 已完成的行动项（原基于 `0.0.4` 基线，至 `0.1.0` 已交付）
 
-下表各项已经实现。0.2.6 之后仍拒绝的功能见 `docs/project-evaluation.md` 与 `docs/roadmap.md`，不再以本表作为当前目标。
+下表各项已经实现。0.2.6 之后的进入顺序见 `docs/next-steps-after-0.2.6.md`。仍拒绝的功能见 `docs/project-evaluation.md` 与 `docs/roadmap.md`，不再以本表作为当前目标。
 
 | 目标版本 | 行动项 | 涉及模块 / 路径 | 预期产出与科学验收标准 |
 | :---: | :--- | :--- | :--- |

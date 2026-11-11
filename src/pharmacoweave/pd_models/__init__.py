@@ -1,10 +1,11 @@
-"""Direct-effect and sigmoid Emax for a fixed baseline E0.
+"""Direct-effect Emax and one effect-compartment closed form.
 
-Importing this module does not fit a curve. Indirect-response and delayed-effect
-models are not implemented.
+Importing this module does not fit a curve. ``simulate_effect_compartment``
+evaluates a supplied IV bolus effect site and does not estimate ke0.
 """
 
 from pharmacoweave.core.roadmap import status
+from pharmacoweave.pd_models.effect_compartment import EffectCompartmentSimulation, simulate_effect_compartment
 from pharmacoweave.pd_models.emax import (
     DirectEffectPair,
     DirectEmaxFit,
@@ -35,6 +36,7 @@ __all__ = [
     "STATUS",
     "DirectEffectPair",
     "DirectEmaxFit",
+    "EffectCompartmentSimulation",
     "EffectDimension",
     "EffectDirection",
     "EffectObservation",
@@ -48,5 +50,6 @@ __all__ = [
     "estimate_hill",
     "fit_direct_emax",
     "fit_sigmoid_emax",
+    "simulate_effect_compartment",
     "unit_matches_effect_dimension",
 ]

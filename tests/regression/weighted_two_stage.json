@@ -1,0 +1,25 @@
+{
+  "reference_id": "weighted_two_stage_v1",
+  "computed_with": "Hand formula. Weight is 1/(standard error/estimate)^2. Geometric mean is exp(sum(w*ln estimate)/sum(w)). Log variance is sum(w*(ln estimate-m)^2)/(V1-V2/V1). Equal standard errors reproduce the unweighted sample variance. For two subjects the weighted variance is (ln theta_1-ln theta_2)^2/2. This file was not produced by importing PharmacoWeave.",
+  "equal_relative_standard_error": {
+    "estimates_l_h": [0.05, 0.20],
+    "standard_errors_l_h": [0.005, 0.02],
+    "geometric_mean_l_h": 0.10,
+    "log_variance_expression": "2 * (ln 2)^2",
+    "note": "Equal weights require s/theta to be the same. Identical absolute standard errors do not keep the geometric mean at 0.10 when the estimates differ."
+  },
+  "two_subject_unequal_standard_error": {
+    "estimates_l_h": [0.05, 0.20],
+    "standard_errors_l_h": [0.005, 0.10],
+    "weights": [100, 4],
+    "geometric_mean_expression": "exp((100*ln 0.05 + 4*ln 0.20) / 104)",
+    "log_variance_expression": "(ln 0.20 - ln 0.05)^2 / 2"
+  },
+  "three_subject_unequal_standard_error": {
+    "estimates_l_h": [0.05, 0.10, 0.20],
+    "standard_errors_l_h": [0.05, 0.10, 0.10],
+    "weights": [1, 1, 4],
+    "geometric_mean_expression": "0.1 * sqrt(2)",
+    "log_variance_expression": "(7/6) * (ln 2)^2"
+  }
+}

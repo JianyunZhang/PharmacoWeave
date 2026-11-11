@@ -54,7 +54,7 @@ flowchart LR
 
 - 几何均值是 `exp(平均 ln 参数)`。
 - 对数方差是 `ln 参数` 的样本方差。受试者人数小于 2 时不计算方差，并拒绝整次汇总。
-- 标准误可以随行保存，但不参与第一项的加权。加权两阶段留到单独的冻结参考之后。
+- 标准误可以随行保存，但不参与第一项的加权。加权两阶段的公式和进入顺序见 `docs/next-steps-after-0.2.6.md`。
 
 失败时不输出均值：
 
@@ -156,4 +156,4 @@ PK-Sim 继续只出现在引擎目录中，许可证记为 GPL-2.0-only，`execu
 
 ## 7. 和现有文档的关系
 
-已完成范围以 `docs/roadmap.md` 为准。立项原文的 Phase 4 措辞保留在 `docs/development-plan.md`。可行性收窄保留在 `docs/feasibility.md`。第 1 至第 5 项已在 0.2.6 落地。`run_in_process` 仍拒绝第 6 节列出的重型算法。
+已完成范围以 `docs/roadmap.md` 为准。立项原文的 Phase 4 措辞保留在 `docs/development-plan.md`。可行性收窄保留在 `docs/feasibility.md`。第 1 至第 5 项已在 0.2.6 落地。`run_in_process` 仍拒绝第 6 节列出的重型算法。0.2.6 之后的进入顺序见 `docs/next-steps-after-0.2.6.md`。

@@ -10,6 +10,7 @@ from pharmacoweave.pk_models import (
     ONE_COMPARTMENT_EXTRAVASCULAR,
     ONE_COMPARTMENT_IV_BOLUS,
     ONE_COMPARTMENT_IV_INFUSION,
+    THREE_COMPARTMENT_IV_BOLUS,
     TWO_COMPARTMENT_IV_BOLUS,
     auc_inf_iv_bolus,
     half_life,
@@ -169,9 +170,12 @@ def test_builtin_specs_cover_all_implemented_compartmental_models() -> None:
 
     assert TWO_COMPARTMENT_IV_BOLUS.estimation_implemented is True
     assert TWO_COMPARTMENT_IV_BOLUS.parameters == ["CL", "V1", "Q", "V2"]
+    assert THREE_COMPARTMENT_IV_BOLUS.estimation_implemented is True
+    assert THREE_COMPARTMENT_IV_BOLUS.parameters == ["CL", "V1", "Q2", "V2", "Q3", "V3"]
     assert set(BUILTIN_SPECS) == {
         "one_compartment_iv_bolus",
         "one_compartment_iv_infusion",
         "one_compartment_extravascular",
         "two_compartment_iv_bolus",
+        "three_compartment_iv_bolus",
     }

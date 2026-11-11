@@ -80,6 +80,7 @@ class ResultBundleManifest(Record):
             "ivive_predictions",
             "prediction_audit",
             "exposure_simulation",
+            "accepted_record",
         }
         listed = analysis_roles & set(self.data)
         if self.analysis_executed and not listed:

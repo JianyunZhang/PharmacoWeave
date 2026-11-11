@@ -88,9 +88,30 @@ TWO_COMPARTMENT_IV_BOLUS = ModelSpec(
     estimation_implemented=True,
 )
 
+THREE_COMPARTMENT_IV_BOLUS = ModelSpec(
+    model_id="three_compartment_iv_bolus",
+    model_type="three_compartment_iv_bolus",
+    equations_ref="C(t) = A*exp(-alpha*t) + B*exp(-beta*t) + G*exp(-gamma*t) for CL, V1, Q2, V2, Q3, V3",
+    parameters=["CL", "V1", "Q2", "V2", "Q3", "V3"],
+    error_model=ErrorModel.UNSPECIFIED,
+    assumptions=[
+        "Input is an instantaneous IV bolus into the central compartment.",
+        "Distribution uses two linear peripheral compartments, Q2/V2 and Q3/V3.",
+        "Elimination occurs linearly from the central compartment (CL).",
+        "Supported weights are uniform, 1/y, and 1/y^2. BLQ observations are omitted and are not replaced with zero.",
+    ],
+    question_of_interest="What CL, V1, Q2, V2, Q3, and V3 does a triexponential IV bolus curve support?",
+    context_of_use=(
+        "Research-use estimation of CL, V1, Q2, V2, Q3, and V3 for a single-dose three-compartment IV bolus. "
+        "Not a dosing recommendation and not a regulatory validation."
+    ),
+    estimation_implemented=True,
+)
+
 BUILTIN_SPECS = {
     "one_compartment_iv_bolus": ONE_COMPARTMENT_IV_BOLUS,
     "one_compartment_iv_infusion": ONE_COMPARTMENT_IV_INFUSION,
     "one_compartment_extravascular": ONE_COMPARTMENT_EXTRAVASCULAR,
     "two_compartment_iv_bolus": TWO_COMPARTMENT_IV_BOLUS,
+    "three_compartment_iv_bolus": THREE_COMPARTMENT_IV_BOLUS,
 }
